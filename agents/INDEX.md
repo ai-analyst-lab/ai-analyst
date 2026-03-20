@@ -34,7 +34,8 @@
 | Experiment Designer | `agents/experiment-designer.md` | Need to test a causal hypothesis — designs A/B tests or quasi-experimental analyses with power estimation and decision rules |
 | Story Architect | `agents/story-architect.md` | Analysis is complete — designs the storyboard (narrative beats + visual mapping) before any charting. Pass `{{CONTEXT}}` for workshop/talk closing sequences. |
 | Chart Maker | `agents/chart-maker.md` | Need to generate a specific chart. |
-| Visual Design Critic | `agents/visual-design-critic.md` | After Chart Maker generates charts — reviews against SWD checklist. After Deck Creator — reviews slide-level design with `{{DECK_FILE}}` and `{{THEME}}`. |
+| Chart Maker (Fix Pass) | `agents/chart-maker.md` | Automatically invoked by the DAG engine (as `chart-maker-fixes`) when the Visual Design Critic returns APPROVED WITH FIXES. Receives `{{FIX_REPORT}}` input. Skipped when verdict is APPROVED. Pipeline HALTs on NEEDS REVISION. |
+| Visual Design Critic | `agents/visual-design-critic.md` | After Chart Maker generates charts — reviews against SWD checklist (step 13). After Deck Creator — reviews slide-level design with `{{DECK_FILE}}` and `{{THEME}}` (step 17, as `visual-design-critic-slides` in registry). |
 | Narrative Coherence Reviewer | `agents/narrative-coherence-reviewer.md` | After Story Architect produces the storyboard, before charting — reviews story flow, beat structure, and Closing beats if present |
 | Storytelling | `agents/storytelling.md` | Analysis and charts are complete, need a narrative |
 | Source Tie-Out | `agents/source-tieout.md` | After Data Explorer, before analysis — verify data loading integrity by comparing pandas direct-read vs ClickHouse SQL on foundational metrics. HALT on mismatch. |
