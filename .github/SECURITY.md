@@ -6,7 +6,7 @@ If you discover a security vulnerability in this project, please report it respo
 
 **Do NOT open a public GitHub issue for security vulnerabilities.**
 
-Instead, email: **shane@aianalystlab.ai**
+Instead, email the security team at AXS Pte Ltd.
 
 Include:
 - Description of the vulnerability
@@ -26,12 +26,12 @@ This policy covers:
 
 This policy does NOT cover:
 - Claude Code itself (report to [Anthropic](https://www.anthropic.com/security))
-- MotherDuck (report to [MotherDuck](https://motherduck.com))
+- ClickHouse (report to [ClickHouse](https://clickhouse.com))
 - Third-party dependencies (report to their maintainers)
 
 ## Best Practices for Users
 
 - Never commit `.claude/mcp.json` with real tokens (use `.claude/mcp.json.example`)
 - Never commit connection templates with credentials (use `.yaml.example` files)
-- Never share your MotherDuck token publicly
+- Never share your ClickHouse credentials publicly
 - Review `.gitignore` before pushing to ensure no sensitive data is tracked

@@ -33,7 +33,7 @@ V2 is a ground-up rebuild of the intelligence layer. The pipeline and agents fro
 
 | Area | V1 | V2 |
 |------|----|----|
-| **Data** | Bundled NovaMart e-commerce dataset | Bring your own — CSV, DuckDB, Postgres, BigQuery, Snowflake |
+| **Data** | Bundled NovaMart e-commerce dataset | Bring your own — CSV, ClickHouse, Postgres, BigQuery, Snowflake |
 | **Onboarding** | Manual setup, read the docs | `/setup` interview learns your role, data, and business context |
 | **Memory** | Stateless across sessions | Knowledge system persists corrections, learnings, query patterns, business glossary |
 | **Self-learning** | None | Captures feedback, logs corrections, retrieves proven SQL patterns — never repeats the same mistake |
@@ -131,7 +131,7 @@ Interactive data browsing without committing to a full analysis. Preview tables,
 /connect-data
 ```
 
-Guided wizard that walks you through connecting CSV files, local DuckDB, Postgres, BigQuery, or Snowflake. Auto-profiles your data, creates schema docs, and remembers your dataset context across sessions.
+Guided wizard that walks you through connecting CSV files, ClickHouse, Postgres, BigQuery, or Snowflake. Auto-profiles your data, creates schema docs, and remembers your dataset context across sessions.
 
 ### 5. Make a single chart
 
@@ -289,7 +289,7 @@ This repo ships clean — no bundled datasets. Connect your own data and the sys
 Run `/connect-data` for a guided setup wizard, or `/setup` for a full onboarding interview. Supported sources:
 
 - **CSV files** — drop them in a directory, point Claude at it
-- **DuckDB** — local or MotherDuck
+- **ClickHouse** — via MCP server
 - **Postgres** — any Postgres-compatible database
 - **BigQuery** — Google BigQuery with service account
 - **Snowflake** — Snowflake with user/password or key pair
@@ -304,9 +304,8 @@ Curated public datasets with README guides are available in `data/examples/`.
 
 If your primary connection fails, the system falls back automatically:
 
-1. Primary connection (e.g., MotherDuck via MCP)
-2. Local DuckDB (from `manifest.local_data.duckdb`)
-3. CSV files via pandas (from `manifest.local_data.path`)
+1. Primary connection (ClickHouse via MCP)
+2. CSV files via pandas (from `manifest.local_data.path`)
 
 You're always told which source is active.
 
@@ -374,7 +373,7 @@ Agents are markdown prompt templates in the `agents/` directory. Each defines a 
 | Agent | What It Does | Pipeline Step |
 |-------|-------------|---------------|
 | data-explorer | Profiles a dataset: schema, distributions, quality, gaps, supported analyses | 4 |
-| source-tieout | Verifies data loaded correctly by comparing pandas vs DuckDB on row counts, nulls, and sums. Halts on mismatch. | 4.5 |
+| source-tieout | Verifies data loaded correctly by comparing pandas vs ClickHouse on row counts, nulls, and sums. Halts on mismatch. | 4.5 |
 
 ### Analysis
 
@@ -504,9 +503,9 @@ Python modules in `helpers/` that agents call during execution:
 |--------|-------------|
 | `data_helpers.py` | Data source abstraction: `detect_active_source()`, `check_connection()`, `read_table()`, `list_tables()` |
 | `sql_helpers.py` | SQL sanity checks: join cardinality, percentage sums, date bounds, duplicates, temporal coverage |
-| `sql_dialect.py` | SQL dialect router for Postgres, BigQuery, Snowflake, DuckDB |
+| `sql_dialect.py` | SQL dialect router for ClickHouse, Postgres, BigQuery, Snowflake |
 | `connection_manager.py` | Unified interface for multi-warehouse connections |
-| `tieout_helpers.py` | Source tie-out: dual-path comparison (pandas vs DuckDB) with tolerances |
+| `tieout_helpers.py` | Source tie-out: dual-path comparison (pandas vs ClickHouse) with tolerances |
 | `schema_profiler.py` | Automated schema discovery and documentation |
 
 ### Analytics and Statistics
@@ -560,7 +559,7 @@ Python modules in `helpers/` that agents call during execution:
 - **Python 3.10+**
 - **Node.js 18+** (for Claude Code)
 - **Claude Code** with a [Claude Pro subscription](https://claude.ai/pro) ($20/month)
-- **Internet connection** (for Claude API and optional MotherDuck)
+- **Internet connection** (for Claude API and optional ClickHouse)
 
 ---
 

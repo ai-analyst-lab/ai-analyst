@@ -1,17 +1,17 @@
-# Connection Template: DuckDB / MotherDuck
+# Connection Template: ClickHouse (via MCP)
 # Copy to .knowledge/datasets/{name}/manifest.yaml and fill in values.
 
 dataset_id: "{dataset_id}"
 display_name: "{Display Name}"
 description: "{Brief description of the dataset}"
-domain: "{e-commerce|saas|fintech|marketplace|other}"
+domain: "{payments|fintech|e-commerce|saas|marketplace|other}"
 created_at: "{YYYY-MM-DD}"
 is_seed: false
 
 connection:
-  type: duckdb           # or "motherduck" for cloud DuckDB
+  type: clickhouse
   database: "{database}"
-  schema: "{schema}"     # SQL schema prefix for queries
+  schema: "{schema}"     # SQL schema prefix for queries (optional)
 
 summary:
   table_count: null      # Auto-populated by data profiler
@@ -22,8 +22,7 @@ summary:
   last_profiled: null
 
 local_data:
-  path: "data/{dataset_id}/"
-  duckdb: "data/{dataset_id}/{database}.duckdb"
+  path: null               # Optional CSV fallback directory
 
 status: active
 last_used: null

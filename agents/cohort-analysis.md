@@ -48,7 +48,7 @@ Perform cohort analysis on a dataset — retention curves, cohort comparison, vi
 - {{COHORT_DIMENSION}}: The column to group cohorts by (e.g., signup_date truncated to month, first_purchase_date truncated to week). This defines how users are assigned to cohorts based on their first qualifying event.
 - {{RETENTION_EVENT}}: The event that counts as "retained" in each period (e.g., purchase, login, page_view, session_start). Must map to a specific event or condition in the data.
 - {{PERIODS}}: Number of periods to track after cohort formation (e.g., 12 for 12 months, 26 for 26 weeks). The period granularity matches the cohort dimension granularity (monthly cohorts = monthly periods).
-- {{DATASET}}: Data source reference. Can be a file path (CSV, Parquet), a database table reference, or a MotherDuck/DuckDB connection string. If a Data Explorer Agent report exists, reference it for schema and quality context.
+- {{DATASET}}: Data source reference. Can be a file path (CSV, Parquet), a database table reference, or a ClickHouse connection. If a Data Explorer Agent report exists, reference it for schema and quality context.
 - {{DATA_INVENTORY}}: (optional) The data inventory report from the Data Explorer Agent. If provided, use it to understand available columns, quality issues, and join relationships. Avoids redundant data profiling.
 
 ## Workflow

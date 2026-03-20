@@ -32,7 +32,7 @@ theme: analytics          # or analytics-dark
 size: 16:9
 paginate: true
 html: true
-footer: "AI Analyst Lab | Client Name | Month Year"
+footer: "AXS Pte Ltd | Client Name | Month Year"
 ---
 ```
 

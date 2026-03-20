@@ -1,8 +1,8 @@
 """Integration tests for the multi-warehouse SQL dialect system.
 
-Tests the SQL dialect router, dialect method consistency, ConnectionManager
-(DuckDB in-memory), schema profiler external warehouse entry point, and
-cross-module imports. All tests run locally without external databases.
+Tests the SQL dialect router, dialect method consistency, ConnectionManager,
+schema profiler external warehouse entry point, and cross-module imports.
+All tests run locally without external databases.
 """
 
 import importlib
@@ -23,7 +23,7 @@ from helpers.schema_profiler import (
 )
 from helpers.dialects import (
     SQLDialect,
-    DuckDBDialect,
+    ClickHouseDialect,
     PostgresDialect,
     BigQueryDialect,
     SnowflakeDialect,
@@ -37,8 +37,8 @@ from helpers.dialects.base import SQLDialect as BaseSQLDialect
 
 
 class TestGetDialect:
-    def test_duckdb_returns_duckdb_dialect(self):
-        assert isinstance(get_dialect("duckdb"), DuckDBDialect)
+    def test_clickhouse_returns_clickhouse_dialect(self):
+        assert isinstance(get_dialect("clickhouse"), ClickHouseDialect)
 
     def test_postgres_returns_postgres_dialect(self):
         assert isinstance(get_dialect("postgres"), PostgresDialect)
@@ -49,9 +49,6 @@ class TestGetDialect:
     def test_snowflake_returns_snowflake_dialect(self):
         assert isinstance(get_dialect("snowflake"), SnowflakeDialect)
 
-    def test_motherduck_alias(self):
-        assert isinstance(get_dialect("motherduck"), DuckDBDialect)
-
     def test_postgresql_alias(self):
         assert isinstance(get_dialect("postgresql"), PostgresDialect)
 
@@ -60,7 +57,7 @@ class TestGetDialect:
             get_dialect("unknown")
 
     def test_case_insensitive(self):
-        assert isinstance(get_dialect("DuckDB"), DuckDBDialect)
+        assert isinstance(get_dialect("ClickHouse"), ClickHouseDialect)
 
     def test_whitespace_stripped(self):
         assert isinstance(get_dialect("  bigquery  "), BigQueryDialect)
@@ -68,7 +65,7 @@ class TestGetDialect:
     def test_list_dialects_has_all_keys(self):
         keys = list_dialects()
         assert isinstance(keys, list)
-        for expected in ("duckdb", "motherduck", "postgres", "bigquery", "snowflake"):
+        for expected in ("clickhouse", "postgres", "bigquery", "snowflake"):
             assert expected in keys
 
 
@@ -77,7 +74,7 @@ class TestGetDialect:
 # =====================================================================
 
 
-_ALL_DIALECT_KEYS = ["duckdb", "postgres", "bigquery", "snowflake"]
+_ALL_DIALECT_KEYS = ["clickhouse", "postgres", "bigquery", "snowflake"]
 
 
 class TestDialectMethodConsistency:
@@ -123,7 +120,7 @@ class TestDialectMethodConsistency:
 
     def test_current_timestamp_returns_string(self, dialect):
         result = dialect.current_timestamp()
-        assert "CURRENT_TIMESTAMP" in result.upper()
+        assert "CURRENT_TIMESTAMP" in result.upper() or "NOW()" in result.upper()
 
     def test_create_temp_table_returns_string(self, dialect):
         result = dialect.create_temp_table("tmp_agg", "SELECT 1")
@@ -135,18 +132,21 @@ class TestDialectMethodConsistency:
 # =====================================================================
 
 
-class TestDuckDBDialectSpecific:
-    def test_sample_uses_using_sample(self):
-        assert DuckDBDialect().sample_rows("orders", 100) == "SELECT * FROM orders USING SAMPLE 100"
+class TestClickHouseDialectSpecific:
+    def test_sample_uses_rand(self):
+        assert ClickHouseDialect().sample_rows("orders", 100) == "SELECT * FROM orders ORDER BY rand() LIMIT 100"
 
-    def test_describe_uses_describe(self):
-        assert DuckDBDialect().describe_table("customers") == "DESCRIBE customers"
+    def test_describe_uses_describe_table(self):
+        assert ClickHouseDialect().describe_table("customers") == "DESCRIBE TABLE customers"
 
     def test_date_diff_uses_native(self):
-        assert DuckDBDialect().date_diff("day", "start_date", "end_date") == "date_diff('day', start_date, end_date)"
+        assert ClickHouseDialect().date_diff("day", "start_date", "end_date") == "dateDiff('day', start_date, end_date)"
 
-    def test_name_is_duckdb(self):
-        assert DuckDBDialect().name == "duckdb"
+    def test_date_trunc_uses_toStartOf(self):
+        assert ClickHouseDialect().date_trunc("order_date", "month") == "toStartOfMonth(order_date)"
+
+    def test_name_is_clickhouse(self):
+        assert ClickHouseDialect().name == "clickhouse"
 
 
 class TestBigQueryDialectSpecific:
@@ -194,62 +194,11 @@ class TestPostgresDialectSpecific:
 
 
 # =====================================================================
-# 3. ConnectionManager (DuckDB in-memory)
+# 3. ConnectionManager (CSV-based)
 # =====================================================================
 
 
-class TestConnectionManagerDuckDB:
-    def _make_manager(self):
-        import duckdb
-        config = {"type": "duckdb", "duckdb_path": ":memory:"}
-        mgr = ConnectionManager(config=config)
-        mgr._connection = duckdb.connect(":memory:")
-        mgr._conn_type = "duckdb"
-        return mgr
-
-    def test_instantiate_with_config(self):
-        config = {"type": "duckdb", "duckdb_path": ":memory:"}
-        mgr = ConnectionManager(config=config)
-        assert mgr.connection_type == "duckdb"
-
-    def test_connection_returns_ok(self):
-        mgr = self._make_manager()
-        result = mgr.test_connection()
-        assert result["ok"] is True and result["type"] == "duckdb"
-        mgr.close()
-
-    def test_list_tables_empty(self):
-        mgr = self._make_manager()
-        assert mgr.list_tables() == []
-        mgr.close()
-
-    def test_list_tables_after_create(self):
-        mgr = self._make_manager()
-        mgr._connection.sql("CREATE TABLE test_orders (id INT, amount FLOAT)")
-        assert "test_orders" in mgr.list_tables()
-        mgr.close()
-
-    def test_query_returns_dataframe(self):
-        mgr = self._make_manager()
-        df = mgr.query("SELECT 42 AS answer")
-        assert isinstance(df, pd.DataFrame) and df.iloc[0, 0] == 42
-        mgr.close()
-
-    def test_get_table_schema(self):
-        mgr = self._make_manager()
-        mgr._connection.sql("CREATE TABLE demo (id INTEGER, name VARCHAR)")
-        schema = mgr.get_table_schema("demo")
-        assert isinstance(schema, list) and len(schema) == 2
-        col_names = [c["name"] for c in schema]
-        assert "id" in col_names and "name" in col_names
-        mgr.close()
-
-    def test_close_resets_connection(self):
-        mgr = self._make_manager()
-        assert mgr._connection is not None
-        mgr.close()
-        assert mgr._connection is None
-
+class TestConnectionManagerCSV:
     def test_context_manager_csv(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             config = {"type": "csv", "csv_path": tmpdir}
@@ -312,20 +261,20 @@ class TestCrossModuleImports:
             assert callable(fn)
 
     def test_import_dialects_init(self):
-        for cls in (SQLDialect, DuckDBDialect, PostgresDialect, BigQueryDialect, SnowflakeDialect):
+        for cls in (SQLDialect, ClickHouseDialect, PostgresDialect, BigQueryDialect, SnowflakeDialect):
             assert cls is not None
 
     def test_base_dialect(self):
         assert BaseSQLDialect().name == "base"
 
     def test_dialect_names(self):
-        assert DuckDBDialect().name == "duckdb"
+        assert ClickHouseDialect().name == "clickhouse"
         assert PostgresDialect().name == "postgres"
         assert BigQueryDialect().name == "bigquery"
         assert SnowflakeDialect().name == "snowflake"
 
     def test_router_matches_direct_import(self):
-        assert type(get_dialect("duckdb")) is DuckDBDialect
+        assert type(get_dialect("clickhouse")) is ClickHouseDialect
         assert type(get_dialect("postgres")) is PostgresDialect
         assert type(get_dialect("bigquery")) is BigQueryDialect
         assert type(get_dialect("snowflake")) is SnowflakeDialect

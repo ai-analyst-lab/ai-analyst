@@ -4,7 +4,7 @@ theme: analytics-dark
 size: 16:9
 paginate: true
 html: true
-footer: "AI Analyst Lab | Sample Dark Deck | aianalystlab.ai"
+footer: "AXS Pte Ltd | Sample Dark Deck"
 ---
 
 <!-- _class: dark-title -->

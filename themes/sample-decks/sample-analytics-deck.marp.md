@@ -4,7 +4,7 @@ theme: analytics-light
 size: 16:9
 paginate: true
 html: true
-footer: "AI Analyst Lab | Sample Deck | aianalystlab.ai"
+footer: "AXS Pte Ltd | Sample Deck"
 ---
 
 <!-- _class: title -->

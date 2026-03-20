@@ -64,9 +64,9 @@ class TestGetDataSourceInfo:
         assert info["csv_available"] is False
         assert info["tables"] == []
 
-    def test_no_duckdb(self, tmp_path):
-        info = get_data_source_info(duckdb_path=str(tmp_path / "missing.duckdb"))
-        assert info["duckdb_available"] is False
+    def test_no_data_dir(self, tmp_path):
+        info = get_data_source_info(data_dir=str(tmp_path / "nonexistent"))
+        assert info["csv_available"] is False
 
 
 class TestSchemaToMarkdown:

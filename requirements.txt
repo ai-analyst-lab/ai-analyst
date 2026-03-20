@@ -3,5 +3,5 @@ seaborn>=0.12
 pandas>=2.0
 numpy>=1.24
 scipy>=1.10
-duckdb>=0.9
+clickhouse-connect>=0.6
 pyyaml>=6.0

@@ -12,18 +12,17 @@ profiling the schema, and setting up the knowledge brain.
 
 ## Invocation
 `/connect-data` — start the connection wizard
-`/connect-data type=postgres` — skip type selection
+`/connect-data type=clickhouse` — skip type selection
 
 ## Instructions
 
 ### Step 1: Choose Connection Type
 Present options:
 1. **CSV files** — "I have CSV files in a local directory"
-2. **DuckDB** — "I have a local DuckDB database file"
-3. **MotherDuck** — "I have a MotherDuck cloud database"
-4. **PostgreSQL** — "I have a PostgreSQL database"
-5. **BigQuery** — "I have a Google BigQuery dataset"
-6. **Snowflake** — "I have a Snowflake warehouse"
+2. **ClickHouse** — "I have a ClickHouse database (connects via MCP)"
+3. **PostgreSQL** — "I have a PostgreSQL database"
+4. **BigQuery** — "I have a Google BigQuery dataset"
+5. **Snowflake** — "I have a Snowflake warehouse"
 
 ### Step 2: Collect Connection Details
 
@@ -32,14 +31,10 @@ Present options:
 - Verify the directory exists and contains .csv files
 - List found files and ask to confirm
 
-**For DuckDB:**
-- Ask: "Path to your .duckdb file?"
-- Verify file exists
-- Test connection with `SELECT 1`
-
-**For MotherDuck:**
-- Ask: "Database name and schema?"
-- Note: "MotherDuck connects via MCP. Make sure your token is configured."
+**For ClickHouse:**
+- Ask: "Database name and schema (if any)?"
+- Note: "ClickHouse connects via MCP tools. Make sure your ClickHouse MCP server is configured."
+- Verify the MCP tools are available: `clickhouse_list_databases`
 
 **For PostgreSQL / BigQuery / Snowflake:**
 - Copy the appropriate template from `connection_templates/`
@@ -61,12 +56,16 @@ Use `ConnectionManager` from `helpers/connection_manager.py`:
 3. If fails: show error, offer to retry or edit config
 4. If passes: proceed
 
+For ClickHouse: use the `clickhouse_query` MCP tool to run `SELECT 1` as
+a connectivity test.
+
 ### Step 5: Profile Schema
-1. Call `list_tables()` to enumerate tables
-2. For each table: get column names and types via `get_table_schema()`
-3. Generate `schema.md` using `schema_to_markdown()` from `helpers/data_helpers.py`
-4. Write to `.knowledge/datasets/{id}/schema.md`
-5. Offer to run full data profiling: "Want me to deep-profile this dataset?"
+1. For ClickHouse: use `clickhouse_list_tables` and `clickhouse_describe_table` MCP tools
+2. For CSV: call `list_tables()` and read column info via pandas
+3. For other warehouses: use `ConnectionManager.list_tables()` and `get_table_schema()`
+4. Generate `schema.md` using `schema_to_markdown()` from `helpers/data_helpers.py`
+5. Write to `.knowledge/datasets/{id}/schema.md`
+6. Offer to run full data profiling: "Want me to deep-profile this dataset?"
 
 ### Step 6: Set Active
 1. Update `.knowledge/active.yaml` to point to the new dataset
@@ -88,3 +87,4 @@ Use `ConnectionManager` from `helpers/connection_manager.py`:
 - **Connection fails repeatedly:** Suggest checking credentials, firewall, VPN
 - **Schema too large (>100 tables):** Profile only, skip per-table details
 - **Dataset name collision:** Append a number (e.g., "mydata-2")
+- **ClickHouse MCP not configured:** Guide user to set up MCP server in `.claude/mcp.json`

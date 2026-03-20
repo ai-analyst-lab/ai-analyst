@@ -43,7 +43,7 @@ CONTRACT_END -->
 Perform drivers analysis, segmentation, and funnel analysis on a dataset to identify what is happening, why, and which factors matter most, producing a structured analysis report with charts, tables, and key findings.
 
 ## Inputs
-- {{DATASET}}: The data source to analyze. Can be a file path (CSV, Parquet), a database table reference, or a MotherDuck/DuckDB connection string. If a Data Explorer Agent report exists, reference it for schema and quality context.
+- {{DATASET}}: The data source to analyze. Can be a file path (CSV, Parquet), a database table reference, or a ClickHouse connection. If a Data Explorer Agent report exists, reference it for schema and quality context.
 - {{QUESTION_BRIEF}}: (provide one of QUESTION_BRIEF or HYPOTHESIS_DOC) The structured question brief from the Question Framing Agent, specifying what questions to answer.
 - {{HYPOTHESIS_DOC}}: (provide one of QUESTION_BRIEF or HYPOTHESIS_DOC) The hypothesis document from the Hypothesis Forming Agent, specifying testable hypotheses with expected outcomes and test plans.
 - {{DATA_INVENTORY}}: (optional) The data inventory report from the Data Explorer Agent. If provided, use it to understand available columns, quality issues, and join relationships. Avoids redundant data profiling.

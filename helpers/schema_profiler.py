@@ -25,12 +25,6 @@ from pathlib import Path
 
 import pandas as pd
 
-# Optional imports — CSV path works without these.
-try:
-    import duckdb
-    _DUCKDB_AVAILABLE = True
-except ImportError:
-    _DUCKDB_AVAILABLE = False
 
 
 # ---------------------------------------------------------------------------
@@ -137,54 +131,6 @@ def _profile_column(series, col_name):
         "description": "",
         "stats": stats,
     }
-
-
-# ---------------------------------------------------------------------------
-# Table-level profiling (DuckDB path)
-# ---------------------------------------------------------------------------
-
-def _profile_table_duckdb(conn, table_name, schema_prefix=""):
-    """Profile a single table via DuckDB connection."""
-    qualified = f"{schema_prefix}.{table_name}" if schema_prefix else table_name
-
-    # Row count
-    try:
-        row_count = int(conn.sql(f"SELECT COUNT(*) AS n FROM {qualified}").fetchone()[0])
-    except Exception:
-        row_count = 0
-
-    # Load into DataFrame for profiling (limit to 50k rows for speed)
-    try:
-        if row_count > 50_000:
-            df = conn.sql(
-                f"SELECT * FROM {qualified} USING SAMPLE 50000"
-            ).df()
-        else:
-            df = conn.sql(f"SELECT * FROM {qualified}").df()
-    except Exception:
-        # Fallback: try without sampling syntax
-        try:
-            df = conn.sql(f"SELECT * FROM {qualified} LIMIT 50000").df()
-        except Exception:
-            return {
-                "name": table_name,
-                "row_count": row_count,
-                "description": "",
-                "columns": [],
-                "date_columns": [],
-                "date_range": None,
-            }
-
-    # Get SQL types from DESCRIBE
-    sql_types = {}
-    try:
-        desc_df = conn.sql(f"DESCRIBE {qualified}").df()
-        for _, row in desc_df.iterrows():
-            sql_types[row["column_name"]] = row["column_type"]
-    except Exception:
-        pass
-
-    return _profile_table_from_df(df, table_name, row_count, sql_types)
 
 
 # ---------------------------------------------------------------------------
@@ -356,27 +302,18 @@ def profile_source(connection_info=None):
 
     profiled_tables = []
 
-    if src_type == "duckdb" and connection_info.get("connection") is not None:
-        conn = connection_info["connection"]
-        for table_name in tables_list:
-            try:
-                table_profile = _profile_table_duckdb(conn, table_name, schema_prefix)
-                profiled_tables.append(table_profile)
-            except Exception as exc:
-                print(
-                    f"[schema_profiler] Warning: could not profile table "
-                    f"'{table_name}' via DuckDB: {exc}"
-                )
-                profiled_tables.append({
-                    "name": table_name,
-                    "row_count": 0,
-                    "description": "",
-                    "columns": [],
-                    "date_columns": [],
-                    "date_range": None,
-                })
-    else:
-        # CSV path
+    if src_type == "clickhouse":
+        # ClickHouse profiling happens via MCP tools (clickhouse_query,
+        # clickhouse_describe_table). Return empty profile — agents will
+        # use MCP tools directly to introspect the schema.
+        return {
+            "dataset": connection_info.get("schema_prefix", "unknown") or "local",
+            "profiled_at": datetime.utcnow().isoformat() + "Z",
+            "tables": [],
+        }
+
+    # CSV path
+    if True:
         csv_dir = connection_info.get("csv_dir", "data/")
         for table_name in tables_list:
             try:
@@ -819,7 +756,7 @@ def get_table_reference(table_name, schema=None):
             "qualified_name": str (e.g., "my_dataset.orders"),
             "schema": str (e.g., "my_dataset"),
             "table": str (e.g., "orders"),
-            "connection_type": str (e.g., "motherduck"),
+            "connection_type": str (e.g., "clickhouse"),
             "exists": bool (True if table is in the dataset's known tables),
         }
     """
@@ -863,7 +800,7 @@ def get_table_reference(table_name, schema=None):
 def profile_external_warehouse(connection_config):
     """Profile an external warehouse using ConnectionManager.
 
-    Supports PostgreSQL, BigQuery, Snowflake, and DuckDB connections.
+    Supports PostgreSQL, BigQuery, Snowflake, and ClickHouse connections.
     Uses the SQL dialect system for warehouse-specific introspection queries.
 
     Args:

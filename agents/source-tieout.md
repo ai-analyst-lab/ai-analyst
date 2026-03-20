@@ -1,13 +1,9 @@
 <!-- CONTRACT_START
 name: source-tieout
-description: Verify data loading integrity by comparing pandas direct-read vs DuckDB SQL on foundational metrics. HALT on mismatch.
+description: Verify data loading integrity by comparing pandas direct-read vs SQL query on foundational metrics. HALT on mismatch.
 inputs:
   - name: DATA_SOURCE
     type: file
-    source: system
-    required: true
-  - name: DUCKDB_PATH
-    type: str
     source: system
     required: true
   - name: DATASET_NAME
@@ -34,13 +30,12 @@ CONTRACT_END -->
 # Agent: Source Tie-Out
 
 ## Purpose
-Verify data loading integrity by reading source files two independent ways (pandas direct read vs DuckDB SQL) and comparing foundational metrics. Catches data loading errors — wrong delimiter, dropped rows, date misparsing, encoding issues — that would otherwise corrupt both the analysis and its validation. Acts as a pipeline gate: FAIL halts the pipeline before analysis begins.
+Verify data loading integrity by reading source files two independent ways (pandas direct read vs SQL query via MCP) and comparing foundational metrics. Catches data loading errors — wrong delimiter, dropped rows, date misparsing, encoding issues — that would otherwise corrupt both the analysis and its validation. Acts as a pipeline gate: FAIL halts the pipeline before analysis begins.
 
 ## Inputs
 - {{DATA_SOURCE}}: Path to the source data file(s) — CSV, Excel, Parquet, or JSON. Can be a single file or a directory of files.
-- {{DUCKDB_PATH}}: Path to the DuckDB database file (e.g., `working/hawaii.duckdb`). If using MotherDuck, provide the connection string.
-- {{DATASET_NAME}}: Short name for output file naming (e.g., "hawaii", "my_dataset").
-- {{TABLE_MAPPING}}: (optional) Explicit mapping of source files to DuckDB table names, as `file.csv:table_name` pairs. If not provided, the agent will auto-discover the mapping by matching filenames to table names.
+- {{DATASET_NAME}}: Short name for output file naming (e.g., "payments", "my_dataset").
+- {{TABLE_MAPPING}}: (optional) Explicit mapping of source files to database table names, as `file.csv:table_name` pairs. If not provided, the agent will auto-discover the mapping by matching filenames to table names.
 
 ## Workflow
 
@@ -52,19 +47,23 @@ Before discovering the source-to-table mapping, run an automated schema profile 
 from helpers.data_helpers import get_connection_for_profiling
 from helpers.schema_profiler import profile_source, profile_external_warehouse, discover_relationships
 
-# Get connection (auto-detects DuckDB vs CSV from active dataset)
+# Get connection (auto-detects ClickHouse vs CSV from active dataset)
 conn_info = get_connection_for_profiling()
 
 # For external warehouses (Postgres, BigQuery, Snowflake), use ConnectionManager:
 if conn_info.get("type") in ("postgres", "bigquery", "snowflake"):
     schema = profile_external_warehouse(conn_info)
+elif conn_info.get("type") == "clickhouse":
+    # ClickHouse schema is profiled via MCP tools:
+    # Use clickhouse_list_tables and clickhouse_describe_table
+    pass
 else:
-    # DuckDB or CSV path
+    # CSV path
     schema = profile_source(conn_info)
 
 # Use SQL dialect for warehouse-specific queries in tie-out:
 from helpers.sql_dialect import get_dialect
-dialect = get_dialect(conn_info.get("type", "duckdb"))
+dialect = get_dialect(conn_info.get("type", "clickhouse"))
 
 # Discover FK relationships between tables via name matching + value overlap
 relationships = discover_relationships(schema)
@@ -107,70 +106,72 @@ Write the schema pre-scan results to the top of the tie-out mapping file (`worki
 This pre-scan replaces manual column selection — the profiler's output drives which checks run in Steps 2-4. If `{{TABLE_MAPPING}}` is provided, use it to filter the schema results to only the mapped tables. If not provided, use the full schema to inform Step 1's auto-discovery.
 
 ### Step 1: Discover Source-to-Table Mapping
-Map each source file to its corresponding DuckDB table.
+Map each source file to its corresponding database table.
 
 **If {{TABLE_MAPPING}} is provided:**
-- Parse the explicit mapping and verify each file exists and each table exists in DuckDB.
+- Parse the explicit mapping and verify each file exists and each table exists in the database.
 
 **If {{TABLE_MAPPING}} is not provided:**
 - List all data files in {{DATA_SOURCE}} (or treat it as a single file).
-- List all tables in the DuckDB database at {{DUCKDB_PATH}}.
+- List all tables in the database (via `clickhouse_list_tables` MCP tool for ClickHouse, or `list_tables()` for CSV).
 - Match by name: strip extension and common prefixes/suffixes from the filename, then find the best-matching table name.
 - If any source file cannot be matched to a table, log it as SKIPPED with a reason.
 
 Write the mapping to `working/tieout_mapping.md` as intermediate output:
 
 ```markdown
-| Source File | DuckDB Table | Match Method |
-|-------------|-------------|--------------|
-| 2025-total.xlsx | tourism_2025 | name match |
-| arrivals.csv | arrivals | exact match |
+| Source File | Database Table | Match Method |
+|-------------|---------------|--------------|
+| payments.csv | payments | exact match |
+| transactions.xlsx | transactions | name match |
 ```
 
 ### Step 2: Read Source Files via Pandas
 For each mapped source file:
 
 1. Import `read_source_direct` and `profile_dataframe` from `helpers/tieout_helpers.py`.
-2. Call `read_source_direct(file_path)` to read the file using pandas only — no DuckDB in this code path.
+2. Call `read_source_direct(file_path)` to read the file using pandas only — no SQL in this code path.
 3. Call `profile_dataframe(df, label="source")` to compute: row count, column names, null counts, numeric sums, distinct counts, date ranges.
 4. Store the profile for comparison.
 
 If a file fails to read (encoding error, corrupt file, unsupported format), record it as a FAIL result immediately and continue to the next file.
 
-### Step 3: Query DuckDB for the Same Metrics
-For each mapped DuckDB table, compute the **same metrics** using SQL — a completely different code path:
+### Step 3: Query Database for the Same Metrics
+For each mapped database table, compute the **same metrics** using SQL — a completely different code path.
 
-```python
-import duckdb
+**For ClickHouse** (via MCP tools):
 
-con = duckdb.connect("{{DUCKDB_PATH}}")
+Use the `clickhouse_query` MCP tool to run each query:
 
-# Row count
-con.sql("SELECT COUNT(*) FROM table_name")
+```sql
+-- Row count
+SELECT COUNT(*) FROM table_name
 
-# Column names
-con.sql("DESCRIBE table_name")
+-- Column names
+DESCRIBE TABLE table_name
 
-# Null counts per column
-con.sql("SELECT COUNT(*) - COUNT(col) AS nulls FROM table_name")
+-- Null counts per column
+SELECT COUNT(*) - COUNT(col) AS nulls FROM table_name
 
-# Numeric sums
-con.sql("SELECT SUM(numeric_col) FROM table_name")
+-- Numeric sums
+SELECT SUM(numeric_col) FROM table_name
 
-# Distinct counts
-con.sql("SELECT COUNT(DISTINCT col) FROM table_name")
+-- Distinct counts
+SELECT COUNT(DISTINCT col) FROM table_name
 
-# Date ranges
-con.sql("SELECT MIN(date_col), MAX(date_col) FROM table_name")
+-- Date ranges
+SELECT MIN(date_col), MAX(date_col) FROM table_name
 ```
 
-Assemble these into a profile dict with the same structure as `profile_dataframe()` output, using `label="duckdb"`.
+**For CSV:** Use pandas to read the CSV and compute the same metrics.
+
+Assemble these into a profile dict with the same structure as `profile_dataframe()` output, using `label="sql"`.
 
 ### Step 4: Compare Profiles
 For each source-table pair:
 
 1. Import `compare_profiles`, `format_tieout_table`, and `overall_status` from `helpers/tieout_helpers.py`.
-2. Call `compare_profiles(source_profile, duckdb_profile)`.
+2. Call `compare_profiles(source_profile, sql_profile)`.
 3. This runs two tiers of checks:
    - **Tier 1 — Structural integrity:** Row count (exact match), column names (exact match), null counts per column (exact match).
    - **Tier 2 — Aggregation integrity:** Numeric sums (within 0.01%), distinct counts (exact match), date ranges (exact match).
@@ -181,7 +182,7 @@ For each source-table pair:
 If the analysis has already produced findings (i.e., this is a late-stage tie-out), re-compute the top 5-10 quantitative claims via both paths:
 
 1. For each claim, write a pandas computation against the source file.
-2. Write an equivalent SQL query against DuckDB.
+2. Write an equivalent SQL query against the database.
 3. Compare results within 0.1% tolerance.
 
 This step is OPTIONAL and only applies when re-validating after analysis. Skip it when running as a pre-analysis gate.
@@ -208,7 +209,7 @@ Where `{{DATE}}` is the current date in YYYY-MM-DD format.
 
 **Generated:** {{DATE}}
 **Source:** {{DATA_SOURCE}}
-**DuckDB:** {{DUCKDB_PATH}}
+**Database:** ClickHouse via MCP / CSV
 **Tables checked:** [count]
 
 ---
@@ -222,13 +223,13 @@ Where `{{DATE}}` is the current date in YYYY-MM-DD format.
 ## Table: [table_name]
 
 **Source file:** [path]
-**DuckDB table:** [name]
+**Database table:** [name]
 **Status:** [PASS | WARN | FAIL]
 
 ### Comparison
 
-| Check | Metric | Source | DuckDB | Status | Detail |
-|-------|--------|--------|--------|--------|--------|
+| Check | Metric | Source | SQL | Status | Detail |
+|-------|--------|--------|-----|--------|--------|
 | Row count | rows | 1,234 | 1,234 | PASS | Match |
 | Column names | columns | 12 | 12 | PASS | All columns match |
 | Null count | revenue | 0 | 0 | PASS | Match |
@@ -249,7 +250,7 @@ Where `{{DATE}}` is the current date in YYYY-MM-DD format.
 ---
 
 ## Files Skipped
-[List any source files that could not be matched to a DuckDB table, with reasons]
+[List any source files that could not be matched to a database table, with reasons]
 
 ## Recommendations
 [If HALT: specific actions to fix the data loading issue]
@@ -260,7 +261,7 @@ Where `{{DATE}}` is the current date in YYYY-MM-DD format.
 - `helpers/tieout_helpers.py` — `read_source_direct()`, `profile_dataframe()`, `compare_profiles()`, `format_tieout_table()`, `overall_status()`
 
 ## Validation
-1. **Independence of code paths**: Verify that the pandas read (Step 2) and DuckDB query (Step 3) use completely different code — no shared functions, no DuckDB in Step 2, no pandas in Step 3. The whole point is dual-path verification.
+1. **Independence of code paths**: Verify that the pandas read (Step 2) and SQL query (Step 3) use completely different code — no shared functions, no SQL in Step 2, no pandas in Step 3. The whole point is dual-path verification.
 2. **All mapped tables are checked**: Count the tables in the mapping (Step 1) and count the table sections in the report. They must match (minus any SKIPPED files).
 3. **Gate decision is consistent**: Re-read the individual table statuses and verify the overall gate decision follows the rules in Step 6. A single FAIL must produce HALT.
 4. **Tolerances are correct**: Row counts and distinct counts use exact match (0 tolerance). Numeric sums use 0.01% tolerance. Claim-level uses 0.1%. Verify no check uses a looser tolerance than specified.

@@ -21,7 +21,7 @@ What should have happened instead.
 - OS: [e.g., macOS 14.2, Ubuntu 22.04]
 - Python version: [e.g., 3.11.5]
 - Claude Code version: [run `claude --version`]
-- Data source: [MotherDuck / local DuckDB / CSV]
+- Data source: [ClickHouse / CSV / Postgres / BigQuery / Snowflake]
 
 **Error output**
 ```

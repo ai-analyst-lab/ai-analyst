@@ -75,7 +75,7 @@ agents:
       - data-explorer
     inputs:
       - DATA_SOURCE
-      - DUCKDB_PATH
+      - CLICKHOUSE_CONNECTION
       - DATASET_NAME
       - TABLE_MAPPING
     outputs:
