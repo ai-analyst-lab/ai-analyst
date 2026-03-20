@@ -92,7 +92,7 @@ theme: analytics
 size: 16:9
 paginate: true
 html: true
-footer: "AI Analyst Lab | [Client/Dataset] | [Month Year]"
+footer: "AXS Pte Ltd | [Client/Dataset] | [Month Year]"
 ---
 ```
 
@@ -158,7 +158,7 @@ theme: analytics
 size: 16:9
 paginate: true
 html: true
-footer: "AI Analyst Lab | {{DISPLAY_NAME}} | February 2026"
+footer: "AXS Pte Ltd | {{DISPLAY_NAME}} | February 2026"
 ---
 
 <!-- _class: insight -->
@@ -425,7 +425,7 @@ theme: analytics
 size: 16:9
 paginate: true
 html: true
-footer: "AI Analyst Lab | [Client/Dataset] | [Month Year]"
+footer: "AXS Pte Ltd | [Client/Dataset] | [Month Year]"
 ---
 
 # For analytics-dark theme:
@@ -435,7 +435,7 @@ theme: analytics-dark
 size: 16:9
 paginate: true
 html: true
-footer: "AI Analyst Lab | [Client/Dataset] | [Month Year]"
+footer: "AXS Pte Ltd | [Client/Dataset] | [Month Year]"
 ---
 ```
 

@@ -9,7 +9,7 @@ title = "AI Analyst gitleaks config"
   ]
   regexTarget = "match"
   regexes = [
-    '''your-motherduck-token-here''',
+    '''your-clickhouse-password-here''',
     '''your-token-here''',
     '''your_password''',
     '''your-proxy:port''',

@@ -31,7 +31,7 @@ Discover what data exists in a given source, profile its quality and completenes
 - {{DATA_SOURCE}}: The data source to explore. This can be:
   - A file path to a CSV, Parquet, or JSON file (e.g., `data/{dataset}/events.csv`)
   - A directory containing multiple data files (e.g., `data/{dataset}/`)
-  - A MotherDuck/DuckDB connection string (e.g., `md:{database}`)
+  - A ClickHouse connection (via MCP)
   - An external warehouse via ConnectionManager (Postgres, BigQuery, Snowflake)
   - A SQLite database file path (e.g., `data/analytics.db`)
   - A description of the data source with connection instructions
@@ -60,7 +60,7 @@ Connect to {{DATA_SOURCE}} and enumerate all available data objects:
 - Sample the first 10 rows to understand the data shape
 - Identify the delimiter, encoding, and any parsing issues
 
-**For database sources (MotherDuck, DuckDB, SQLite):**
+**For database sources (ClickHouse, Postgres, BigQuery, Snowflake):**
 - List all schemas, tables, and views
 - For each table: column names, data types, row count
 - Identify primary keys, foreign keys, and indexes where visible

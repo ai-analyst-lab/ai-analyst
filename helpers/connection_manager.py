@@ -2,7 +2,7 @@
 Connection Manager — unified interface for multi-warehouse connections.
 
 Manages connection lifecycle for different data warehouse backends:
-MotherDuck/DuckDB (native), PostgreSQL, BigQuery, and Snowflake.
+ClickHouse (via MCP), PostgreSQL, BigQuery, Snowflake, and CSV.
 
 Usage:
     from helpers.connection_manager import ConnectionManager
@@ -22,13 +22,6 @@ from pathlib import Path
 
 import pandas as pd
 
-# Optional imports — each warehouse backend is optional.
-try:
-    import duckdb
-    _DUCKDB_AVAILABLE = True
-except ImportError:
-    _DUCKDB_AVAILABLE = False
-
 try:
     import yaml
     _YAML_AVAILABLE = True
@@ -38,8 +31,7 @@ except ImportError:
 
 # Supported connection types and their required packages.
 SUPPORTED_TYPES = {
-    "motherduck": {"package": "duckdb", "installed": _DUCKDB_AVAILABLE},
-    "duckdb": {"package": "duckdb", "installed": _DUCKDB_AVAILABLE},
+    "clickhouse": {"package": None, "installed": True},  # MCP handles connectivity
     "csv": {"package": None, "installed": True},
     "postgres": {"package": "psycopg2", "installed": False},
     "bigquery": {"package": "google-cloud-bigquery", "installed": False},
@@ -105,7 +97,6 @@ class ConnectionManager:
                 "dataset_id": source.get("source", "unknown"),
                 "display_name": source.get("display_name", "Unknown"),
                 "schema_prefix": source.get("schema_prefix", ""),
-                "duckdb_path": source.get("duckdb_path"),
                 "csv_path": source.get("csv_path"),
                 "connection": source.get("connection", {}),
             }
@@ -131,8 +122,8 @@ class ConnectionManager:
         """
         conn_type = self._conn_type
 
-        if conn_type in ("motherduck", "duckdb"):
-            self._connect_duckdb()
+        if conn_type == "clickhouse":
+            self._connect_clickhouse()
         elif conn_type == "postgres":
             self._connect_postgres()
         elif conn_type == "bigquery":
@@ -166,11 +157,15 @@ class ConnectionManager:
             dict: {ok: bool, type: str, message: str}
         """
         try:
-            if self._conn_type in ("motherduck", "duckdb"):
-                if self._connection is None:
-                    self.connect()
-                self._connection.sql("SELECT 1").fetchone()
-                return {"ok": True, "type": self._conn_type, "message": "Connected"}
+            if self._conn_type == "clickhouse":
+                return {
+                    "ok": True,
+                    "type": "clickhouse",
+                    "message": (
+                        "ClickHouse connection is managed by MCP. "
+                        "Use clickhouse_query tool to run SELECT 1 to verify."
+                    ),
+                }
 
             elif self._conn_type == "postgres":
                 if self._connection is None:
@@ -204,12 +199,9 @@ class ConnectionManager:
         Returns:
             list[str]: Sorted table names.
         """
-        if self._conn_type in ("motherduck", "duckdb") and self._connection:
-            try:
-                df = self._connection.sql("SHOW TABLES").df()
-                return sorted(df["name"].tolist()) if "name" in df.columns else []
-            except Exception:
-                return []
+        if self._conn_type == "clickhouse":
+            # ClickHouse tables are listed via MCP: clickhouse_list_tables
+            return []
 
         elif self._conn_type == "postgres" and self._connection:
             try:
@@ -243,19 +235,9 @@ class ConnectionManager:
         Returns:
             list[dict]: Each dict has keys: name, type, nullable.
         """
-        if self._conn_type in ("motherduck", "duckdb") and self._connection:
-            try:
-                df = self._connection.sql(f"DESCRIBE {table_name}").df()
-                columns = []
-                for _, row in df.iterrows():
-                    columns.append({
-                        "name": row.get("column_name", row.get("Field", "")),
-                        "type": row.get("column_type", row.get("Type", "")),
-                        "nullable": row.get("null", "YES") == "YES",
-                    })
-                return columns
-            except Exception:
-                return []
+        if self._conn_type == "clickhouse":
+            # ClickHouse schema is inspected via MCP: clickhouse_describe_table
+            return []
 
         elif self._conn_type == "csv":
             csv_dir = self._csv_dir or self._config.get("csv_path", "")
@@ -282,8 +264,11 @@ class ConnectionManager:
         Raises:
             RuntimeError: If no SQL-capable connection is available.
         """
-        if self._conn_type in ("motherduck", "duckdb") and self._connection:
-            return self._connection.sql(sql).df()
+        if self._conn_type == "clickhouse":
+            raise RuntimeError(
+                "ClickHouse queries should be executed via MCP tools "
+                "(clickhouse_query). Use the MCP tool directly."
+            )
 
         elif self._conn_type == "postgres" and self._connection:
             return pd.read_sql(sql, self._connection)
@@ -304,8 +289,11 @@ class ConnectionManager:
         Returns:
             pandas.DataFrame
         """
-        if self._conn_type in ("motherduck", "duckdb") and self._connection:
-            return self._connection.sql(f"SELECT * FROM {table_name}").df()
+        if self._conn_type == "clickhouse":
+            raise RuntimeError(
+                "ClickHouse tables should be read via MCP tools "
+                "(clickhouse_query with SELECT *). Use the MCP tool directly."
+            )
 
         elif self._conn_type == "csv":
             csv_dir = self._csv_dir or self._config.get("csv_path", "")
@@ -340,6 +328,8 @@ class ConnectionManager:
         if self._conn_type == "csv":
             csv_dir = self._csv_dir or self._config.get("csv_path", "")
             return Path(csv_dir).is_dir()
+        if self._conn_type == "clickhouse":
+            return True  # MCP handles connectivity
         return self._connection is not None
 
     @property
@@ -351,19 +341,11 @@ class ConnectionManager:
     # Backend-specific connectors (private)
     # ------------------------------------------------------------------
 
-    def _connect_duckdb(self):
-        """Connect to local DuckDB or MotherDuck fallback."""
-        if not _DUCKDB_AVAILABLE:
-            raise ConnectionError("duckdb package not installed. pip install duckdb")
-
-        db_path = self._config.get("duckdb_path")
-        if db_path and Path(db_path).exists():
-            self._connection = duckdb.connect(str(db_path), read_only=True)
-            self._conn_type = "duckdb"
-        else:
-            # Fallback to CSV
-            self._conn_type = "csv"
-            self._connect_csv()
+    def _connect_clickhouse(self):
+        """ClickHouse connection is managed by MCP tools."""
+        self._conn_type = "clickhouse"
+        # No local connection object — all queries go through MCP tools:
+        # clickhouse_query, clickhouse_list_tables, clickhouse_describe_table
 
     def _connect_csv(self):
         """Set up CSV-based access."""

@@ -4,7 +4,7 @@
 
 - **Python 3.10+** with pip
 - **Claude Code** CLI installed ([docs](https://docs.anthropic.com/en/docs/claude-code))
-- Your data in CSV, DuckDB, or a supported warehouse (Postgres, BigQuery, Snowflake)
+- Your data in CSV files or a supported warehouse (ClickHouse, Postgres, BigQuery, Snowflake)
 
 ## Quick Start
 
@@ -28,7 +28,7 @@ On first launch, Claude will detect a fresh install and start the interactive
 setup interview. It walks you through:
 
 1. **Your role and team** -- so Claude adapts its communication style
-2. **Your data source** -- CSV directory, DuckDB file, or warehouse connection
+2. **Your data source** -- CSV directory or warehouse connection (ClickHouse, Postgres, BigQuery, Snowflake)
 3. **Your business context** -- what your company does, key metrics, team structure
 4. **Your preferences** -- output formats, chart style, export channels
 
@@ -59,14 +59,9 @@ Or run the full analysis pipeline:
 Place your CSV files in a directory (e.g., `data/my_dataset/`) and tell Claude
 during setup. Each `.csv` file becomes a queryable table.
 
-### Local DuckDB
-
-Point Claude to a `.duckdb` file during setup. DuckDB provides fast SQL
-queries over local data.
-
 ### External Warehouses
 
-For Postgres, BigQuery, or Snowflake connections, you'll need to configure
+For ClickHouse, Postgres, BigQuery, or Snowflake connections, you'll need to configure
 MCP (Model Context Protocol) servers. Run `/connect-data` and follow the
 prompts.
 

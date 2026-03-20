@@ -1,13 +1,13 @@
 # Analytics Chart Style Guide
 
-**Internal reference for all AI Analytics for Builders course visuals.**
+**Internal reference for AXS Pte Ltd analytics visuals.**
 Based on Cole Nussbaumer Knaflic's *Storytelling with Data* (SWD) principles.
 
 ---
 
 ## Philosophy
 
-Every chart in this course follows one rule: **one chart, one story.**
+Every chart follows one rule: **one chart, one story.**
 
 - The title states the takeaway, not a description
 - Gray everything, then highlight the one thing that matters

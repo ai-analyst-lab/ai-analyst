@@ -1,13 +1,13 @@
 """
 Data Source Helpers — abstraction layer for local data access.
 
-Provides unified access to dataset data via MotherDuck MCP, local DuckDB,
-or CSV fallback. Reads ``.knowledge/active.yaml`` to determine the active
-dataset and routes queries transparently.
+Provides unified access to dataset data via ClickHouse MCP or CSV fallback.
+Reads ``.knowledge/active.yaml`` to determine the active dataset and routes
+queries transparently.
 
 Usage:
     from helpers.data_helpers import (
-        get_local_connection, read_table, list_tables,
+        read_table, list_tables,
         get_data_source_info, detect_active_source, check_connection,
         get_connection_for_profiling, schema_to_markdown,
     )
@@ -15,12 +15,7 @@ Usage:
     # Auto-detect active source
     source = detect_active_source()
 
-    # DuckDB path
-    conn = get_local_connection("path/to/your.duckdb")
-    if conn:
-        df = conn.sql("SELECT * FROM orders LIMIT 10").df()
-
-    # CSV fallback
+    # CSV access
     df = read_table("orders", data_dir="data/your_dataset/")
 
     # Discovery
@@ -31,13 +26,6 @@ Usage:
 from pathlib import Path
 
 import pandas as pd
-
-# Optional imports — CSV path works without these.
-try:
-    import duckdb
-    _DUCKDB_AVAILABLE = True
-except ImportError:
-    _DUCKDB_AVAILABLE = False
 
 try:
     import yaml
@@ -50,57 +38,7 @@ except ImportError:
 # Default paths (relative to project root)
 # ---------------------------------------------------------------------------
 
-_DEFAULT_DUCKDB_PATH = None  # Set via manifest.yaml or detect_active_source()
 _DEFAULT_DATA_DIR = None  # Set via manifest.yaml or detect_active_source()
-
-
-# ---------------------------------------------------------------------------
-# DuckDB connection
-# ---------------------------------------------------------------------------
-
-def get_local_connection(duckdb_path=None):
-    """Open a read-only connection to a local DuckDB file.
-
-    Args:
-        duckdb_path: Path to the DuckDB file, relative to the repo root.
-            If None, attempts to resolve from the active dataset manifest.
-
-    Returns:
-        duckdb.Connection if the file exists and the connection succeeds,
-        or ``None`` if DuckDB is not installed or the file is missing.
-    """
-    if not _DUCKDB_AVAILABLE:
-        print(
-            "[data_helpers] duckdb is not installed. "
-            "Install it with: pip install duckdb"
-        )
-        return None
-
-    if duckdb_path is None:
-        # Try to resolve from active dataset
-        source = detect_active_source()
-        duckdb_path = source.get("duckdb_path")
-        if duckdb_path is None:
-            print("[data_helpers] No DuckDB path configured. Use /connect-data to set up a dataset.")
-            return None
-
-    path = Path(duckdb_path)
-    if not path.exists():
-        print(
-            f"[data_helpers] DuckDB file not found: {path}\n"
-            "  Tip: run the data setup notebook or use read_table() for CSV access."
-        )
-        return None
-
-    try:
-        conn = duckdb.connect(str(path), read_only=True)
-        return conn
-    except Exception as exc:
-        print(
-            f"[data_helpers] Could not connect to DuckDB at {path}: {exc}\n"
-            "  Tip: the file may be corrupted. Re-download or use CSV fallback."
-        )
-        return None
 
 
 # ---------------------------------------------------------------------------
@@ -183,32 +121,23 @@ def list_tables(data_dir=None):
 # Data source info
 # ---------------------------------------------------------------------------
 
-def get_data_source_info(
-    duckdb_path=None,
-    data_dir=None,
-):
+def get_data_source_info(data_dir=None):
     """Return a dict describing the current data source status.
 
-    Checks whether DuckDB is available, whether CSV files are present, and
-    enumerates the tables that can be found.
+    Checks whether CSV files are present and enumerates the tables
+    that can be found.
 
     Args:
-        duckdb_path: Path to the local DuckDB file.
         data_dir: Directory containing CSV files.
 
     Returns:
         dict with keys:
-            duckdb_available (bool), duckdb_path (str),
             csv_available (bool), csv_dir (str),
             tables (list of str)
     """
     csv_tables = list_tables(data_dir)
 
-    duckdb_ok = _DUCKDB_AVAILABLE and duckdb_path is not None and Path(duckdb_path).exists()
-
     return {
-        "duckdb_available": duckdb_ok,
-        "duckdb_path": str(duckdb_path),
         "csv_available": len(csv_tables) > 0,
         "csv_dir": str(data_dir),
         "tables": csv_tables,
@@ -234,9 +163,8 @@ def detect_active_source():
         dict with keys:
             source (str): Dataset ID (e.g., "my_dataset").
             display_name (str): Human-readable name.
-            type (str): "motherduck", "duckdb", or "csv".
+            type (str): "clickhouse" or "csv".
             schema_prefix (str): SQL schema prefix for queries.
-            duckdb_path (str|None): Path to local DuckDB file.
             csv_path (str|None): Path to local CSV directory.
             connection (dict): Raw connection config from manifest.
     """
@@ -259,17 +187,14 @@ def detect_active_source():
         "display_name": manifest.get("display_name", active_dataset),
         "type": conn.get("type", "csv"),
         "schema_prefix": conn.get("schema_prefix", ""),
-        "duckdb_path": local_data.get("duckdb"),
         "csv_path": local_data.get("path"),
         "connection": conn,
     }
 
     # --- Determine best available connection type ---
-    # Priority: motherduck > local duckdb > csv
-    if conn.get("type") == "motherduck":
-        source_info["type"] = "motherduck"
-    elif source_info["duckdb_path"] and Path(source_info["duckdb_path"]).exists():
-        source_info["type"] = "duckdb"
+    # Priority: clickhouse > csv
+    if conn.get("type") == "clickhouse":
+        source_info["type"] = "clickhouse"
     elif source_info["csv_path"] and Path(source_info["csv_path"]).is_dir():
         source_info["type"] = "csv"
     else:
@@ -313,7 +238,6 @@ def _fallback_source(dataset_id):
         "display_name": dataset_id,
         "type": "none",
         "schema_prefix": "",
-        "duckdb_path": None,
         "csv_path": None,
         "connection": {},
     }
@@ -328,8 +252,7 @@ def check_connection(source_info=None):
     """Verify connectivity to the active data source.
 
     Runs a lightweight probe against the detected (or provided) source.
-    For MotherDuck this is a no-op (MCP handles connectivity). For local
-    DuckDB it opens a read-only connection and runs ``SELECT 1``. For CSV
+    For ClickHouse this is a no-op (MCP handles connectivity). For CSV
     it checks that the data directory exists and contains files.
 
     Args:
@@ -349,52 +272,17 @@ def check_connection(source_info=None):
     src_type = source_info.get("type", "csv")
     src_name = source_info.get("source", "unknown")
 
-    # --- MotherDuck: connectivity is managed by MCP, we can't probe it here.
-    if src_type == "motherduck":
+    # --- ClickHouse: connectivity is managed by MCP, we can't probe it here.
+    if src_type == "clickhouse":
         return {
             "ok": True,
             "source": src_name,
-            "type": "motherduck",
+            "type": "clickhouse",
             "message": (
-                "MotherDuck connection is managed by MCP. "
-                "Run a simple query (SELECT 1) to verify."
+                "ClickHouse connection is managed by MCP. "
+                "Run a simple query (SELECT 1) via clickhouse_query to verify."
             ),
         }
-
-    # --- Local DuckDB ---
-    if src_type == "duckdb":
-        db_path = source_info.get("duckdb_path")
-        if not db_path or not Path(db_path).exists():
-            return {
-                "ok": False,
-                "source": src_name,
-                "type": "duckdb",
-                "message": f"DuckDB file not found: {db_path}",
-            }
-        if not _DUCKDB_AVAILABLE:
-            return {
-                "ok": False,
-                "source": src_name,
-                "type": "duckdb",
-                "message": "duckdb package not installed. pip install duckdb",
-            }
-        try:
-            conn = duckdb.connect(str(db_path), read_only=True)
-            conn.sql("SELECT 1").fetchone()
-            conn.close()
-            return {
-                "ok": True,
-                "source": src_name,
-                "type": "duckdb",
-                "message": f"Connected to local DuckDB: {db_path}",
-            }
-        except Exception as exc:
-            return {
-                "ok": False,
-                "source": src_name,
-                "type": "duckdb",
-                "message": f"DuckDB connection failed: {exc}",
-            }
 
     # --- CSV fallback ---
     csv_path = source_info.get("csv_path")
@@ -430,25 +318,24 @@ def check_connection(source_info=None):
 
 
 # ---------------------------------------------------------------------------
-# Profiling connection interface (DP-1.2 — for DQ-2 schema_profiler)
+# Profiling connection interface (for schema_profiler)
 # ---------------------------------------------------------------------------
 
 
 def get_connection_for_profiling(source_info=None):
     """Return a connection suitable for schema profiling.
 
-    Bridges ``data_helpers`` → ``schema_profiler`` (DQ-2). Returns a dict
-    with the connection type and either an open DuckDB connection or a
-    CSV directory path, so the profiler can introspect tables without
-    knowing the underlying source.
+    Bridges ``data_helpers`` → ``schema_profiler``. Returns a dict with the
+    connection type and either a CSV directory path or MCP guidance, so the
+    profiler can introspect tables without knowing the underlying source.
 
     Args:
         source_info: Optional dict from :func:`detect_active_source`.
 
     Returns:
         dict with keys:
-            type (str): "duckdb" or "csv"
-            connection: duckdb.Connection or None
+            type (str): "clickhouse" or "csv"
+            connection: None (ClickHouse uses MCP, CSV uses pandas)
             csv_dir (str|None): Path to CSV directory
             schema_prefix (str): SQL schema prefix
             tables (list[str]): Available table names
@@ -465,20 +352,10 @@ def get_connection_for_profiling(source_info=None):
         "tables": [],
     }
 
-    # Try DuckDB first (covers motherduck fallback to local duckdb too)
-    if src_type in ("duckdb", "motherduck"):
-        db_path = source_info.get("duckdb_path")
-        if db_path and Path(db_path).exists() and _DUCKDB_AVAILABLE:
-            try:
-                conn = duckdb.connect(str(db_path), read_only=True)
-                # Discover tables
-                tables_df = conn.sql("SHOW TABLES").df()
-                result["connection"] = conn
-                result["type"] = "duckdb"
-                result["tables"] = tables_df["name"].tolist() if "name" in tables_df.columns else []
-                return result
-            except Exception:
-                pass  # Fall through to CSV
+    # ClickHouse: tables discovered via MCP tools (clickhouse_list_tables)
+    if src_type == "clickhouse":
+        result["type"] = "clickhouse"
+        return result
 
     # CSV fallback
     csv_dir = source_info.get("csv_path")
@@ -489,7 +366,7 @@ def get_connection_for_profiling(source_info=None):
 
 
 # ---------------------------------------------------------------------------
-# Schema-to-Markdown rendering (DP-1.3 — for K-2 knowledge system)
+# Schema-to-Markdown rendering (for knowledge system)
 # ---------------------------------------------------------------------------
 
 

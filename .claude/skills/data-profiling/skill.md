@@ -17,7 +17,7 @@ Deep-profile the active dataset to understand schema structure, value distributi
 from helpers.data_helpers import get_connection_for_profiling
 from helpers.schema_profiler import profile_source
 
-# Get connection (auto-detects DuckDB vs CSV from active dataset)
+# Get connection (auto-detects ClickHouse vs CSV from active dataset)
 conn_info = get_connection_for_profiling()
 
 # Run full schema profile — introspects all tables: column names, types,
@@ -216,7 +216,7 @@ Apply these rules consistently across all sections:
 3. **All columns are non-numeric:** Skip distribution and correlation analysis. Focus on completeness and categorical cardinality.
 4. **Very wide tables (>50 columns):** Profile all columns for completeness, but limit distribution analysis to the top 20 numeric columns by variance. Note which columns were skipped.
 5. **Empty tables (0 rows):** Log as BLOCKER. Do not attempt profiling -- report the table as empty and move on.
-6. **DuckDB connection fails:** Fall back to CSV via `read_table()`. The schema profiler handles this internally, but deep profiling should also use the CSV path.
+6. **ClickHouse connection fails:** Fall back to CSV via `read_table()`. The schema profiler handles this internally, but deep profiling should also use the CSV path.
 
 ## Anti-Patterns
 

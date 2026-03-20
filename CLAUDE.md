@@ -222,21 +222,19 @@ Use `/datasets` to list all connected datasets. Use `/switch-dataset {name}` to 
 
 ### Multi-Warehouse SQL
 
-For external warehouses (Postgres, BigQuery, Snowflake), use `get_dialect(connection_type)` from `helpers/sql_dialect.py` for warehouse-specific SQL (date_trunc, safe_divide, etc.). Never write raw warehouse-specific SQL — always use the dialect adapter.
+For ClickHouse, Postgres, BigQuery, and Snowflake, use `get_dialect(connection_type)` from `helpers/sql_dialect.py` for warehouse-specific SQL (date_trunc, safe_divide, etc.). Never write raw warehouse-specific SQL — always use the dialect adapter.
 
 ### Data Source Fallback
 
 At the start of any analysis, verify data connectivity:
 1. Read `.knowledge/datasets/{active}/manifest.yaml` for connection details
-2. Try the primary connection (e.g., MotherDuck via MCP) — run a simple `SELECT 1` query
-3. If primary fails → try local DuckDB via `manifest.local_data.duckdb` path
-4. If local DuckDB fails → use CSV files via pandas from `manifest.local_data.path`
-5. Always inform the user which source is active
+2. Try the primary connection (ClickHouse via MCP) — run a simple `SELECT 1` query via `clickhouse_query` tool
+3. If ClickHouse MCP fails → use CSV files via pandas from `manifest.local_data.path`
+4. Always inform the user which source is active
 
 Python helpers for source detection and fallback are in `helpers/data_helpers.py`:
 - `detect_active_source()` — reads `.knowledge/active.yaml` + manifest, returns source info
-- `check_connection()` — probes the active source (DuckDB SELECT 1, CSV dir check)
-- `get_local_connection()` — connect to local DuckDB
+- `check_connection()` — probes the active source (ClickHouse MCP, CSV dir check)
 - `read_table(table_name)` — read a CSV table
 - `list_tables()` — list available CSV tables
 
@@ -286,8 +284,8 @@ These are non-negotiable. They protect analytical quality.
    reference.
 
 9. **Always verify data connectivity at analysis start.** Before running any
-   query, confirm which data source is active (MotherDuck, local DuckDB, or
-   CSV). If a connection fails, fall back automatically and inform the user.
+   query, confirm which data source is active (ClickHouse via MCP or CSV).
+   If a connection fails, fall back automatically and inform the user.
 
 10. **Adapt to the user's expertise.** Detect role from vocabulary: PM (OKRs, roadmap) → decisions/impact; DS (p-value, regression) → methodology; Eng (API, schema) → SQL/performance. Default PM-friendly.
 
@@ -307,7 +305,7 @@ These are non-negotiable. They protect analytical quality.
 
 | Problem | What to Do |
 |---------|-----------|
-| MotherDuck won't connect | Fall back to local DuckDB/CSVs automatically (see Data Source Fallback). Inform the user. |
+| ClickHouse MCP not responding | Fall back to CSVs automatically (see Data Source Fallback). Inform the user. Check MCP server configuration. |
 | SQL query errors | Simplify the query. If JOIN fails, try subquery. If aggregation fails, check GROUP BY. Show the user what went wrong. |
 | Chart won't render | Save the data table as fallback. Try a simpler chart type. If matplotlib fails entirely, produce a text summary. |
 | Source tie-out fails | HALT. Do not proceed with analysis. Show the mismatch. Ask: "Should we investigate the data issue or proceed with caution?" |

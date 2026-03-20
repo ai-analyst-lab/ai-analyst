@@ -150,8 +150,8 @@ Next up: Phase 2 — Data Connection
 **Group 1:**
 1. "Let's connect your data. What do you have?
    - **CSV files** in a local directory
-   - **DuckDB** database file
-   - **Cloud warehouse** (MotherDuck, Postgres, BigQuery, Snowflake)
+   - **ClickHouse** database (connects via MCP)
+   - **Cloud warehouse** (Postgres, BigQuery, Snowflake)
    - **Nothing yet** — I want to use a sample dataset"
 
 ### Branch Logic
@@ -163,10 +163,13 @@ Next up: Phase 2 — Data Connection
 - If confirmed, invoke the Connect Data skill internally (`/connect-data type=csv`)
   to create the dataset brain and profile schema.
 
-**If DuckDB:**
-- Ask: "What's the path to your .duckdb file?"
-- Verify it exists.
-- If confirmed, invoke `/connect-data type=duckdb` to set up the connection.
+**If ClickHouse:**
+- Ask: "Database name and schema (if any)?"
+- Explain: "ClickHouse connects via MCP tools. Make sure your ClickHouse MCP
+  server is configured in `.claude/mcp.json`."
+- Invoke `/connect-data type=clickhouse` to set up the connection.
+- If MCP tools are not available, mark as `partial` with
+  `partial_reason: clickhouse_mcp_needed`.
 
 **If Cloud warehouse:**
 - Explain: "Cloud warehouses connect via MCP (Model Context Protocol). This

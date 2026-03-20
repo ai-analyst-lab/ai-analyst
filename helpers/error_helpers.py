@@ -10,16 +10,16 @@ Usage:
 
     # Wrap any exception for a friendly message
     try:
-        df = conn.sql("SELECT * FROM nonexistent_table").df()
+        result = run_query("SELECT * FROM nonexistent_table")
     except Exception as exc:
         result = friendly_error(exc, context="running SQL query")
         print(result["message"])
         print(result["suggestion"])
 
-    # safe_query: execute SQL with automatic fallback
-    df, info = safe_query(conn, "SELECT * FROM orders LIMIT 10",
+    # safe_query: execute SQL with automatic CSV fallback
+    df, info = safe_query(None, "SELECT * FROM orders LIMIT 10",
                           fallback_csv="orders")
-    print(info["source"])  # "duckdb" or "csv_fallback"
+    print(info["source"])  # "clickhouse" or "csv_fallback"
 """
 
 import difflib
@@ -28,13 +28,6 @@ from pathlib import Path
 
 import pandas as pd
 
-# DuckDB is optional — CSV fallback path works without it.
-try:
-    import duckdb
-
-    _DUCKDB_AVAILABLE = True
-except ImportError:
-    _DUCKDB_AVAILABLE = False
 
 
 # ---------------------------------------------------------------------------
@@ -60,9 +53,9 @@ _SQL_HINTS = [
             "Check the table name for typos. Check your active dataset schema\n"
             "for available table names:\n"
             "  Run /data to inspect the active schema, or\n"
-            "  conn.sql(\"SHOW TABLES\").df() to list tables.\n"
-            "If using MotherDuck: schema.TABLE\n"
-            "If using local DuckDB: just TABLE (no schema prefix)"
+            "  Use clickhouse_list_tables MCP tool to list tables.\n"
+            "If using ClickHouse: database.TABLE\n"
+            "If using CSV: just TABLE (no schema prefix)"
         ),
     },
     {
@@ -70,8 +63,10 @@ _SQL_HINTS = [
         "keywords": ["Referenced column", "could not find", "not found in FROM", "has no column"],
         "message": "A column name in your query was not recognized.",
         "suggestion": (
-            "Check column names for typos. Run this to see available columns:\n"
-            "  conn.sql(\"DESCRIBE tablename\").df()\n"
+            "Check column names for typos. Use the clickhouse_describe_table\n"
+            "MCP tool to see available columns, or for CSV:\n"
+            "  from helpers.data_helpers import read_table\n"
+            "  df = read_table('tablename'); print(df.columns.tolist())\n"
             "Or use the Data Explorer agent to inspect the schema."
         ),
     },
@@ -174,7 +169,7 @@ def friendly_error(exception, context=None):
                 f"  {pip_cmd}\n"
                 f"\n"
                 f"Common packages:\n"
-                f"  pip install duckdb pandas matplotlib scipy numpy"
+                f"  pip install pandas matplotlib scipy numpy"
             ),
             "technical": technical,
         }
@@ -205,10 +200,10 @@ def friendly_error(exception, context=None):
                 f"{context_prefix}Permission denied: {exc_msg}"
             ),
             "suggestion": (
-                "The file or database is locked or you do not have permission to access it.\n"
+                "The file or resource is locked or you do not have permission to access it.\n"
                 "  - Close any other programs that may have the file open\n"
                 "  - Check file permissions\n"
-                "  - For DuckDB: only one process can write at a time"
+                "  - For ClickHouse: check your MCP server credentials"
             ),
             "technical": technical,
         }
@@ -256,7 +251,7 @@ def friendly_error(exception, context=None):
                 "Run conn.sql(\"DESCRIBE tablename\").df() to see available columns."
             )
         suggestion_parts.append(
-            "Tip: Column names are case-sensitive in DuckDB."
+            "Tip: Column names are case-sensitive in ClickHouse."
         )
 
         return {
@@ -287,41 +282,20 @@ def friendly_error(exception, context=None):
             "technical": technical,
         }
 
-    # --- DuckDB connection failures ---
-    if _is_duckdb_connection_error(exception):
-        return {
-            "error_type": "connection_error",
-            "message": (
-                f"{context_prefix}Could not connect to DuckDB. "
-                "The database file may be missing, corrupted, or locked by another process."
-            ),
-            "suggestion": (
-                "Try these steps:\n"
-                "  1. Check that the .duckdb file exists in your active dataset directory\n"
-                "  2. Close any other programs using the database\n"
-                "  3. Fall back to CSV: from helpers.data_helpers import read_table\n"
-                "     df = read_table('orders')\n"
-                "  4. If DuckDB is not installed: pip install duckdb"
-            ),
-            "technical": technical,
-        }
-
-    # --- MCP / MotherDuck connection failures ---
+    # --- MCP / ClickHouse connection failures ---
     if _is_mcp_connection_error(exception):
         return {
             "error_type": "mcp_connection_error",
             "message": (
-                f"{context_prefix}Could not connect to MotherDuck via MCP. "
-                "This usually means the MCP server is not running or your token is invalid."
+                f"{context_prefix}Could not connect to ClickHouse via MCP. "
+                "This usually means the MCP server is not running or your credentials are invalid."
             ),
             "suggestion": (
                 "Try these steps:\n"
-                "  1. Check that your MOTHERDUCK_TOKEN is set in the environment\n"
-                "  2. Verify the MCP server is running (check .claude/mcp.json)\n"
-                "  3. Fall back to local DuckDB:\n"
-                "     from helpers.data_helpers import get_local_connection\n"
-                "     conn = get_local_connection()\n"
-                "  4. Or fall back to CSV:\n"
+                "  1. Verify the ClickHouse MCP server is running\n"
+                "  2. Check your MCP configuration (.claude/mcp.json)\n"
+                "  3. Test with: clickhouse_query tool with SELECT 1\n"
+                "  4. Fall back to CSV:\n"
                 "     from helpers.data_helpers import read_table\n"
                 "     df = read_table('orders')"
             ),
@@ -352,11 +326,14 @@ def friendly_error(exception, context=None):
 def safe_query(conn, sql, fallback_csv=None):
     """Execute a SQL query with friendly errors and optional CSV fallback.
 
-    Tries to execute the query via DuckDB. If it fails and a CSV fallback
-    table name is provided, automatically loads the data from CSV instead.
+    Tries to execute the query via the provided connection. If it fails and
+    a CSV fallback table name is provided, automatically loads data from CSV.
+
+    Note: For ClickHouse, queries should be executed via MCP tools
+    (clickhouse_query). This function is primarily for CSV fallback scenarios.
 
     Args:
-        conn: DuckDB connection (or None if connection failed).
+        conn: Database connection (or None if connection failed).
         sql: SQL query string to execute.
         fallback_csv: Optional table name for CSV fallback (e.g., "orders").
             If the SQL query fails and this is provided, the function will
@@ -364,7 +341,7 @@ def safe_query(conn, sql, fallback_csv=None):
 
     Returns:
         tuple of (DataFrame, source_info) where source_info is a dict with:
-            source (str): "duckdb" or "csv_fallback"
+            source (str): "sql" or "csv_fallback"
             query (str): The original SQL or CSV path used
             status (str): "ok" or "fallback"
             error (dict or None): friendly_error output if fallback was used
@@ -375,7 +352,7 @@ def safe_query(conn, sql, fallback_csv=None):
             return _csv_fallback(
                 fallback_csv,
                 error_info=friendly_error(
-                    ConnectionError("No DuckDB connection available"),
+                    ConnectionError("No database connection available"),
                     context="executing SQL query",
                 ),
             )
@@ -386,7 +363,7 @@ def safe_query(conn, sql, fallback_csv=None):
                 "query": sql,
                 "status": "error",
                 "error": friendly_error(
-                    ConnectionError("No DuckDB connection available"),
+                    ConnectionError("No database connection available"),
                     context="executing SQL query",
                 ),
             },
@@ -398,7 +375,7 @@ def safe_query(conn, sql, fallback_csv=None):
 
         # Warn on empty results (not an error, but worth noting)
         source_info = {
-            "source": "duckdb",
+            "source": "sql",
             "query": sql,
             "status": "ok",
             "error": None,
@@ -421,7 +398,7 @@ def safe_query(conn, sql, fallback_csv=None):
         return (
             pd.DataFrame(),
             {
-                "source": "duckdb",
+                "source": "sql",
                 "query": sql,
                 "status": "error",
                 "error": error_info,
@@ -505,41 +482,19 @@ def suggest_column(target, available_columns, n=3):
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-def _is_duckdb_connection_error(exc):
-    """Check if an exception is a DuckDB connection failure."""
-    exc_msg = str(exc).lower()
-    exc_type = type(exc).__name__
-
-    # Direct connection errors
-    if isinstance(exc, (ConnectionError, OSError)):
-        return "duckdb" in exc_msg or "database" in exc_msg
-
-    # DuckDB-specific errors
-    if _DUCKDB_AVAILABLE and isinstance(exc, duckdb.Error):
-        connection_keywords = ["connection", "database", "locked", "cannot open"]
-        return any(kw in exc_msg for kw in connection_keywords)
-
-    # Generic errors that look like connection issues
-    if exc_type in ("IOException", "InvalidInputException"):
-        return True
-
-    return False
-
-
 def _is_mcp_connection_error(exc):
-    """Check if an exception is an MCP/MotherDuck connection failure."""
+    """Check if an exception is an MCP/ClickHouse connection failure."""
     exc_msg = str(exc).lower()
 
     # Exclude SQL parse/query errors that happen to contain "token"
-    # (e.g., "unexpected token" is a SQL syntax error, not an MCP issue)
     sql_noise = ["syntax error", "parser error", "unexpected token", "parse error"]
     if any(kw in exc_msg for kw in sql_noise):
         return False
 
     mcp_keywords = [
-        "mcp", "motherduck", "md:", "authentication",
+        "mcp", "clickhouse", "authentication",
         "unauthorized", "could not connect to remote",
-        "motherduck_token", "invalid token",
+        "connection refused", "invalid credentials",
     ]
     return any(kw in exc_msg for kw in mcp_keywords)
 

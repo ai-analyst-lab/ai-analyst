@@ -89,7 +89,7 @@ else
     pip install --quiet \
         pandas \
         matplotlib \
-        duckdb \
+        clickhouse-connect \
         pyyaml \
         pytest \
         faker
@@ -99,10 +99,9 @@ fi
 # Verify key imports
 echo "Verifying installation..."
 python3 -c "
-import pandas, matplotlib, duckdb, yaml
+import pandas, matplotlib, yaml
 print('  pandas', pandas.__version__)
 print('  matplotlib', matplotlib.__version__)
-print('  duckdb', duckdb.__version__)
 print('  pyyaml', yaml.__version__)
 " 2>/dev/null && echo -e "${GREEN}  All key packages verified${NC}" || {
     echo -e "${RED}  Some packages failed to import. Check the output above.${NC}"
@@ -113,9 +112,8 @@ echo ""
 echo -e "${GREEN}=== Setup complete ===${NC}"
 echo ""
 echo "Next steps:"
-echo "  1. Download data:     bash scripts/download-data.sh"
-echo "  2. (Optional) Build DuckDB: bash scripts/build-duckdb.sh"
-echo "  3. Start Claude Code:  claude"
+echo "  1. Start Claude Code:  claude"
+echo "  2. Connect your data:  /connect-data"
 echo ""
 echo "To activate the virtual environment manually:"
 echo "  source ${VENV_DIR}/bin/activate"

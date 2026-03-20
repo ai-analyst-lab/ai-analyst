@@ -30,7 +30,7 @@ Read `.knowledge/setup-state.yaml`. Classify into one of three states:
 Present this welcome and route to `/setup`:
 
 ```
-Welcome to AI Analyst — your analytical partner for product teams.
+Welcome to AXS Analyst — your analytical partner for AXS product teams.
 
 I help you turn business questions into validated insights, charts, and
 presentations. Think funnel analysis, segmentation, root cause investigation,

@@ -7,7 +7,7 @@ sources: {}
   # my_dataset:
   #   display_name: "My Dataset"
   #   description: "Description of the dataset"
-  #   connection_type: "duckdb"  # or "motherduck", "postgres", "bigquery", "snowflake", "csv"
+  #   connection_type: "clickhouse"  # or "postgres", "bigquery", "snowflake", "csv"
   #   database: "my_dataset"
   #   schema_prefix: "my_dataset"
   #   data_dir: "data/my_dataset/"

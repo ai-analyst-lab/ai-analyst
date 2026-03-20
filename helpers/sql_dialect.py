@@ -3,9 +3,9 @@
 Usage:
     from helpers.sql_dialect import get_dialect
 
-    dialect = get_dialect("duckdb")
+    dialect = get_dialect("clickhouse")
     dialect.date_trunc("order_date", "month")
-    # => "date_trunc('month', order_date)"
+    # => "toStartOfMonth(order_date)"
 
     dialect = get_dialect("bigquery")
     dialect.date_trunc("order_date", "month")
@@ -15,7 +15,7 @@ Usage:
 from __future__ import annotations
 
 from helpers.dialects.base import SQLDialect
-from helpers.dialects.duckdb_dialect import DuckDBDialect
+from helpers.dialects.clickhouse import ClickHouseDialect
 from helpers.dialects.postgres import PostgresDialect
 from helpers.dialects.bigquery import BigQueryDialect
 from helpers.dialects.snowflake import SnowflakeDialect
@@ -23,8 +23,7 @@ from helpers.dialects.snowflake import SnowflakeDialect
 
 # Registry mapping connection_type strings to dialect classes.
 _DIALECT_MAP: dict[str, type[SQLDialect]] = {
-    "duckdb": DuckDBDialect,
-    "motherduck": DuckDBDialect,
+    "clickhouse": ClickHouseDialect,
     "postgres": PostgresDialect,
     "postgresql": PostgresDialect,
     "bigquery": BigQueryDialect,
@@ -32,13 +31,13 @@ _DIALECT_MAP: dict[str, type[SQLDialect]] = {
 }
 
 
-def get_dialect(connection_type: str = "duckdb") -> SQLDialect:
+def get_dialect(connection_type: str = "clickhouse") -> SQLDialect:
     """Return the appropriate SQLDialect instance for *connection_type*.
 
     Args:
-        connection_type: One of ``'duckdb'``, ``'motherduck'``, ``'postgres'``,
+        connection_type: One of ``'clickhouse'``, ``'postgres'``,
             ``'postgresql'``, ``'bigquery'``, ``'snowflake'``.  Defaults to
-            ``'duckdb'``.
+            ``'clickhouse'``.
 
     Returns:
         An instantiated SQLDialect subclass.
@@ -47,8 +46,8 @@ def get_dialect(connection_type: str = "duckdb") -> SQLDialect:
         ValueError: If the connection type is not recognised.
 
     Examples:
-        >>> get_dialect("duckdb").name
-        'duckdb'
+        >>> get_dialect("clickhouse").name
+        'clickhouse'
         >>> get_dialect("bigquery").name
         'bigquery'
     """
@@ -66,7 +65,7 @@ def get_dialect(connection_type: str = "duckdb") -> SQLDialect:
 def list_dialects() -> list[str]:
     """Return sorted list of supported connection type strings.
 
-    >>> 'duckdb' in list_dialects()
+    >>> 'clickhouse' in list_dialects()
     True
     """
     return sorted(_DIALECT_MAP.keys())

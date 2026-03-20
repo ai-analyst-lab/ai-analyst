@@ -4,7 +4,7 @@ theme: analytics
 size: 16:9
 paginate: true
 html: true
-footer: "AI Analyst Lab | {{CLIENT}} | {{MONTH_YEAR}}"
+footer: "AXS Pte Ltd | {{CLIENT}} | {{MONTH_YEAR}}"
 ---
 
 <!-- _class: title -->

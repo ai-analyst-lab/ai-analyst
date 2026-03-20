@@ -37,7 +37,7 @@ Record response in `.knowledge/user/dev-context.yaml` under `codebase.type`.
 Ask the user:
 ```
 2. **Data layer:** How is your data organized?
-   - Database type: (Postgres, BigQuery, Snowflake, DuckDB, other)
+   - Database type: (Postgres, BigQuery, Snowflake, ClickHouse, other)
    - Schema naming convention: (e.g., `analytics.`, `public.`, `dbt_prod.`)
    - Key tables location: (path to schema definitions, dbt models, etc.)
 ```
@@ -93,7 +93,7 @@ last_updated: "{{DATE}}"
 codebase:
   type: null           # analytics | backend | fullstack | data-science | other
   data_layer:
-    database: null     # postgres | bigquery | snowflake | duckdb | other
+    database: null     # postgres | bigquery | snowflake | clickhouse | other
     schema_prefix: null
     models_path: null  # path to dbt models or schema definitions
   sql_conventions:

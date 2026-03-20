@@ -1,9 +1,8 @@
 """
 Source Tie-Out Helpers — dual-path data integrity verification.
 
-Reads source files via pandas (independent of DuckDB) and compares
-foundational metrics against DuckDB-loaded versions to catch data
-loading errors before analysis begins.
+Reads source files via pandas and compares foundational metrics against
+SQL-loaded versions to catch data loading errors before analysis begins.
 
 Usage:
     from helpers.tieout_helpers import (
@@ -13,8 +12,8 @@ Usage:
 
     source_df = read_source_direct("data/sales.csv")
     source_profile = profile_dataframe(source_df)
-    duckdb_profile = profile_dataframe(duckdb_df)
-    results = compare_profiles(source_profile, duckdb_profile)
+    sql_profile = profile_dataframe(sql_df)
+    results = compare_profiles(source_profile, sql_profile)
     print(format_tieout_table(results))
     print(overall_status(results))
 """

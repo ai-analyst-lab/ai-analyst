@@ -47,7 +47,7 @@ CONTRACT_END -->
 Perform time-series analysis on a dataset to identify trends, detect anomalies, decompose seasonality, and produce annotated timeline charts that explain what changed and when.
 
 ## Inputs
-- {{DATASET}}: The data source to analyze. Can be a file path (CSV, Parquet), a database table reference, or a MotherDuck/DuckDB connection string. Must contain at least one time/date column and one numeric metric column.
+- {{DATASET}}: The data source to analyze. Can be a file path (CSV, Parquet), a database table reference, or a ClickHouse connection. Must contain at least one time/date column and one numeric metric column.
 - {{TIME_COLUMN}}: The name of the column containing the time dimension (e.g., `date`, `created_at`, `event_timestamp`). Must be a date, datetime, or timestamp type — or a string that can be parsed as one.
 - {{METRIC_COLUMNS}}: One or more metric columns to analyze over time. Comma-separated if multiple (e.g., `revenue, active_users, conversion_rate`). Each must be a numeric column or an aggregatable field.
 - {{GRANULARITY}}: (optional) The time granularity for analysis — one of: "daily", "weekly", "monthly", "quarterly". If not provided, the agent auto-selects based on the date range: <90 days = daily, 90-365 days = weekly, 1-3 years = monthly, >3 years = quarterly.

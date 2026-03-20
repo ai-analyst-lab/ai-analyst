@@ -41,7 +41,7 @@ All notable changes to this project will be documented in this file.
 - Example e-commerce dataset schema (13 tables)
 - Tiered data system: Tier 1 in git, Tier 2 via GitHub Releases
 - Setup scripts: `setup.sh`, `download-data.sh`, `build-duckdb.sh`
-- Multi-warehouse support: DuckDB, MotherDuck, Postgres, BigQuery, Snowflake
+- Multi-warehouse support: ClickHouse, Postgres, BigQuery, Snowflake
 - SWD-styled chart generation with collision detection
 - Marp slide deck creation with branded HTML components
 - 4-layer validation framework with A-F confidence scoring

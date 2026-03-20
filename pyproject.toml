@@ -10,13 +10,13 @@ readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
 authors = [
-    {name = "Shane Butler", email = "shane@aianalystlab.ai"},
+    {name = "AXS Pte Ltd"},
 ]
 
 dependencies = [
     "pandas>=1.5",
     "matplotlib>=3.6",
-    "duckdb>=0.9",
+    "clickhouse-connect>=0.6",
     "pyyaml>=6.0",
 ]
 
