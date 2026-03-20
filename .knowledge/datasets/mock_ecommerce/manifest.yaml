@@ -1,0 +1,22 @@
+name: mock_ecommerce
+display_name: "Mock E-Commerce"
+connection_type: csv
+local_data:
+  path: data/examples/mock_ecommerce/
+  tables:
+    - users
+    - events
+    - orders
+    - funnel
+summary:
+  users: 500
+  events: 5548
+  orders: 378
+  funnel_rows: 1508
+  date_range: "2024-01-01 to 2024-06-30"
+  description: >
+    Synthetic e-commerce dataset with 500 users, their events, orders and funnel
+    progression over H1 2024. Contains an intentional anomaly: March 2024 signups
+    convert at ~40% lower rate due to a simulated product issue. Funnel activation
+    and purchase steps for March cohort are additionally compounded.
+created: "2026-03-20"
