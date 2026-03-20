@@ -722,7 +722,8 @@ def suggest_segments_to_check(
             and (
                 df[col].dtype == "object"
                 or df[col].dtype.name == "category"
-                or (pd.api.types.is_bool_dtype(df[col]))
+                or pd.api.types.is_string_dtype(df[col])
+                or pd.api.types.is_bool_dtype(df[col])
             )
         ]
     else:
