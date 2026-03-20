@@ -16,6 +16,7 @@ authors = [
 dependencies = [
     "pandas>=1.5",
     "matplotlib>=3.6",
+    "scipy>=1.10",
     "clickhouse-connect>=0.6",
     "pyyaml>=6.0",
 ]

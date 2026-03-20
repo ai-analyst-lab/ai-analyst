@@ -572,4 +572,4 @@ When all checkpoints pass, report:
 4. Metrics status (new/updated)
 5. Archive confirmation (analysis ID)
 6. Export status (PDF/HTML generated, or skipped with reason)
-6. Any manual follow-ups needed
+7. Any manual follow-ups needed
