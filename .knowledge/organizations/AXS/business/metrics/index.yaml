@@ -1,0 +1,150 @@
+# AXS Metrics Dictionary
+# Canonical KPI definitions. The AI analyst checks this before computing any metric
+# to ensure consistent formulas and guardrail awareness.
+#
+# Fields:
+#   name         snake_case identifier used in SQL and reports
+#   display_name Human-readable label for charts and decks
+#   definition   Business meaning — what does a high/low value indicate?
+#   formula      Exact calculation, referencing dbt model names where known
+#   owner        Team responsible for this metric
+#   target       Current goal value (null = not set)
+#   guardrails   Other metrics to check when this metric improves (avoid gaming)
+#   dbt_ref      dbt model or exposure where this is the authoritative source
+#
+# TODO: Replace targets with real values and update dbt_ref once schema.yml is loaded.
+
+metrics:
+  - name: gross_ticket_revenue
+    display_name: "Gross Ticket Revenue"
+    definition: >
+      Total face value of all tickets sold in confirmed orders, before refunds.
+      Does not include service fees. Primary top-line revenue indicator.
+    formula: "SUM(ticket_face_value) WHERE order_status = 'confirmed'"
+    owner: Finance
+    target: null
+    guardrails:
+      - refund_rate
+      - chargeback_rate
+    dbt_ref: "fct_orders"
+    added_at: "2026-03-21"
+
+  - name: net_ticket_revenue
+    display_name: "Net Ticket Revenue"
+    definition: >
+      Gross ticket revenue minus refunds and chargebacks. The revenue figure used
+      for P&L reporting.
+    formula: "SUM(ticket_face_value) WHERE order_status = 'confirmed' MINUS refunds"
+    owner: Finance
+    target: null
+    guardrails:
+      - chargeback_rate
+    dbt_ref: "fct_orders"
+    added_at: "2026-03-21"
+
+  - name: service_fee_revenue
+    display_name: "Service Fee Revenue"
+    definition: >
+      Total service fees collected across all confirmed orders. Distinct from face
+      value — this is AXS's primary earned revenue line. Split with venue per contract.
+    formula: "SUM(service_fee_amount) WHERE order_status = 'confirmed'"
+    owner: Finance
+    target: null
+    guardrails:
+      - cart_abandonment_rate
+      - customer_satisfaction_score
+    dbt_ref: "fct_orders"
+    added_at: "2026-03-21"
+
+  - name: conversion_rate
+    display_name: "Ticket Purchase Conversion Rate"
+    definition: >
+      Share of sessions that result in at least one completed ticket order.
+      Measured from the point a fan views an event listing (not from site entry).
+    formula: "COUNT(DISTINCT order_id) / COUNT(DISTINCT session_id WHERE event_page_viewed = true)"
+    owner: Product
+    target: 0.042
+    guardrails:
+      - cart_abandonment_rate
+      - average_order_value
+    dbt_ref: "fct_sessions"
+    added_at: "2026-03-21"
+
+  - name: cart_abandonment_rate
+    display_name: "Cart Abandonment Rate"
+    definition: >
+      Percentage of sessions that added tickets to cart but did not complete
+      purchase. A key guardrail for conversion rate — an increase in conversion
+      driven by reducing friction should not also increase abandonments on
+      re-engagement.
+    formula: "1 - (completed_orders / cart_add_sessions)"
+    owner: Product
+    target: null
+    guardrails:
+      - conversion_rate
+    dbt_ref: "fct_sessions"
+    added_at: "2026-03-21"
+
+  - name: average_order_value
+    display_name: "Average Order Value (AOV)"
+    definition: >
+      Mean revenue per completed order, inclusive of face value and service fees.
+      Watch for AOV changes when testing fee structures or ticket tier mix shifts.
+    formula: "SUM(order_total) / COUNT(DISTINCT order_id) WHERE order_status = 'confirmed'"
+    owner: Finance
+    target: null
+    guardrails:
+      - conversion_rate
+      - refund_rate
+    dbt_ref: "fct_orders"
+    added_at: "2026-03-21"
+
+  - name: scan_rate
+    display_name: "Event Scan Rate"
+    definition: >
+      Percentage of issued tickets that are successfully scanned at event entry.
+      Proxy for actual attendance. Below-benchmark scan rates (< 85%) warrant
+      investigation into access control issues or mobile ID failures.
+    formula: "COUNT(scanned_tickets) / COUNT(issued_tickets) per event"
+    owner: Operations
+    target: 0.92
+    guardrails:
+      - customer_support_tickets
+      - mobile_id_failure_rate
+    dbt_ref: "fct_scans"
+    added_at: "2026-03-21"
+
+  - name: refund_rate
+    display_name: "Refund Rate"
+    definition: >
+      Percentage of ticket orders that are refunded. Voluntary refunds (fan request)
+      are tracked separately from forced refunds (event cancellation). High voluntary
+      refund rates can indicate post-purchase regret or misleading event listings.
+    formula: "COUNT(refunded_orders) / COUNT(confirmed_orders)"
+    owner: Customer Experience
+    target: null
+    guardrails:
+      - chargeback_rate
+      - net_ticket_revenue
+    dbt_ref: "fct_orders"
+    added_at: "2026-03-21"
+
+  - name: chargeback_rate
+    display_name: "Chargeback Rate"
+    definition: >
+      Percentage of orders that result in a card dispute / chargeback. Industry
+      threshold is < 0.1% — exceeding this triggers payment processor warnings.
+      Spikes often indicate fraud, not customer dissatisfaction.
+    formula: "COUNT(chargeback_orders) / COUNT(confirmed_orders)"
+    owner: Finance
+    target: 0.001
+    guardrails:
+      - refund_rate
+      - fraud_score
+    dbt_ref: "fct_orders"
+    added_at: "2026-03-21"
+
+  # TODO: Add resale-specific metrics once resale data source is connected:
+  # - resale_take_rate: AXS fee as % of resale transaction value
+  # - resale_price_premium: median resale price / face value
+  # - fan_to_fan_volume: number of resale transactions per event

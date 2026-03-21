@@ -1,0 +1,79 @@
+# AXS Team Structure
+# Who needs analysis and what they care about.
+# Helps the analyst adapt communication style and metric focus per audience.
+# TODO: Update names, reporting lines, and stakeholders to match your org chart.
+
+teams:
+  - name: "Product"
+    focus: "Fan purchase funnel, conversion, feature development"
+    key_metrics:
+      - conversion_rate
+      - cart_abandonment_rate
+      - average_order_value
+    stakeholders:
+      - "VP Product"
+      - "Product Managers"
+    communication_style: "Data-driven, comfortable with SQL and cohort analysis"
+    added_at: "2026-03-21"
+
+  - name: "Finance"
+    focus: "Revenue reporting, fee economics, P&L"
+    key_metrics:
+      - gross_ticket_revenue
+      - net_ticket_revenue
+      - service_fee_revenue
+      - chargeback_rate
+      - refund_rate
+    stakeholders:
+      - "CFO"
+      - "Finance Analysts"
+    communication_style: "Executive-friendly, prefers summary tables and clear variance explanations"
+    added_at: "2026-03-21"
+
+  - name: "Operations"
+    focus: "Event execution, venue relationships, access control"
+    key_metrics:
+      - scan_rate
+      - gate_throughput
+      - customer_support_tickets
+    stakeholders:
+      - "VP Operations"
+      - "Event Operations Managers"
+    communication_style: "Operational, event-level granularity, prefers before/after comparisons"
+    added_at: "2026-03-21"
+
+  - name: "Marketplace"
+    focus: "Fan-to-fan resale, take rate, anti-fraud"
+    key_metrics:
+      - resale_take_rate
+      - resale_price_premium
+      - fan_to_fan_volume
+      - chargeback_rate
+    stakeholders:
+      - "Head of Marketplace"
+      - "Trust & Safety"
+    communication_style: "Comfortable with cohort and funnel analysis"
+    added_at: "2026-03-21"
+
+  - name: "Customer Experience"
+    focus: "Support volume, refund patterns, CSAT"
+    key_metrics:
+      - refund_rate
+      - customer_satisfaction_score
+      - mobile_id_failure_rate
+    stakeholders:
+      - "Head of CX"
+      - "Support Team Leads"
+    communication_style: "Qualitative context helpful alongside numbers"
+    added_at: "2026-03-21"
+
+  - name: "Engineering"
+    focus: "Platform reliability, data pipeline health, schema changes"
+    key_metrics:
+      - mobile_id_failure_rate
+      - scan_rate
+    stakeholders:
+      - "CTO"
+      - "Engineering Leads"
+    communication_style: "Technical, happy with SQL, interested in root cause details"
+    added_at: "2026-03-21"

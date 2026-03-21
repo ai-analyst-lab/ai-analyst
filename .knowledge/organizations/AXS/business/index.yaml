@@ -1,0 +1,9 @@
+organization: "AXS"
+is_example: false
+sections:
+  glossary: glossary/terms.yaml
+  products: products/index.yaml
+  metrics: metrics/index.yaml
+  objectives: objectives/index.yaml
+  teams: teams/index.yaml
+  dbt: dbt/

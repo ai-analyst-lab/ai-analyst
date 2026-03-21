@@ -1,0 +1,36 @@
+# AXS Objectives & Key Results (OKRs)
+# Current strategic goals. Update each quarter.
+# owner: team or individual accountable for the objective
+# status: on_track | at_risk | off_track | complete
+
+objectives:
+  # TODO: Replace placeholder OKRs with your real Q1/Q2 2026 goals.
+  - objective: "Grow primary ticket volume while protecting fee revenue"
+    key_results:
+      - "Increase confirmed ticket orders by X% vs same period last year"
+      - "Maintain service_fee_revenue / gross_ticket_revenue ratio above Y%"
+      - "Reduce cart abandonment rate below Z%"
+    quarter: "Q1 2026"
+    owner: "Product & Finance"
+    status: on_track
+    added_at: "2026-03-21"
+
+  - objective: "Improve fan experience at event entry"
+    key_results:
+      - "Achieve scan_rate ≥ 92% across all mobile-only events"
+      - "Reduce mobile ID failure rate by 30% vs Q4 2025"
+      - "Reduce entry-related support ticket volume by 20%"
+    quarter: "Q1 2026"
+    owner: "Operations & Engineering"
+    status: on_track
+    added_at: "2026-03-21"
+
+  - objective: "Scale the fan resale marketplace"
+    key_results:
+      - "Grow fan-to-fan resale volume by X% QoQ"
+      - "Maintain resale take rate at target while growing GMV"
+      - "Launch price-cap enforcement in 3 new markets"
+    quarter: "Q1 2026"
+    owner: "Marketplace Team"
+    status: on_track
+    added_at: "2026-03-21"

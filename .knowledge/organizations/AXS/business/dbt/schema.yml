@@ -1,0 +1,90 @@
+# AXS dbt schema.yml
+# ──────────────────────────────────────────────────────────────────────────────
+# REPLACE THIS FILE with your real dbt schema.yml content.
+#
+# This placeholder shows the expected format. The AI analyst reads this file
+# to understand your data models before writing SQL.
+#
+# Minimal required fields:
+#   models[].name         → physical table name in your warehouse
+#   models[].description  → what this table represents in business terms
+#   columns[].name        → column name (must match warehouse column)
+#   columns[].description → business meaning of this column
+#
+# See dbt/README.md for a full annotated example.
+# ──────────────────────────────────────────────────────────────────────────────
+
+version: 2
+
+models:
+  # ── Replace with your real models ──────────────────────────────────────────
+  - name: fct_orders
+    description: >
+      TODO: Add your fct_orders description here.
+      One row per confirmed ticket order. Source of truth for revenue and
+      conversion metrics.
+    columns:
+      - name: order_id
+        description: "TODO: Surrogate key for the order."
+      - name: order_status
+        description: "TODO: confirmed | refunded | cancelled | chargeback"
+      - name: face_value_usd
+        description: "TODO: Face value of tickets in this order, excluding fees."
+      - name: service_fee_usd
+        description: "TODO: Service fees charged to the fan."
+      - name: is_resale
+        description: "TODO: True for fan-to-fan resale orders."
+      - name: event_id
+        description: "TODO: FK to dim_events."
+      - name: customer_id
+        description: "TODO: FK to dim_customers."
+
+  - name: fct_scans
+    description: "TODO: One row per ticket scan at event entry."
+    columns:
+      - name: ticket_id
+        description: "TODO: FK to fct_orders."
+      - name: scan_result
+        description: "TODO: success | failure | duplicate | void"
+      - name: scanned_at
+        description: "TODO: Timestamp of the scan attempt."
+
+  - name: dim_events
+    description: "TODO: One row per event. Contains configuration flags."
+    columns:
+      - name: event_id
+        description: "TODO: Surrogate key."
+      - name: event_name
+        description: "TODO: Display name of the event."
+      - name: event_date
+        description: "TODO: Scheduled event date/time in local timezone."
+      - name: venue_id
+        description: "TODO: FK to dim_venues."
+      - name: is_mobile_only
+        description: "TODO: True if AXS Mobile ID required for entry."
+      - name: capacity
+        description: "TODO: Total sellable inventory count."
+
+  - name: dim_customers
+    description: "TODO: One row per fan account."
+    columns:
+      - name: customer_id
+        description: "TODO: Surrogate key."
+      - name: signup_date
+        description: "TODO: Date the fan registered."
+      - name: country_code
+        description: "TODO: ISO 2-letter country code."
+      - name: ltv_band
+        description: "TODO: Lifetime value bucket: low | mid | high"
+
+  - name: dim_venues
+    description: "TODO: One row per venue."
+    columns:
+      - name: venue_id
+        description: "TODO: Surrogate key."
+      - name: venue_name
+        description: "TODO: Venue display name."
+      - name: country_code
+        description: "TODO: Country where the venue is located."
+      - name: capacity
+        description: "TODO: Maximum sellable capacity for the venue."

@@ -1,0 +1,131 @@
+# AXS Business Glossary
+# Domain-specific terms the AI analyst should know before writing SQL or interpreting data.
+# Source field: "manual" | "dbt" (extracted from schema.yml descriptions)
+# dbt_ref: "model_name" or "model_name.column_name" where this term is defined in dbt
+#
+# To add terms: edit this file directly, or run /business after adding to dbt schema.yml
+# To search: /business lookup {term}
+
+terms:
+  - term: "inventory"
+    definition: >
+      A block of seats or tickets made available for a specific event by a venue
+      or promoter. Inventory can be held (reserved but not sold), released (available
+      to purchase), or killed (removed from sale).
+    aliases: ["allotment", "ticket block"]
+    source: manual
+    dbt_ref: null
+    added_by: setup
+    added_at: "2026-03-21"
+
+  - term: "manifest"
+    definition: >
+      The complete seat map and ticket configuration for an event — defines sections,
+      rows, seats, price tiers, and holds. A manifest is uploaded by the venue before
+      tickets go on sale.
+    aliases: ["seat map", "event manifest"]
+    source: manual
+    dbt_ref: null
+    added_by: setup
+    added_at: "2026-03-21"
+
+  - term: "face value"
+    definition: >
+      The original printed price of a ticket as set by the promoter or venue. Used
+      as the reference price for calculating resale premiums and service fee percentages.
+    aliases: ["original price", "primary price"]
+    source: manual
+    dbt_ref: null
+    added_by: setup
+    added_at: "2026-03-21"
+
+  - term: "resale"
+    definition: >
+      Secondary market ticket sales where fans resell tickets they have already
+      purchased. AXS facilitates fan-to-fan resale on its platform, enforcing
+      price caps and identity verification in some markets.
+    aliases: ["secondary", "fan-to-fan", "resale marketplace"]
+    source: manual
+    dbt_ref: null
+    added_by: setup
+    added_at: "2026-03-21"
+
+  - term: "mobile-only event"
+    definition: >
+      An event where the venue requires digital tickets on the AXS Mobile ID app
+      for entry — paper printouts and PDF tickets are not accepted. Affects scan
+      success rate and customer support volume.
+    aliases: ["mobile ID event", "digital-only"]
+    source: manual
+    dbt_ref: null
+    added_by: setup
+    added_at: "2026-03-21"
+
+  - term: "scan rate"
+    definition: >
+      The percentage of issued tickets that are successfully scanned for entry at
+      an event. A scan rate significantly below 100% may indicate no-shows, failed
+      scans, or entry issues. Calculated as: scanned_tickets / issued_tickets.
+    aliases: ["entry rate", "attendance rate"]
+    source: manual
+    dbt_ref: null
+    added_by: setup
+    added_at: "2026-03-21"
+
+  - term: "hold"
+    definition: >
+      Tickets reserved for a specific purpose (artist, venue, press, sponsor) and
+      not available for public sale. Holds reduce the sellable inventory count.
+      Unreleased holds at event time are counted as no-shows in attendance figures.
+    aliases: ["comp hold", "artist hold", "venue hold"]
+    source: manual
+    dbt_ref: null
+    added_by: setup
+    added_at: "2026-03-21"
+
+  - term: "order"
+    definition: >
+      A completed transaction in which a fan purchases one or more tickets. One
+      order can contain multiple tickets for the same event. Orders have statuses:
+      confirmed, refunded, cancelled, chargeback.
+    aliases: ["transaction", "purchase"]
+    source: manual
+    dbt_ref: null
+    added_by: setup
+    added_at: "2026-03-21"
+
+  - term: "service fee"
+    definition: >
+      A per-ticket or per-order fee added on top of face value at checkout.
+      Service fees are split between AXS and the venue/promoter according to
+      contract terms. The fee structure can vary by event, venue, and ticket tier.
+    aliases: ["convenience fee", "booking fee", "facility fee"]
+    source: manual
+    dbt_ref: null
+    added_by: setup
+    added_at: "2026-03-21"
+
+  - term: "chargeback"
+    definition: >
+      A disputed transaction where the cardholder's bank reverses a charge, forcing
+      a refund. High chargeback rates on an event or sales channel indicate potential
+      fraud or fulfilment issues. Tracked separately from voluntary refunds.
+    aliases: ["dispute", "card dispute"]
+    source: manual
+    dbt_ref: null
+    added_by: setup
+    added_at: "2026-03-21"
+
+  # ── dbt-sourced terms (auto-populated from schema.yml, edit dbt_ref to match) ─
+  # TODO: After dropping your schema.yml into business/dbt/, run:
+  #   /business lookup {term}
+  # to verify extractions, then replace the entries below with your real dbt terms.
+  #
+  # Example dbt-sourced entry:
+  # - term: "ltv_band"
+  #   definition: "Customer lifetime value bucket (low/mid/high) as defined in dim_customers"
+  #   aliases: ["ltv_segment"]
+  #   source: dbt
+  #   dbt_ref: "dim_customers.ltv_band"
+  #   added_by: dbt_ingest
+  #   added_at: null

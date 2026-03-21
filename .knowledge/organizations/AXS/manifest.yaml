@@ -1,0 +1,11 @@
+organization: "AXS"
+is_example: false
+created_at: "2026-03-21"
+industry: "live entertainment & ticketing"
+description: >
+  AXS is a live entertainment technology company that powers ticketing, access
+  control, and fan engagement for venues, promoters, and sports teams worldwide.
+  The platform connects fans to events through digital ticketing, resale
+  marketplaces, and venue management tools.
+schema_version: 1
+dbt_docs_path: "business/dbt/"

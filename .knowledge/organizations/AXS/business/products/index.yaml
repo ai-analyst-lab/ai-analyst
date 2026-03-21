@@ -1,0 +1,83 @@
+# AXS Product Catalog
+# What the company builds and sells — helps the analyst understand which data
+# belongs to which product line and which metrics matter for each.
+#
+# TODO: Review and update descriptions to match your internal product names.
+
+products:
+  - name: "AXS Ticketing Platform"
+    type: product
+    description: >
+      Core primary ticketing platform for venues and promoters. Handles event
+      creation, inventory management, on-sale, fan purchase flow, and fulfilment
+      (digital tickets / AXS Mobile ID). The main revenue driver via service fees.
+    key_metrics:
+      - gross_ticket_revenue
+      - service_fee_revenue
+      - conversion_rate
+      - cart_abandonment_rate
+      - average_order_value
+    data_tables:
+      - orders
+      - events
+      - inventory
+      - sessions
+    added_at: "2026-03-21"
+
+  - name: "AXS Mobile ID"
+    type: product
+    description: >
+      Digital ticketing app used for event entry. Replaces paper/PDF tickets with
+      rotating barcodes on the fan's phone. Required for mobile-only events.
+      Affects scan rate and customer support volume at entry.
+    key_metrics:
+      - scan_rate
+      - mobile_id_failure_rate
+      - customer_support_tickets
+    data_tables:
+      - scans
+      - mobile_sessions
+    added_at: "2026-03-21"
+
+  - name: "AXS Fan Resale"
+    type: product
+    description: >
+      Fan-to-fan ticket resale marketplace integrated into the primary ticketing
+      platform. AXS earns a take rate on each resale transaction. Supports price
+      caps and identity lock in some markets. Competes with Stubhub, Viagogo.
+    key_metrics:
+      - resale_take_rate
+      - resale_price_premium
+      - fan_to_fan_volume
+    data_tables:
+      - resale_listings
+      - resale_transactions
+    added_at: "2026-03-21"
+
+  - name: "AXS Premium"
+    type: product
+    description: >
+      Premium hospitality and experience packages sold alongside standard tickets —
+      VIP suites, meet-and-greet, early entry. Higher AOV product line.
+      Tracked separately from standard ticket orders.
+    key_metrics:
+      - average_order_value
+      - gross_ticket_revenue
+    data_tables:
+      - orders
+      - premium_packages
+    added_at: "2026-03-21"
+
+  - name: "AXS Access Control"
+    type: product
+    description: >
+      Venue entry management hardware and software — scanners, gate management,
+      and real-time capacity dashboards for operators. Not a direct revenue line
+      but affects scan_rate and operational SLA metrics.
+    key_metrics:
+      - scan_rate
+      - gate_throughput
+    data_tables:
+      - scans
+      - gate_events
+    added_at: "2026-03-21"
