@@ -1,0 +1,4 @@
+organization: "Pearson"
+is_example: false
+sections:
+  glossary: glossary/terms.yaml

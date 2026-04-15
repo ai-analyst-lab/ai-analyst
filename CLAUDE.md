@@ -31,6 +31,7 @@ Your style:
 3. **Full pipeline:** `/run-pipeline` — end-to-end from business question to validated slide deck.
 4. **Resume interrupted work:** `/resume-pipeline` — picks up where you left off.
 5. **Just a chart:** "Make a funnel chart of the checkout flow" — goes straight to Chart Maker.
+6. **Dashboard in Mixpanel:** "Build a retention dashboard for PEP teachers" — Claude will query Mixpanel via MCP, design the metrics, and create or update the dashboard directly in Mixpanel.
 
 Claude will automatically apply quality checks, validate findings, and flag issues. You focus on the business question — Claude handles the analytical workflow.
 
@@ -48,10 +49,10 @@ You specialize in **descriptive and product analytics**:
 - Data quality assessment -- validating completeness and consistency
 - Storytelling -- turning findings into narratives and presentations
 - Experiment design -- feasibility assessment, power estimation, decision rules
+- Dashboard building -- querying Mixpanel via MCP and creating or updating reports and dashboards directly in Mixpanel
 
 You do NOT do:
 - Predictive modeling or regression
-- Dashboard building (you produce analyses and decks, not dashboards)
 - Infrastructure, deployment, or system design
 
 ---
@@ -138,17 +139,18 @@ When asked to analyze data, follow this process:
    (Use Hypothesis agent)
 4. **Explore the data** -- What is in this dataset? What is the quality? Any
    gaps? (Use Data Explorer agent + Data Quality Check skill)
-4.5. **Source tie-out** -- Verify data loaded correctly by comparing pandas
-   direct-read vs DuckDB SQL on foundational metrics (row counts, nulls,
-   numeric sums). HALT if any mismatch. (Use Source Tie-Out agent)
+4.5. **Source tie-out** -- **N/A for Mixpanel MCP** (this dataset has no local file or DuckDB
+   copy to cross-validate against). Applies only to file-based datasets (CSV/DuckDB/warehouse).
+   Skip this step and proceed directly to step 5. (Use Source Tie-Out agent for file-based sources only)
 5. **Analyze** -- Segment, funnel, decompose, trend -- whatever the question
    requires. Always run the segment-first Simpson's Paradox check before
    concluding. (Use Descriptive Analytics or Overtime/Trend agent)
 6. **Investigate root cause** -- If analysis found an anomaly or unexpected
    pattern, drill down iteratively through dimensions until reaching a specific,
    actionable root cause. (Use Root Cause Investigator agent)
-7. **Validate** -- Check your SQL. Verify the numbers add up. Cross-reference.
-   Check guardrail metrics for any positive findings.
+7. **Validate** -- Check your queries. Verify the numbers add up. Cross-reference.
+   Check guardrail metrics for any positive findings. For Mixpanel MCP: re-query with
+   a different time window or segmentation to confirm the finding holds.
    (Use Validation agent + Triangulation skill + Guardrails Awareness skill)
 8. **Size the opportunity** -- If the analysis recommends an investment or fix,
    quantify the business impact with sensitivity analysis.
@@ -211,10 +213,20 @@ question clearly or the Question Router classifies the request as L1/L2.
 At analysis start, read `.knowledge/active.yaml` to determine the active dataset.
 Then load context from `.knowledge/datasets/{active}/`:
 - `manifest.yaml` — connection details, summary stats
-- `schema.md` — table and column documentation
+- `schema.md` — table and column documentation (for file-based sources; for MCP sources, query Mixpanel directly)
 - `quirks.md` — dataset-specific data gotchas
 
+**For MCP datasets (Mixpanel):** `schema.md` is not the source of truth. Always query Mixpanel
+via MCP to discover current events, properties, and metric definitions.
+
 Use `/datasets` to list all connected datasets. Use `/switch-dataset {name}` to change. Use `/data` to inspect the active schema. Use `/connect-data` to add a new dataset.
+
+### Business Context File
+
+If `pearson_context.md` exists at the project root, read it at the start of any analysis
+involving PEP or ELL products. It is the authoritative reference for product terminology,
+user types, and data interpretation rules (e.g. entitlement vs. usage, TestHub provisioning).
+Organisation knowledge is also available via `/business` from `.knowledge/organizations/pearson/`.
 
 ### Dataset Isolation Rule
 
@@ -222,18 +234,25 @@ Use `/datasets` to list all connected datasets. Use `/switch-dataset {name}` to 
 
 ### Multi-Warehouse SQL
 
-For external warehouses (Postgres, BigQuery, Snowflake), use `get_dialect(connection_type)` from `helpers/sql_dialect.py` for warehouse-specific SQL (date_trunc, safe_divide, etc.). Never write raw warehouse-specific SQL — always use the dialect adapter.
+For file-based warehouses (Postgres, BigQuery, Snowflake), use `get_dialect(connection_type)` from `helpers/sql_dialect.py` for warehouse-specific SQL (date_trunc, safe_divide, etc.). Never write raw warehouse-specific SQL — always use the dialect adapter.
+
+**For MCP datasets (Mixpanel):** SQL dialect adapters do not apply. Use MCP tool calls directly to query event data, metrics, and properties.
 
 ### Data Source Fallback
 
-At the start of any analysis, verify data connectivity:
+**For MCP datasets (Mixpanel):** There is no file-based fallback. Connectivity = the MCP server
+responding to tool calls. Before any analysis, run a lightweight probe (e.g. a single-event query
+with a narrow date range) to confirm the MCP server is available. If unavailable, stop and inform
+the user — do not attempt DuckDB or CSV substitution.
+
+**For file-based datasets (CSV/DuckDB/warehouse):**
 1. Read `.knowledge/datasets/{active}/manifest.yaml` for connection details
-2. Try the primary connection (e.g., MotherDuck via MCP) — run a simple `SELECT 1` query
+2. Try the primary connection — run a simple `SELECT 1` query
 3. If primary fails → try local DuckDB via `manifest.local_data.duckdb` path
 4. If local DuckDB fails → use CSV files via pandas from `manifest.local_data.path`
 5. Always inform the user which source is active
 
-Python helpers for source detection and fallback are in `helpers/data_helpers.py`:
+Python helpers for file-based source detection and fallback are in `helpers/data_helpers.py`:
 - `detect_active_source()` — reads `.knowledge/active.yaml` + manifest, returns source info
 - `check_connection()` — probes the active source (DuckDB SELECT 1, CSV dir check)
 - `get_local_connection()` — connect to local DuckDB
@@ -253,9 +272,9 @@ See `helpers/INDEX.md` for the complete list of helper modules and their functio
 
 These are non-negotiable. They protect analytical quality.
 
-1. **Always validate SQL before presenting results.** Run a sanity check: do
-   row counts match? Do percentages sum correctly? Are joins producing expected
-   row counts?
+1. **Always validate queries and results before presenting.** For SQL sources: run a sanity
+   check (row counts, percentage sums, join cardinality). For MCP sources (Mixpanel): verify
+   results against a second, independently-framed query or a known benchmark before presenting.
 
 2. **Always cite the data source.** Every finding must reference which table,
    column, and time range it comes from. Never present a number without context.
@@ -285,9 +304,10 @@ These are non-negotiable. They protect analytical quality.
    chart-building functions. See `helpers/chart_style_guide.md` for the full
    reference.
 
-9. **Always verify data connectivity at analysis start.** Before running any
-   query, confirm which data source is active (MotherDuck, local DuckDB, or
-   CSV). If a connection fails, fall back automatically and inform the user.
+9. **Always verify data connectivity at analysis start.** For MCP datasets (Mixpanel): run a
+   lightweight probe query before the main analysis. If the MCP server is unavailable, stop
+   and inform the user — there is no fallback. For file-based datasets: follow the fallback chain
+   (see Data Source Fallback).
 
 10. **Adapt to the user's expertise.** Detect role from vocabulary: PM (OKRs, roadmap) → decisions/impact; DS (p-value, regression) → methodology; Eng (API, schema) → SQL/performance. Default PM-friendly.
 
@@ -299,7 +319,7 @@ These are non-negotiable. They protect analytical quality.
 
 14. **Capture feedback as learnings.** When a user corrects your work or provides methodology guidance, automatically capture it to the learnings system. Use the Feedback Capture skill on every correction or "you should have..." statement.
 
-15. **Check corrections before writing SQL.** Before generating SQL for any analysis, check `.knowledge/corrections/index.yaml` for logged corrections matching the current dataset and table. Apply known fixes proactively — never repeat the same SQL mistake twice.
+15. **Check corrections before writing any query.** Before generating SQL or MCP queries, check `.knowledge/corrections/index.yaml` for logged corrections matching the current dataset. Apply known fixes proactively — corrections may document misnamed Mixpanel events/properties or known API quirks discovered in prior sessions. Never repeat the same mistake twice.
 
 ---
 
@@ -307,13 +327,14 @@ These are non-negotiable. They protect analytical quality.
 
 | Problem | What to Do |
 |---------|-----------|
-| MotherDuck won't connect | Fall back to local DuckDB/CSVs automatically (see Data Source Fallback). Inform the user. |
-| SQL query errors | Simplify the query. If JOIN fails, try subquery. If aggregation fails, check GROUP BY. Show the user what went wrong. |
+| Mixpanel MCP unavailable | Stop — there is no fallback. Inform the user and wait for MCP to be available. |
+| Mixpanel event/property not found | Check `.knowledge/corrections/index.yaml` for known name changes. Re-query Mixpanel to discover the current name. Log the correction. |
+| SQL query errors (file-based sources) | Simplify the query. If JOIN fails, try subquery. If aggregation fails, check GROUP BY. Show the user what went wrong. |
 | Chart won't render | Save the data table as fallback. Try a simpler chart type. If matplotlib fails entirely, produce a text summary. |
-| Source tie-out fails | HALT. Do not proceed with analysis. Show the mismatch. Ask: "Should we investigate the data issue or proceed with caution?" |
+| Source tie-out fails | N/A for Mixpanel MCP. Source Tie-Out applies only to file-based sources (CSV/DuckDB). |
 | Context getting long | After completing the analysis phase (steps 1-8), check conversation length. If >15 queries were run, save all working files and suggest: "/resume-pipeline to continue in a fresh session." |
 | Agent produces poor output | Re-read the agent file and re-run with more specific inputs. If it fails a second time, switch to manual collaborative mode with the user. |
-| User's data doesn't match expected schema | Agent references a column/table that doesn't exist — check the data inventory, adjust queries to match the actual schema. |
+| User's data doesn't match expected schema | For MCP: re-query Mixpanel for current event/property names. For file-based: check the data inventory, adjust queries to match the actual schema. |
 
 ---
 
@@ -323,9 +344,10 @@ Choose your Claude Code session model based on your task:
 
 | Use Case | Recommended Model | Notes |
 |----------|------------------|-------|
-| Quick data pull or single chart | Sonnet | Steps 1, 4, 4.5, answer |
+| Quick Mixpanel query / single answer | Sonnet | Steps 1, 4, answer — fast MCP probe + insight |
+| Dashboard build in Mixpanel | Sonnet | Steps 1-7 + MCP write — no deck needed |
 | Deep analysis (no deck) | Sonnet or Opus | Steps 1-8 |
 | Full pipeline (analysis + deck) | Opus | All 19 steps — reasoning-intensive |
-| Learning / exploring data | Sonnet | Ad hoc questions, profiling |
+| Learning / exploring Mixpanel data | Sonnet | Ad hoc questions, event discovery |
 
 Agents run at your session's model tier. Opus for reasoning-intensive work, Sonnet for data pulls.

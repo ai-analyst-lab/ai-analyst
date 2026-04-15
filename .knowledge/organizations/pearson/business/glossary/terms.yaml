@@ -1,0 +1,75 @@
+# Business glossary — Pearson ELL / PEP
+# Source: pearson_context.md + product catalog
+terms:
+  - term: "PEP"
+    definition: "Pearson English Portal — the central digital platform for Pearson's institutional ELL customers. Functions as portal and access layer, main authentication and user management system, and native learning platform with class management, assignments, assessments, gradebook, and presentation tools. Also the hub through which all connected ELL products (MEL, PEC, SLG, Speaking Tutor, TestHub) are accessed."
+    aliases: ["Pearson English Portal"]
+    user_roles: ["Student", "Teacher", "Institution Admin"]
+    added_by: "setup"
+    added_at: "2026-04-15"
+
+  - term: "MEL"
+    definition: "MyEnglishLab — student practice and assessment platform. Connects via PEP. Produces learning engagement and assessment outcome data (exercises completed, scores, session duration, completion rates)."
+    aliases: ["MyEnglishLab"]
+    user_roles: ["Student", "Teacher"]
+    added_by: "setup"
+    added_at: "2026-04-15"
+
+  - term: "PEC"
+    definition: "Pearson English Connect — courseware delivery and classroom support platform. Connects via PEP. Produces lesson and content engagement data."
+    aliases: ["Pearson English Connect"]
+    user_roles: ["Student", "Teacher"]
+    added_by: "setup"
+    added_at: "2026-04-15"
+
+  - term: "SLG"
+    definition: "Smart Lesson Generator — AI tool for teacher lesson preparation using Pearson courseware. Accessed via PEP. Teacher-only tool; events are only meaningful when filtered to the Teacher role. Key signals: lessons generated, SLG sessions per teacher."
+    aliases: ["Smart Lesson Generator"]
+    user_roles: ["Teacher"]
+    added_by: "setup"
+    added_at: "2026-04-15"
+
+  - term: "ST"
+    definition: "Speaking Tutor — AI-powered speaking practice for learners. Accessed via PEP. Produces short, repeatable AI interaction events."
+    aliases: ["Speaking Tutor"]
+    user_roles: ["Student", "Teacher"]
+    added_by: "setup"
+    added_at: "2026-04-15"
+
+  - term: "TH"
+    definition: "TestHub — assessment and testing platform for ELL (benchmark, level, and certificate-related tests). Institution-provisioned: NOT activated through standard access code redemption — provisioned at institution level and managed within TestHub. Produces test execution and assessment outcome data, NOT learning engagement data. Users: Students, Teachers, and Institution Admins."
+    aliases: ["TestHub"]
+    user_roles: ["Student", "Teacher", "Institution Admin"]
+    provisioning: "institution-level (not access code)"
+    added_by: "setup"
+    added_at: "2026-04-15"
+
+  - term: "Access code"
+    definition: "Entitlement grant redeemed by students or teachers in PEP to unlock courseware and digital learning tools. Redeemed access codes indicate entitlement, NOT actual usage. Some products become visible in PEP once entitlement is granted, even if never used. Exception: TestHub is not activated via access codes."
+    aliases: ["access codes", "redemption code"]
+    added_by: "setup"
+    added_at: "2026-04-15"
+
+  - term: "Entitlement"
+    definition: "Access granted to a product via access code redemption. Entitlement ≠ engagement. A user can be entitled to a product and never interact with it."
+    aliases: ["entitled"]
+    added_by: "setup"
+    added_at: "2026-04-15"
+
+  - term: "Student"
+    definition: "PEP user role. Consumes learning content and completes activities. User role context is essential for correct interpretation of activity data — the same event means different things across roles."
+    aliases: ["learner"]
+    added_by: "setup"
+    added_at: "2026-04-15"
+
+  - term: "Teacher"
+    definition: "PEP user role. Manages classes, assignments, and lesson preparation. Uses SLG for AI-assisted lesson prep."
+    aliases: ["instructor", "educator"]
+    added_by: "setup"
+    added_at: "2026-04-15"
+
+  - term: "Institution Admin"
+    definition: "PEP user role. Manages users, licenses, and institution setup."
+    aliases: ["admin", "institution administrator"]
+    added_by: "setup"
+    added_at: "2026-04-15"
