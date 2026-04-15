@@ -1,9 +1,0 @@
-# Code owners — these files require review from the maintainer
-# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
-
-# Security-sensitive files
-.gitignore              @shanebutler
-.claude/                @shanebutler
-connection_templates/   @shanebutler
-scripts/                @shanebutler
-.github/                @shanebutler
