@@ -102,6 +102,11 @@ condition matches -- you do not need to be asked.
 | Business | `.claude/skills/business/skill.md` | Invoked as `/business` — browse organization knowledge (glossary, metrics, products, teams) |
 | Notion Ingest | `.claude/skills/notion-ingest/skill.md` | Invoked as `/notion-ingest` — crawl Notion workspace to extract business context |
 | Runs | `.claude/skills/runs/skill.md` | Invoked as `/runs` — list, inspect, compare, and clean up pipeline runs |
+| Recall Optimization | `.claude/skills/recall-optimization/skill.md` | Optimizing minority-class recall in regression-as-classification — systematic 5-lever procedure with re-tuning gates |
+| F1 Optimization | `.claude/skills/f1-optimization/skill.md` | Optimizing balanced F1 in regression-as-classification — same 5-lever framework but maximizes harmonic mean of precision and recall |
+| Forward-Chaining CV | `.claude/skills/forward-chaining-cv/skill.md` | Evaluating ML models on temporal/panel data — entity-aware splits, aggregation rules, distribution shift diagnostics |
+| Feature Hygiene | `.claude/skills/feature-hygiene/skill.md` | Before training any model on tabular data — ordered checklist for dropping IDs, dates, leakage, high-NaN, zero-variance columns with severity gates |
+| Target Engineering | `.claude/skills/target-engineering/skill.md` | Defining a regression or classification target — forward-shift, market adjustment, clipping/winsorization, skew diagnostics, class balance profiling |
 
 **How skills work:** Read the skill file when triggered and follow its instructions. Multiple skills can apply at once (e.g., Visualization Patterns + Triangulation).
 
