@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.0.0] - 2026-06-18
+
+Major expansion and open-source cleanup. Roughly doubled the system (40 → 65 skills, 22 → 43 agents) and made it dataset-agnostic and secret-clean.
+
+### Added
+- Experimentation: `/experiment` (A/B design → power → SRM → analysis → decision) and `/causal` (diff-in-diff, propensity matching, pre/post) with a production `experiment_stats` library
+- `/north-star` — North Star Metric lifecycle coaching (design, audit, drivers, inputs) with a cited playbook
+- `/reliability` — stability eval that runs a question N times and reports STABLE vs DRIFT
+- Deck tooling: `/deck-critique`, `/slide-transform`, `/deck-rescue`
+- `/theme-picker` + WCAG-checked brand themes (FiveThirtyEight, Economist)
+- `/analysis-design` and `/stress-test` for plan rigor
+- Google Slides and Notion export (alongside existing Google Docs / PDF / Word)
+- `/teach` (concept visuals) and `/skill-creator` (author/benchmark skills)
+
+### Changed
+- Dataset-agnostic by default — no bundled dataset; `/connect-data` builds the knowledge brain locally for your own warehouse
+- Renamed from the internal "AI Analyst Plus" line to **AI Analyst**
+
+### Removed
+- Bundled synthetic-data generator (moving to a separate sample-data repo)
+- Deprecated `tieout_helpers` shim and `source-tieout` agent
+- Course/community-specific scaffolding
+
 ## [2.0.0] - 2026-02-23
 
 ### Added

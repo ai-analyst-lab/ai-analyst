@@ -2,10 +2,34 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![Claude Code Required](https://img.shields.io/badge/requires-Claude%20Code-blueviolet.svg)](https://claude.ai/code)
+[![Version 3](https://img.shields.io/badge/version-3.0-success.svg)](#-whats-new-in-v3)
 
 An AI-powered product analyst that lives inside Claude Code. Ask business questions in plain English, get validated analyses, branded charts, and stakeholder-ready slide decks — in minutes, not days.
 
-**18** agents | **55** skills | **40** helper modules | DAG-based parallel execution | PDF + HTML + Google Docs export
+**43** agents | **65** skills | **44** helper modules | DAG-based parallel execution | PDF + HTML + Google Docs / Slides / Notion export
+
+---
+
+## 🚀 What's New in v3
+
+v3 is a major expansion *and* a cleanup. The toolkit roughly doubled — **40 → 65 skills**, **22 → 43 agents** — and is now fully dataset-agnostic, secret-scanned, and open-source-ready.
+
+**New capabilities**
+
+- **Experimentation** — `/experiment` runs the full A/B lifecycle (design → power → SRM → analysis → ship/abort decision), and `/causal` covers the cases you *can't* randomize (diff-in-diff, propensity matching, pre/post), backed by a production-grade `experiment_stats` library.
+- **North Star coaching** — `/north-star` helps you design, audit, and diagnose your team's anchor metric, with a cited playbook and case-book.
+- **Reliability checks** — `/reliability` runs a question several independent times and tells you whether the answer is *stable* enough to act on — the cheapest eval, no answer key needed.
+- **Deck doctor** — `/deck-critique`, `/slide-transform`, and `/deck-rescue` diagnose weak slides and rebuild them around a real narrative.
+- **Theming** — `/theme-picker` plus WCAG-checked brand themes (FiveThirtyEight, Economist, and your own), so every chart is on-brand and accessible.
+- **Analysis rigor** — `/analysis-design` turns a hunch into a testable plan; `/stress-test` pressure-tests it for confounds, bad baselines, and missing kill-criteria *before* you run a query.
+- **More exports** — Google Docs, Google Slides, and Notion join PDF, Word, Slack, and email.
+- **Teaching & extensibility** — `/teach` generates concept visuals; `/skill-creator` lets you build and benchmark your own skills.
+
+**Cleaned up for open source**
+
+- **Dataset-agnostic by default** — no bundled dataset; `/connect-data` profiles whatever warehouse you wire in (DuckDB, Postgres, BigQuery, Snowflake) and builds the knowledge brain locally.
+- **Secret-scanned** — no credentials in the tree or git history.
+- **Leaner** — course-specific scaffolding and deprecated shims removed.
 
 ---
 
