@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [3.0.0] - 2026-06-18
 
-Major expansion and open-source cleanup. Roughly doubled the system (40 → 65 skills, 22 → 43 agents) and made it dataset-agnostic and secret-clean.
+Major release. Roughly doubled the system (40 to 65 skills, 22 to 43 agents) and made it work on any dataset out of the box.
 
 ### Added
 - Experimentation: `/experiment` (A/B design → power → SRM → analysis → decision) and `/causal` (diff-in-diff, propensity matching, pre/post) with a production `experiment_stats` library
