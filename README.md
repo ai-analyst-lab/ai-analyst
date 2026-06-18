@@ -2,11 +2,13 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![Claude Code Required](https://img.shields.io/badge/requires-Claude%20Code-blueviolet.svg)](https://claude.ai/code)
-[![Version 3](https://img.shields.io/badge/version-3.0-success.svg)](#-whats-new-in-v3)
+[![Version 3](https://img.shields.io/badge/version-3.0-success.svg)](#whats-new-in-v3)
 
-An AI-powered product analyst that lives inside Claude Code. Ask business questions in plain English, get validated analyses, branded charts, and stakeholder-ready slide decks, in minutes, not days.
+An AI product analyst that lives inside Claude Code. Ask questions about your data in plain English and get back validated analyses, branded charts, and stakeholder-ready slide decks, in minutes, not days.
 
-**43** agents | **65** skills | **44** helper modules | DAG-based parallel execution | PDF + HTML + Google Docs / Slides / Notion export
+You talk to it the way you'd talk to an analyst on your team. No SQL to write, no dashboards to build. Connect your data, ask what you want to know, and it does the rest.
+
+**65 skills · 43 agents · 44 helper modules · works on DuckDB, Postgres, BigQuery, and Snowflake**
 
 ---
 
@@ -27,22 +29,11 @@ There's no bundled dataset, so it works on your own data from day one. Run `/con
 
 ---
 
-## What This Is
+## Getting Started
 
-AI Analyst turns Claude Code into a product analytics system. It combines:
+Three steps and you're running.
 
-- **Skills** (`.claude/skills/`), standards Claude follows automatically (chart styling, data validation, question framing, stakeholder communication)
-- **Agents** (`agents/`), multi-step analytical workflows orchestrated by a DAG engine (question framing → data exploration → analysis → storytelling → deck creation)
-- **Helpers** (`helpers/`), Python modules for charting, SQL validation, data connectivity, statistical tests, and more
-- **Knowledge** (`.knowledge/`), persistent memory for dataset context, corrections, proven SQL patterns, and business glossary
-
-You interact by talking to Claude. Ask a question, invoke a slash command, or let Claude figure out which skills and agents to apply.
-
----
-
-## Quick Start
-
-**1. Clone and install**
+**1. Install**
 
 ```bash
 git clone https://github.com/ai-analyst-lab/ai-analyst.git
@@ -50,260 +41,139 @@ cd ai-analyst
 pip install -e ".[dev]"
 ```
 
-**2. Connect your data** (optional)
+**2. Open it**
 
-In Claude Code, run `/connect-data` to wire up a warehouse (DuckDB, Postgres,
-BigQuery, Snowflake) or a CSV directory. Curated public datasets with guides live
-in `data/examples/`.
+Start Claude Code in the project folder. Run `/setup` for a short guided onboarding, or `/connect-data` to point it straight at your data.
 
-**3. Start Claude Code**
+**3. Ask**
 
-```bash
-claude
-```
+Type a question the way you'd ask a colleague:
 
-**4. Ask a question**
+> What's our conversion rate by device?
 
-```
-What's our conversion rate by device?
-```
-
-Or run the full pipeline:
-
-```
-/run-pipeline question="Why is conversion dropping on mobile?"
-```
+That's all. It figures out which data to query, runs the analysis, and answers with a chart and a short read on what it means.
 
 ---
 
-## Don't Know What to Do? Just Ask.
+## What You Can Do
 
-Claude knows the entire system, every agent, skill, command, and dataset. If you're stuck:
+You drive everything in plain English. Here are the things people reach for most. Each example is something you'd actually type.
 
-```
-What can I do with this data?
-What should I run to refresh the deck?
-How do I connect my own CSV files?
-Which agents handle root cause analysis?
-Re-run just the chart maker and deck creator.
-```
+**Get a quick answer.** Ask a question, get a number with context and a chart.
 
-You don't need to memorize anything in this README. Think of it as a reference, Claude is the guide.
+> Which channel has the best 30-day retention?
 
----
+**Run a full analysis.** For the bigger questions, it runs an end-to-end investigation and hands back a validated analysis and a slide deck.
 
-## Five Things You Can Do
+> Why is checkout conversion dropping on mobile?
 
-### 1. Ask a quick question
+**Design and read experiments.** Plan an A/B test, size it, and interpret the result. Or handle the situations where you can't randomize.
 
-```
-What's our conversion rate by device?
-```
+> Help me design a test for the new onboarding flow.
+>
+> Is this experiment ready to ship, or should we keep it running?
 
-Claude queries the data and returns an answer with a chart. Simple questions get answered in under 2 minutes without running the full pipeline.
+**Set and defend a North Star.** Get help choosing your team's guiding metric, pressure-testing it, and figuring out why it stalled.
 
-### 2. Run a full analysis
+> Is "weekly active teams" a good north star for us?
 
-```
-/run-pipeline question="What's driving the decline in conversion?"
-```
+**Check whether an answer is trustworthy.** Run the same question a few times and see if it holds steady enough to act on.
 
-The pipeline runs 18 agents across 4 phases: Frame the question, Analyze the data, Build the story, Create the deck. You get a validated analysis, branded charts, a narrative, and a slide deck with speaker notes. Exports to PDF, HTML, and Google Docs.
+> Run that retention number again a few times and tell me if it's stable.
 
-### 3. Explore a dataset
+**Make a single chart.** Describe what you want and get a clean, on-brand chart.
 
-```
-/explore
-```
+> Make a funnel chart of the checkout flow and highlight the biggest drop-off.
 
-Interactive data browsing without committing to a full analysis. Preview tables, check distributions, spot patterns, form hypotheses.
+**Fix a weak deck.** Score a presentation slide by slide and rebuild the ones that aren't landing.
 
-### 4. Connect your own data
+> Critique this deck and rescue the worst slides.
 
-```
-/connect-data
-```
+**Share it anywhere.** Send results out in whatever format the audience needs.
 
-Guided wizard for CSV files, local DuckDB, Postgres, BigQuery, or Snowflake. Auto-profiles your data, creates schema docs, and remembers context across sessions.
+> Export this as a Google Doc for the leadership review.
 
-### 5. Make a single chart
+And when you're not sure what to do next, just ask:
 
-```
-Make a funnel chart of the checkout flow, highlighting the biggest drop-off step.
-```
-
-Charts follow Storytelling with Data methodology: warm off-white background, decluttered axes, action title, direct labels instead of legends.
+> What can I do with this data?
 
 ---
 
-## How It Works: The Pipeline
+## How It Works
 
-When you run `/run-pipeline`, Claude orchestrates 18 agents across 4 phases:
+Two ideas, and Claude handles the rest.
 
-```
-1. FRAME              2. ANALYZE                          3. STORY                 4. DECK
-+-----------------+   +-----------------------------+   +--------------------+   +------------------+
-| Question        |   | Data Explorer               |   | Story Architect    |   | Storytelling     |
-|   Framing       |   |   > Source Tie-Out           |   |   > Coherence      |   |   > Deck Creator |
-|   > Hypothesis  |   |   > Descriptive Analytics    |   |     Reviewer       |   |   > Slide Review |
-|     Generation  |   |   > Root Cause Investigator  |   |   > Chart Maker    |   |   > Close the    |
-|                 |-->|   > Validation               |-->|   > Design Critic  |-->|     Loop         |
-+-----------------+   |   > Opportunity Sizer        |   +--------------------+   +------------------+
-                      +-----------------------------+
-```
+**Skills** are standards it follows automatically. When it makes a chart, it styles it properly. When it starts an analysis, it checks data quality first. When it reports a number, it gives you a comparison so the number means something. You never call these. They apply whenever they're relevant, and several can apply at once.
 
-**Phase 1, Frame:** Structures your business question into analytical questions with testable hypotheses.
+**Agents** are the multi-step workflows behind the bigger jobs. When you run a full analysis, Claude moves through a pipeline: it frames your question, explores and validates the data, investigates the root cause, builds a story, designs the charts, and assembles the deck, checking its own work at each step.
 
-**Phase 2, Analyze:** Explores the data, verifies loading integrity, runs segmentation/funnel/drivers analysis, drills to root cause, validates findings, and sizes the opportunity.
-
-**Phase 3, Story:** Designs a storyboard (Context-Tension-Resolution arc), generates charts with collision detection, and reviews visual quality.
-
-**Phase 4, Deck:** Writes a stakeholder narrative, builds a branded Marp slide deck, reviews design, and ensures every recommendation has a follow-up plan. Exports to PDF, HTML, and Google Docs.
-
-Five execution plans let you run just the part you need:
-
-| Plan | Use When | What Runs |
-|------|----------|-----------|
-| `full_presentation` | Complete analysis to slide deck | All 18 agents |
-| `deep_dive` | Analysis without presentation | Phases 1-2 only |
-| `quick_chart` | Just need one chart | Chart Maker + Design Critic |
-| `refresh_deck` | Re-do the presentation layer | Phases 3-4 (reuses analysis) |
-| `validate_only` | Check existing work | Validation + Source Tie-Out |
-
-```
-/run-pipeline question="..." plan=deep_dive
-```
-
-If the pipeline gets interrupted, resume where you left off:
-
-```
-/resume-pipeline
-```
+The result is an analyst that tells you what it found and why it matters, not just a query that returns rows.
 
 ---
 
-## All Commands
+## Commands
 
-| Command | What It Does |
-|---------|-------------|
-| `/run-pipeline` | Full analysis to slide deck |
-| `/resume-pipeline` | Resume interrupted pipeline |
-| `/explore` | Interactive data exploration |
-| `/data` | Show active dataset schema |
-| `/datasets` | List all connected datasets |
-| `/switch-dataset` | Change the active dataset |
-| `/connect-data` | Add a new data source |
-| `/setup` | Interactive onboarding interview |
-| `/metrics` | Browse the metric dictionary |
-| `/history` | View past analyses |
-| `/patterns` | View recurring patterns |
-| `/export` | Export as slides, email, Slack, Google Doc, or Word |
-| `/forecast` | Generate a time-series forecast |
-| `/runs` | List, inspect, compare pipeline runs |
-| `/business` | Browse organization knowledge |
-| `/log-correction` | Log a data or methodology correction |
-| `/architect` | Multi-persona planning methodology |
-| `/notion-ingest` | Import business context from Notion |
-| `/compare-datasets` | Compare metrics across datasets |
-| `/deck-critique` | Score a deck slide-by-slide against SWD checklist |
-| `/deck-rescue` | Full deck rewrite pipeline |
-| `/slide-transform` | Redesign a single bad slide |
-| `/analysis-design` | Full lifecycle from hunch to validated investigation plan |
-| `/stress-test` | 7-point review of any analysis plan |
-| `/experiment-brief` | Generate a structured A/B test brief |
-| `/kickoff` | Introduce yourself to the community on Slack |
-| `/show-off` | Share what you built with the community |
+You can always just ask in plain English. Slash commands are shortcuts for common jobs.
 
-Or just ask in plain English. "Show me conversion by device" works as well as any command.
+**Analysis**
+`/run-pipeline` full analysis to slide deck · `/resume-pipeline` pick up an interrupted run · `/explore` browse a dataset · `/analysis-design` turn a hunch into a plan · `/stress-test` review a plan for flaws · `/forecast` time-series projection
+
+**Experiments and causal**
+`/experiment` A/B design, power, analysis, decision · `/experiment-brief` structured test brief · `/causal` diff-in-diff, matching, before/after
+
+**Metrics and trust**
+`/north-star` design and audit your guiding metric · `/metrics` browse the metric dictionary · `/reliability` check if an answer is stable
+
+**Decks and sharing**
+`/deck-critique` score a deck · `/slide-transform` redesign one slide · `/deck-rescue` rebuild a whole deck · `/export` to Docs, Slides, Notion, PDF, Word, Slack, or email
+
+**Your data**
+`/connect-data` add a source · `/data` show the schema · `/datasets` list connected datasets · `/switch-dataset` change the active one · `/compare-datasets` compare across two
+
+**Setup and knowledge**
+`/setup` guided onboarding · `/business` browse org knowledge · `/history` past analyses · `/runs` inspect pipeline runs · `/teach` concept visuals · `/skill-creator` build your own skills
 
 ---
 
 ## Your Data
 
-This repo ships clean, no bundled datasets. Connect your own data and the system builds context around it.
+The repo ships clean, with no bundled dataset. You connect your own, and the system builds context around it.
 
-### Connect your own
+Run `/connect-data` for a guided wizard (or `/setup` for full onboarding). Supported sources:
 
-Run `/connect-data` for a guided wizard, or `/setup` for full onboarding. Supported sources:
-
-- **CSV files**, drop them in a directory, point Claude at it
+- **CSV files**, dropped in a directory
 - **DuckDB**, local or MotherDuck
 - **Postgres**, any Postgres-compatible database
-- **BigQuery**, Google BigQuery with service account
-- **Snowflake**, Snowflake with user/password or key pair
+- **BigQuery**, with a Google service account
+- **Snowflake**, with user/password or key pair
 
-The system auto-profiles your data, creates schema documentation, and remembers context across sessions in `.knowledge/datasets/`.
-
-### Sample data
-
-Bring your own data via `/connect-data` (DuckDB, Postgres, BigQuery, Snowflake, or
-a CSV directory). Curated public datasets with README guides are available in `data/examples/`.
+It auto-profiles your data, writes schema documentation, and remembers context across sessions in `.knowledge/`. That memory also captures corrections (so the same mistake doesn't happen twice), proven query patterns, and your business glossary. A few public practice datasets live in `data/examples/`.
 
 ---
 
-## Architecture
-
-```
-ai-analyst/
-├── CLAUDE.md                    # AI persona, skills table, rules, workflow
-├── agents/                      # 18 agent prompt templates (markdown)
-│   ├── registry.yaml            # DAG dependencies and execution order
-│   └── CONTRACT_TEMPLATE.md     # Template for writing new agents
-├── .claude/skills/              # 55 skill definitions
-├── helpers/                     # 40 Python modules
-│   ├── chart_helpers.py         # SWD charting (swd_style, highlight_bar, etc.)
-│   ├── data_helpers.py          # Data source abstraction
-│   ├── sql_helpers.py           # SQL sanity checks
-│   └── ...
-├── .knowledge/                  # Persistent memory (dataset context, corrections, patterns)
-│   ├── active.yaml              # Currently active dataset
-│   └── datasets/                # Per-dataset manifest, schema, quirks
-├── themes/                      # Marp CSS themes (light + dark)
-├── templates/                   # Marp deck templates, HTML components
-├── outputs/                     # Final deliverables (analyses, charts, decks)
-└── working/                     # Intermediate files (gitignored)
-```
-
-### Skills vs Agents
-
-**Skills** are standards Claude follows automatically. When you make a chart, the Visualization Patterns skill activates. When you start an analysis, Data Quality Check runs. You never invoke them, they apply when their trigger condition matches. Multiple skills can fire at once.
-
-**Agents** are multi-step workflows for specific tasks. They're markdown prompt templates with `{{VARIABLES}}` that get substituted at runtime. The pipeline orchestrates them in dependency order using a DAG engine.
-
-### Knowledge System
-
-`.knowledge/` persists across sessions:
-- **Dataset context**, schema, quirks, connection details per dataset
-- **Corrections**, logged mistakes so the same SQL error never happens twice
-- **Query archaeology**, proven SQL patterns retrieved before writing new queries
-- **Business glossary**, organization-specific terms, metrics, products, teams (importable from Notion)
-
----
-
-## Customization
+## Make It Yours
 
 | Want to... | Do this |
 |-----------|---------|
 | Change how Claude thinks | Edit `CLAUDE.md` (persona, rules, workflow) |
 | Add a new skill | Create `.claude/skills/my-skill/skill.md` |
-| Add a new agent | Create `agents/my-agent.md` using `agents/CONTRACT_TEMPLATE.md` |
-| Change the slide theme | Create a YAML theme in `themes/brands/` |
-| Modify the pipeline | Edit `.claude/skills/run-pipeline/skill.md` |
-| Add to the agent DAG | Edit `agents/registry.yaml` |
+| Add a new agent | Copy `agents/CONTRACT_TEMPLATE.md` |
+| Change the slide theme | Add a YAML theme in `themes/brands/` |
+| Adjust the pipeline | Edit `.claude/skills/run-pipeline/skill.md` |
+
+See [docs/setup-guide.md](docs/setup-guide.md) for setup and [docs/theming.md](docs/theming.md) for branding.
 
 ---
 
 ## Requirements
 
 - **Python 3.10+**
-- **Claude Code** with a [Claude Pro or Max subscription](https://claude.ai/pro)
-- **Node.js 18+** (for Marp PDF/HTML export)
-- **Internet connection** (for Claude API and optional cloud data sources)
+- **Claude Code** with a [Claude subscription](https://claude.ai/code)
+- **Node.js 18+** for PDF and HTML slide export
+- An internet connection for the Claude API and any cloud data sources
 
 ---
 
-## Getting Help
+## Help and License
 
-- **Setup guide:** [docs/setup-guide.md](docs/setup-guide.md)
-- **Theming:** [docs/theming.md](docs/theming.md)
-- **Questions or bugs:** Ask in the `#help` channel on Slack
+Questions or bugs: open an [issue](https://github.com/ai-analyst-lab/ai-analyst/issues). Licensed under [MIT](LICENSE).
