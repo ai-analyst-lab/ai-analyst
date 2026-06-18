@@ -1,0 +1,120 @@
+# Atom.yaml — universal frontmatter contract every atom must satisfy.
+# Source of truth: WIKI_SCHEMA.md §"Atomic note format".
+# Every {TypeName}Atom.yaml in this directory MUST `extends: Atom`.
+
+schema_version: 1
+schema_name: Atom
+extends: null
+
+# Declared subtypes (every name here MUST have a corresponding {TypeName}Atom.yaml in this dir).
+declared_subtypes:
+  - Concept
+  - Principle
+  - Definition
+  - Quote
+  - ProTip
+  - Example
+  - CaseStudyFragment
+  - AntiPattern
+  - WorkflowStep
+  - ChecklistItem
+  - ChapterMap
+  - SectionMap
+  - Figure
+  - FigureElement
+
+# Universal required frontmatter fields. Every atom file MUST carry these.
+required_fields:
+  - id
+  - type
+  - schema_version
+  - extracted_by
+  - extracted_at
+  - source            # nested object — see required_subfields.source
+  - controlled_terms
+  - tier
+  - confidence
+  - confidence_derivation
+  - curator_status
+  - reconciliation_status
+  - indices
+
+required_subfields:
+  source:
+    - file
+    - page
+    - lines           # 2-int array [start_line, end_line]
+    - span_quote      # verbatim, ≤300 chars
+
+# Optional but recognized at the universal level.
+optional_fields:
+  - related_atoms       # array of atom IDs
+  - case_id             # required on CaseStudyFragmentAtom; optional elsewhere
+  - workflow_id         # required on WorkflowStepAtom; optional elsewhere
+  - step_order          # required on WorkflowStep + ChecklistItem; optional elsewhere
+  - curated_by
+  - curated_at
+  - cross_extractor_agreement
+  - index_payload       # nested map keyed by index name (cases | query | glossary | quotes | pro-tips)
+
+# Field-level constraints enforced by validators.py.
+field_constraints:
+  schema_version:
+    type: integer
+    const: 1
+  source.page:
+    type: integer
+    minimum: 1
+  source.span_quote:
+    type: string
+    max_length: 300
+  source.lines:
+    type: array
+    items: integer
+    length: 2
+  controlled_terms:
+    type: array
+    items: string
+    cross_check: glossary_keys   # each term MUST exist as a key in raw/atoms/_glossary.yaml
+  extracted_at:
+    type: string
+    format: iso8601-date
+  id:
+    type: string
+    pattern: per-subtype          # see each {TypeName}Atom.yaml id_pattern
+
+enums:
+  tier: [1, 2, 3]
+  confidence: [high, medium, low]
+  curator_status: [pending, approved, rejected, revision_requested]
+  reconciliation_status: [pending, reconciled, conflict, waived]
+  type:
+    # Atom `type` field MUST be one of these snake-or-kebab forms used in atom IDs and directories.
+    - concept
+    - principle
+    - definition
+    - quote
+    - pro-tip
+    - example
+    - case-study-fragment
+    - anti-pattern
+    - workflow-step
+    - checklist-item
+    - chapter-map
+    - section-map
+    - figure
+    - figure-element
+  indices:
+    # Each entry of the `indices` array MUST be one of:
+    - glossary
+    - cases
+    - query
+    - quotes
+    - pro-tips
+    - figures
+    - workflows
+    - anti-patterns
+    - verticals
+
+id_pattern: null            # subtype-specific; see each {TypeName}Atom.yaml
+page_size_cap_words: null   # atoms have no word cap

@@ -1,7 +1,30 @@
+---
+name: business
+description: Browse, search, and explore your organization's business context system — glossary terms, product catalog, metric definitions, OKRs/objectives, and team structure. This skill provides interactive access to all business knowledge stored in `.knowledge/organizations/`. Use this skill whenever the user wants to understand business terminology, look up metric definitions, explore what products exist, review company objectives, understand team structure, search for business terms, or generally wants to know "what business context do we have?" Trigger on phrases like "/business", "show me our glossary", "what metrics are defined?", "what products do we have?", "show me our OKRs", "who's on which team?", "look up [business term]", "search for [term] in our business knowledge", "what's the definition of [term]?", "show me our business context", "browse our company knowledge", "what teams do we have?", "find [term] in the knowledge base", or any request to view or search organizational knowledge. This skill is especially useful when starting analyses (to understand available metrics and terms), when onboarding new team members (to share business vocabulary), when writing reports (to verify metric definitions match company standards), or when collaborating across teams (to establish shared terminology). Always use this skill instead of reading `.knowledge/organizations/` files directly — it provides formatted, user-friendly output with search, pagination, and helpful error messages.
+---
+
 # /business — Business Context Browser
 
 > Interactive browser for your organization's knowledge system. Explore terms,
 > products, metrics, objectives, and team structure.
+
+## ⚠️ CRITICAL: This Skill's Purpose
+
+**This skill is for browsing ORGANIZATIONAL KNOWLEDGE FILES, not analyzing data.**
+
+What this skill does:
+- Shows what's documented in `.knowledge/organizations/{org}/business/` YAML files
+- Displays glossary terms, product catalogs, metric definitions, OKRs, team structure
+- Searches across business knowledge categories
+
+What this skill does NOT do:
+- ❌ Query datasets or run SQL
+- ❌ Analyze actual data in tables
+- ❌ Show user profiles (separate system)
+- ❌ Show analysis history (use `/history` instead)
+- ❌ Show corrections log (separate system)
+
+**If the user wants to know what products exist in the DATA, use `/explore` or Data Explorer agent instead. If they invoke `/business products`, show what's in the products YAML file.**
 
 ## Trigger
 Invoked as `/business` or `/business {subcommand}`
@@ -9,7 +32,8 @@ Invoked as `/business` or `/business {subcommand}`
 ## Prerequisites
 - Organization context must exist at `.knowledge/organizations/{org}/`
 - Read `.knowledge/setup-state.yaml` to find active organization
-- If no org configured: "No organization context found. Run `/setup` Phase 3 to configure business context, or create one manually at `.knowledge/organizations/{name}/`."
+- If no org configured: "No organization context found. Run `/setup` Phase 3 to configure business context, or create one manually at `.knowledge/organizations/{name}/`."`
+
 
 ## Subcommands
 
@@ -29,10 +53,23 @@ Type /business {category} for details.
 ```
 
 **Implementation:**
-1. Read `.knowledge/organizations/{org}/manifest.yaml` for org name
-2. Use `helpers/business_context.py` → `load_business_context(org_path)`
-3. Count entries in each category
+1. Read `.knowledge/setup-state.yaml` to find active organization name
+2. **REQUIRED:** Use `helpers/business_context.py` → `load_business_context(org_path)` to load data
+   - DO NOT manually read YAML files
+   - The helper handles file not found errors, parsing errors, and provides consistent structure
+3. Count entries in each category (glossary, products, metrics, objectives, teams)
 4. Display summary table
+5. ⚠️ **SCOPE BOUNDARY:** Show ONLY business context categories. Do NOT include analysis history, corrections, user profile, or dataset info — those are separate systems.
+5. **If business context is empty or sparse (fewer than 3 categories populated):**
+   - Check `.knowledge/analyses/index.yaml` for past analyses
+   - If analyses exist, add a section called "Implicit Knowledge (from Past Analyses)"
+   - Extract and show:
+     - Most frequently analyzed metrics (count mentions across analysis titles/tags)
+     - Recurring business questions or themes
+     - Common data gotchas from the active dataset's `quirks.md`
+   - This helps new team members understand what the team actually measures, even when formal docs aren't populated yet
+   - Frame this as "What the team measures (inferred from past work)" vs "Formal documentation (not yet configured)"
+6. Always provide next steps: suggest `/setup` to populate formal context, or show how to add entries manually
 
 ### `/business glossary` — Browse Terms
 Display all business term definitions:
@@ -67,9 +104,11 @@ Display product hierarchy:
 ```
 
 **Implementation:**
-1. Load from `business/products/index.yaml`
-2. Display in table format
-3. If empty: "No products defined. Add products to `.knowledge/organizations/{org}/business/products/index.yaml`."
+1. ⚠️ **DO NOT query the dataset.** Read the YAML file at `business/products/index.yaml`
+2. Load product entries from the YAML file (NOT from database tables)
+3. Display in table format
+4. If empty: "No products defined. Add products to `.knowledge/organizations/{org}/business/products/index.yaml`."
+5. **Common mistake:** Querying `products` table or `checkout_sessions` table in the database. This is WRONG. `/business products` shows what's DOCUMENTED in YAML files, not what's in the data.
 
 ### `/business metrics` — Inspect Metric Definitions
 Display metric dictionary:
@@ -142,6 +181,10 @@ If no match: "No results for '{term}'. Try a different search term or browse cat
 2. Case-insensitive substring match across all categories
 3. Rank: exact match > starts-with > contains
 4. Show top 10 results with category badge
+5. **If no formal match found AND the term looks like a metric (e.g., contains "rate", "count", "total", "revenue", "user"):**
+   - Check the active dataset's `schema.md` for columns matching the term
+   - Check the active dataset's `quirks.md` for mentions of the term
+   - If found, show: "Not in formal glossary, but found in dataset: [column name] — [description]. Consider adding to `/business metrics` for future reference."
 
 ## Error Handling
 - Missing org directory → suggest `/setup` Phase 3

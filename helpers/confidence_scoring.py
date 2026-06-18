@@ -572,6 +572,100 @@ def _score_sample_size(metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     return {"score": score, "max": 10, "status": status, "detail": detail}
 
 
+def _score_cross_verification(validation_results: Dict[str, Any]) -> Dict[str, Any]:
+    """Score Factor 8: Cross-Verification (0-10).
+
+    Uses cross-verification agent's confidence score (0-10 scale from
+    helpers/cross_verification.py score_cross_verification()).
+
+    Scoring:
+        Score 10 (all checks pass) -> 10
+        Score 8 (C/D warn)         ->  8
+        Score 6 (B warn)           ->  6
+        Score 4 (C/D fail)         ->  4
+        Score 2 (B fail)           ->  2
+        Score 0 (A fail)           ->  0
+        Not provided               ->  0 (MISSING)
+
+    Args:
+        validation_results: Dict containing 'cross_verification' key
+            with value dict having 'score' (0-10).
+
+    Returns:
+        dict with keys: score, max, status, detail.
+    """
+    cv = validation_results.get("cross_verification")
+
+    if cv is None:
+        return {
+            "score": 0,
+            "max": 10,
+            "status": "MISSING",
+            "detail": "Cross-verification not provided.",
+        }
+
+    cv_score = cv.get("score", 0)
+
+    if cv_score >= 8:
+        status = "PASS"
+    elif cv_score >= 4:
+        status = "WARNING"
+    else:
+        status = "BLOCKER"
+
+    detail = f"Cross-verification score: {cv_score}/10."
+    if cv.get("overall_status"):
+        detail += f" Overall: {cv['overall_status']}."
+
+    return {"score": cv_score, "max": 10, "status": status, "detail": detail}
+
+
+def _score_reproducibility_factor(validation_results: Dict[str, Any]) -> Dict[str, Any]:
+    """Score Factor 9: Reproducibility (0-5).
+
+    Uses reproducibility check results (from helpers/cross_verification.py
+    score_reproducibility()).
+
+    Scoring:
+        PASS or SKIPPED (deterministic) -> 5
+        WARN (minor variance)           -> 3
+        FAIL (significant variance)     -> 0
+        Not provided                    -> 0 (MISSING)
+
+    Args:
+        validation_results: Dict containing 'reproducibility' key
+            with value dict having 'score' (0-5) or 'status'.
+
+    Returns:
+        dict with keys: score, max, status, detail.
+    """
+    repro = validation_results.get("reproducibility")
+
+    if repro is None:
+        return {
+            "score": 0,
+            "max": 5,
+            "status": "MISSING",
+            "detail": "Reproducibility check not provided.",
+        }
+
+    repro_score = repro.get("score", 0)
+    repro_status = repro.get("status", "UNKNOWN")
+
+    if repro_score >= 5:
+        status = "PASS"
+    elif repro_score >= 3:
+        status = "WARNING"
+    else:
+        status = "BLOCKER"
+
+    detail = f"Reproducibility: {repro_status} (score {repro_score}/5)."
+    if repro.get("deterministic"):
+        detail += " Source is deterministic."
+
+    return {"score": repro_score, "max": 5, "status": status, "detail": detail}
+
+
 # ---------------------------------------------------------------------------
 # Identify which validators are present
 # ---------------------------------------------------------------------------
@@ -581,6 +675,8 @@ _VALIDATOR_KEYS = {
     "logical": {"aggregation", "segment_exhaustiveness", "temporal", "trend_continuity"},
     "business": {"ranges", "rates", "yoy"},
     "simpsons": {"simpsons"},
+    "cross_verification": {"cross_verification"},
+    "reproducibility": {"reproducibility"},
 }
 
 
@@ -611,11 +707,11 @@ def score_confidence(
 ) -> Dict[str, Any]:
     """Compute a 0-100 confidence score from validation results.
 
-    Synthesizes 7 factors from the 4 validator layers plus sample size
-    metadata into a single confidence score with letter grade and
-    actionable recommendation.
+    Synthesizes 9 factors from the 4 validator layers, cross-verification,
+    reproducibility checks, and sample size metadata into a single confidence
+    score with letter grade and actionable recommendation.
 
-    The 7 factors (and their max points):
+    The 9 factors (and their max points):
         1. Data Completeness       (0-15) -- from structural_validator
         2. Structural Integrity    (0-15) -- from structural_validator
         3. Aggregation Consistency (0-15) -- from logical_validator
@@ -623,6 +719,8 @@ def score_confidence(
         5. Business Plausibility   (0-15) -- from business_rules
         6. Simpson's Paradox Risk  (0-15) -- from simpsons_paradox
         7. Sample Size             (0-10) -- from metadata
+        8. Cross-Verification      (0-10) -- from cross_verification
+        9. Reproducibility         (0-5)  -- from reproducibility checks
 
     Args:
         validation_results: Dict with keys corresponding to validator
@@ -639,6 +737,8 @@ def score_confidence(
             - 'rates': from business_rules.validate_rates()
             - 'yoy': from business_rules.validate_yoy_change()
             - 'simpsons': from simpsons_paradox.check_simpsons_paradox() or scan_dimensions()
+            - 'cross_verification': from cross_verification.score_cross_verification()
+            - 'reproducibility': from reproducibility.reproducibility_check()
         metadata: Optional dict with additional context:
             - 'row_count' (int): Number of rows in the dataset.
 
@@ -695,6 +795,8 @@ def score_confidence(
         "business_plausibility": _score_business_plausibility(validation_results),
         "simpsons_paradox_risk": _score_simpsons_paradox(validation_results),
         "sample_size": _score_sample_size(metadata),
+        "cross_verification": _score_cross_verification(validation_results),
+        "reproducibility": _score_reproducibility_factor(validation_results),
     }
 
     # --- Compute total score ---

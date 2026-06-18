@@ -53,3 +53,14 @@ class DuckDBDialect(SQLDialect):
         'DESCRIBE customers'
         """
         return f"DESCRIBE {table}"
+
+    # ------------------------------------------------------------------
+    # Validation methods
+    # ------------------------------------------------------------------
+
+    def row_checksum(self, table: str, columns: list[str]) -> str:
+        """DuckDB: use CAST AS VARCHAR for string conversion."""
+        col_concat = " || '|' || ".join(
+            f"COALESCE(CAST({c} AS VARCHAR), '')" for c in columns
+        )
+        return f"SELECT MD5({col_concat}) AS row_hash FROM {table}"

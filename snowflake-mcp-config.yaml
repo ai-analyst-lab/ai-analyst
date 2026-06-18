@@ -1,0 +1,28 @@
+# Snowflake MCP Server Configuration
+# Controls which Snowflake services are available via MCP tools.
+# Auth is handled via .env and passed as CLI args in .mcp.json.
+
+agent_services: []
+search_services: []
+analyst_services: []
+
+other_services:
+  object_manager: true
+  query_manager: true
+  semantic_manager: true
+
+sql_statement_permissions:
+  - Select: true
+  - Show: true
+  - Describe: true
+  - Create: true
+  - Use: true
+  - Command: true
+  - Drop: false
+  - Update: false
+  - Delete: false
+  - Insert: false
+  - Merge: false
+  - TruncateTable: false
+  - Alter: false
+  - Unknown: false

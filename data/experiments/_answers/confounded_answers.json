@@ -1,0 +1,10 @@
+{
+  "true_causal_effect": "+5.0 orders from feature adoption",
+  "confounders": [
+    "tenure_months (confounds both adoption and orders)"
+  ],
+  "naive_estimate": "~7-8 (biased upward due to tenure confounding)",
+  "psm_estimate": "~5.0 (should recover true effect if tenure controlled)",
+  "expected_analysis": "PSM or regression with tenure as covariate",
+  "notes": "Without controlling for tenure, the effect is overstated by ~50%."
+}

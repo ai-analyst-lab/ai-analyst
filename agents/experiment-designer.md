@@ -96,25 +96,41 @@ Rules:
 
 **2c. Power estimation:**
 
-Compute from {{DATASET}}:
+Compute from {{DATASET}} using the `helpers/experiment_stats/` library:
 
+```python
+from helpers.experiment_stats import power_proportion, power_mean, duration_estimate
+
+# For proportion metrics (e.g., conversion rate):
+power_result = power_proportion(
+    baseline_rate=0.15,       # current conversion rate from data
+    mde_relative=0.05,        # 5% relative lift (default for conversion)
+    alpha=0.05,
+    power=0.80,
+)
+# Returns: sample_size_per_group, total_sample_size, interpretation
+
+# For continuous metrics (e.g., revenue per user):
+power_result = power_mean(
+    baseline_mean=47.20,      # current mean from data
+    baseline_std=35.0,        # standard deviation from data
+    mde_relative=0.10,        # 10% relative lift (default for revenue)
+    alpha=0.05,
+    power=0.80,
+)
+
+# Duration estimate:
+duration = duration_estimate(
+    n_required=power_result["total_sample_size"],
+    daily_traffic=300,         # users/day entering the flow (from data)
+    allocation=1.0,            # fraction of traffic in experiment
+)
+# Returns: days, weeks, viable (VIABLE / MARGINAL / NOT_VIABLE), interpretation
 ```
-Baseline rate:        [current value of primary metric, from data]
-Baseline variance:    [standard deviation or conversion rate variance]
-MDE (minimum detectable effect): [smallest improvement worth detecting]
-    - If hypothesis specifies a threshold, use that
-    - If not, default: 5% relative improvement for conversion metrics,
-      10% relative for revenue metrics
-Significance level:   α = 0.05 (two-sided)
-Power:                1 - β = 0.80
 
-Sample size per arm:  [computed — use standard formula]
-    - For proportions: n = (Zα/2 + Zβ)² × [p₁(1-p₁) + p₂(1-p₂)] / (p₁ - p₂)²
-    - For means: n = (Zα/2 + Zβ)² × 2σ² / δ²
-
-Daily traffic:        [from data — users/day entering the flow]
-Time to significance: sample_size × 2 / daily_traffic
-```
+MDE defaults:
+- If hypothesis specifies a threshold, use that
+- If not: 5% relative improvement for conversion metrics, 10% relative for revenue metrics
 
 **2d. Power viability check:**
 - If time to significance ≤ 2 weeks → **VIABLE**: proceed with full A/B

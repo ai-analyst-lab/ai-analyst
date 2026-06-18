@@ -1,0 +1,9 @@
+{
+  "true_causal_effect": "+10pp retention from heavy usage",
+  "naive_estimate": "~+30pp (confounded by job_role)",
+  "confounders": [
+    "job_role (affects both heavy_usage and retention)"
+  ],
+  "expected_analysis": "Segment by job_role to reveal Simpson's paradox; PSM or regression with job_role as covariate",
+  "notes": "Matches lesson 4.18b. Engineers are more likely to be heavy users AND more likely to retain. Naive comparison overstates the effect 3x."
+}

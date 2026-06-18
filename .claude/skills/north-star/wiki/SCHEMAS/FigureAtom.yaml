@@ -1,0 +1,53 @@
+# FigureAtom.yaml — whole-figure descriptions produced by figure-describer.
+# One atom per labeled figure (diagram, chart, screenshot, illustration).
+
+schema_version: 1
+schema_name: FigureAtom
+extends: Atom
+
+required_fields:
+  - id
+  - type
+  - schema_version
+  - extracted_by
+  - extracted_at
+  - source
+  - controlled_terms
+  - tier
+  - confidence
+  - confidence_derivation
+  - curator_status
+  - reconciliation_status
+  - indices
+
+type_specific_required:
+  - figure_id              # stable kebab-case identifier, e.g., "fig-3-2-metric-tree"
+  - caption                # the printed caption (verbatim)
+  - figure_type            # diagram | chart | table | screenshot | illustration | photo
+  - description            # ≤200-word prose description of what the figure shows
+  - elements               # array of FigureElementAtom IDs that decompose this figure
+  - why_atomic
+
+type_specific_optional:
+  - illustrates            # array of concept/principle/anti-pattern atom IDs this figure illustrates
+  - data_table_inline      # if the figure is a table, include the data inline as an array of rows
+
+enums:
+  type: [figure]
+  figure_type: [diagram, chart, table, screenshot, illustration, photo]
+  tier: [1, 2, 3]
+  confidence: [high, medium, low]
+  curator_status: [pending, approved, rejected, revision_requested]
+  reconciliation_status: [pending, reconciled, conflict, waived]
+
+field_constraints:
+  figure_id:
+    type: string
+    pattern: "^fig-[a-z0-9-]{1,60}$"
+  elements:
+    type: array
+    items: string
+    item_pattern: "^figure-element-p[0-9]{3}-l[0-9]{4}-[a-z0-9-]{1,40}$"
+
+id_pattern: "^figure-p[0-9]{3}-l[0-9]{4}-[a-z0-9-]{1,40}$"
+page_size_cap_words: null

@@ -9,6 +9,8 @@ Deep-profile the active dataset to understand schema structure, value distributi
 - When explicitly invoked by the user
 - When the existing profile is stale (check `last_profiled` in manifest.yaml)
 
+**DISAMBIGUATION:** this is the DEEP statistical profile (distributions, correlations, anomalies). For cross-table relationships/health and the first-contact "tell me about this data" overview, use `data-map`; for a single column's distribution, use `distribution-profiler`; for a plain schema listing, use `/data` (data-inspect).
+
 ## Instructions
 
 ### Step 1: Connect and Profile Schema

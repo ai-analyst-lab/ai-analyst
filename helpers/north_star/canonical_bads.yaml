@@ -1,0 +1,250 @@
+# canonical_bads.yaml — Patterns the deterministic refusal pre-filter rejects without LLM call.
+#
+# Schema version: 1
+# Owned by: Shane (curator)
+# Read by: helpers/north_star/refusal.py
+# Used by: every /north-star verb that takes a candidate NSM
+#
+# Rules for adding entries:
+#   1. Only add patterns where ALL credible NSM framework practitioners would refuse.
+#      Patterns with debate go in wiki/debates/ instead.
+#   2. Every pattern must cite a wiki anti-pattern by slug.
+#   3. Patterns are case-insensitive substring matches (the refusal helper lowercases input).
+#   4. Be conservative on broad terms ("users") — favor specific phrases ("monthly active users")
+#      to keep false-positive rate ≤2% per acceptance criterion #2.
+#   5. Each pattern has a `match_patterns` LIST of substrings — the helper refuses if
+#      ANY of them appear in the candidate. Cover abbreviation AND spelled-out form,
+#      plus common hyphen/space variants.
+#      (Legacy `match_pattern` singular field still accepted for backward compat.)
+#
+# Target: ≥15 entries for v0.1 ship. Seed entries below are 6 examples Shane verified
+# against the Amplitude playbook. Shane extends to ≥15 before W1.1 ships.
+
+schema_version: 1
+patterns:
+
+  # ---- Lagging indicators (measure value AFTER it's delivered) ----
+
+  - name: "Monthly Recurring Revenue (MRR)"
+    match_patterns:
+      - "monthly recurring revenue"
+      - "mrr"        # bare — "mrr" trigraph is vanishingly rare in English (zero common words)
+    anti_pattern_id: "lagging-indicator-as-nsm"
+    severity: high
+    reasoning: |
+      MRR is the revenue outcome of value already delivered. It cannot be moved
+      directly by product work — only by changing the input metrics that drive it
+      (activation, retention, expansion). Naming MRR as the NSM hides what
+      product work should actually move.
+    cite:
+      source: "Amplitude North Star Playbook"
+      page: 16
+      verified: true
+
+  - name: "Annual Recurring Revenue (ARR)"
+    match_mode: word   # word-boundary: bare "arr" fires, but NOT inside narrow/carry/arrival/narrative
+    match_patterns:
+      - "annual recurring revenue"
+      - "arr"
+    anti_pattern_id: "lagging-indicator-as-nsm"
+    severity: high
+    reasoning: |
+      Same shape as MRR but slower-moving. ARR is a lagging indicator of value
+      already delivered across a year. Product teams cannot move ARR directly.
+    cite:
+      source: "Amplitude North Star Playbook"
+      page: 16
+      verified: true
+
+  # ---- Vanity metrics (raw activity counts without value semantics) ----
+
+  - name: "Monthly Active Users (MAU)"
+    match_patterns:
+      - "monthly active users"
+      - "monthly active user "
+      - "mau"        # bare — vanishingly rare trigraph; "mauve" / "Maui" are not metrics
+    anti_pattern_id: "vanity-metric-as-nsm"
+    severity: high
+    reasoning: |
+      MAU counts raw account activity within a calendar month. It does not
+      distinguish high-value engagement from low-value (e.g., a user who completes
+      a value-delivery moment counts the same as a user who logged in once and
+      bounced). Use a value-delivery-grounded weekly active metric instead.
+    cite:
+      source: "Amplitude North Star Playbook"
+      page: 14
+      verified: true
+
+  - name: "Daily Active Users (DAU)"
+    match_patterns:
+      - "daily active users"
+      - "daily active user "
+      - "dau"        # bare — vanishingly rare trigraph in English
+    anti_pattern_id: "vanity-metric-as-nsm"
+    severity: high
+    reasoning: |
+      DAU has the same shape failure as MAU at a finer time grain. The metric
+      conflates value-delivering sessions with vanity sessions. Productivity-game
+      products especially should not use DAU as NSM.
+    cite:
+      source: "Amplitude North Star Playbook"
+      page: 14
+      verified: true
+
+  - name: "Signups / new user count"
+    match_patterns:
+      - "signups"
+      - "sign-ups"
+      - "sign ups"
+      - "new user count"
+      - "new account count"
+    anti_pattern_id: "vanity-metric-as-nsm"
+    severity: high
+    reasoning: |
+      Signups measure top-of-funnel activity, not value delivery. Optimizing
+      for signups optimizes for marketing reach, not product fit. Use an
+      activation metric grounded in the customer experiencing value.
+    cite:
+      source: "Amplitude North Star Playbook"
+      page: 14
+      verified: true
+
+  - name: "Pageviews"
+    match_patterns:
+      - "pageview"
+      - "page view"
+      - "page-view"
+    anti_pattern_id: "vanity-metric-as-nsm"
+    severity: high
+    reasoning: |
+      Pageviews count raw page renders, not value delivered. Maximizing
+      pageviews can mean serving users worse (more pages to navigate to
+      what they want). Use an attention-game NSM grounded in completed
+      value moments (videos completed, articles read to end, etc.).
+    cite:
+      source: "Amplitude North Star Playbook"
+      page: 14
+      verified: true
+
+  # ---- Demo-hardening additions (2026-06-11) ----
+  # Added so a metric an audience member shouts reliably refuses live. Each is an
+  # uncontested instance of an already-documented anti-pattern (vanity or lagging).
+  # `verified: false` = Shane still needs to confirm the exact playbook page; the
+  # anti_pattern_id slug is correct and resolves. Veto any you disagree with.
+
+  - name: "Lifetime Value (LTV)"
+    match_mode: word
+    match_patterns:
+      - "lifetime value"
+      - "ltv"
+    anti_pattern_id: "lagging-indicator-as-nsm"
+    severity: high
+    reasoning: |
+      LTV is the downstream output of the input metrics that actually drive value
+      (activation, retention, expansion). It is realized over a long horizon and
+      cannot be moved directly by product work, so it hides what teams should do.
+    cite:
+      source: "Amplitude North Star Playbook"
+      page: 16
+      verified: false
+
+  - name: "Average Revenue Per User (ARPU)"
+    match_mode: word
+    match_patterns:
+      - "revenue per user"
+      - "arpu"
+    anti_pattern_id: "lagging-indicator-as-nsm"
+    severity: high
+    reasoning: |
+      ARPU is a revenue ratio — a lagging outcome of value already delivered.
+      It says nothing about whether customers are experiencing more value, and
+      product teams move it only by moving the inputs underneath it.
+    cite:
+      source: "Amplitude North Star Playbook"
+      page: 16
+      verified: false
+
+  - name: "Gross Merchandise Value (GMV)"
+    match_mode: word
+    match_patterns:
+      - "gross merchandise value"
+      - "gmv"
+    anti_pattern_id: "lagging-indicator-as-nsm"
+    severity: high
+    reasoning: |
+      GMV totals transaction value after the fact. It is a lagging financial
+      outcome, not a leading indicator of delivered customer value, and it climbs
+      with discounting or low-quality volume that erodes real value.
+    cite:
+      source: "Amplitude North Star Playbook"
+      page: 16
+      verified: false
+
+  - name: "Churn rate"
+    match_patterns:
+      - "churn rate"
+      - "churn"
+    anti_pattern_id: "lagging-indicator-as-nsm"
+    severity: high
+    reasoning: |
+      Churn is a lagging health signal: by the time it moves, value was already
+      not delivered weeks earlier. Anchor on the leading value-delivery metric
+      that predicts retention instead of the retention/churn outcome itself.
+    cite:
+      source: "Amplitude North Star Playbook"
+      page: 16
+      verified: false
+
+  - name: "Net Promoter Score (NPS)"
+    match_mode: word
+    match_patterns:
+      - "net promoter score"
+      - "nps"
+    anti_pattern_id: "vanity-metric-as-nsm"
+    severity: high
+    reasoning: |
+      NPS is a stated-intent survey score, not an observed value-delivery
+      behavior. It is slow, sample-biased, and gameable, and it does not tell a
+      team which product work to do. Use a behavioral value metric instead.
+    cite:
+      source: "Amplitude North Star Playbook"
+      page: 14
+      verified: false
+
+  - name: "Downloads"
+    # Specific raw-count forms only — bare "downloads" over-matches legit rates
+    # like "downloads-to-activation rate" (favor specific phrases, FP rule #4).
+    match_patterns:
+      - "total downloads"
+      - "number of downloads"
+      - "download count"
+      - "app downloads"
+    anti_pattern_id: "vanity-metric-as-nsm"
+    severity: high
+    reasoning: |
+      Downloads measure top-of-funnel acquisition, not value delivered. An app
+      can be downloaded and never used. Anchor on the first value moment users
+      reach after install, not the install itself.
+    cite:
+      source: "Amplitude North Star Playbook"
+      page: 14
+      verified: false
+
+  # ---- TODO: Shane extends this list to ≥15 entries before W1.1 ships ----
+  #
+  # Candidates to consider (each needs reasoning + cite to playbook page):
+  #   - "weekly active users" (WAU — same shape as MAU/DAU; some debate, may belong in debates/)
+  #   - "total registered users" (cumulative count, not value)
+  #   - "revenue per user" / "ARPU" (revenue is lagging)
+  #   - "customer acquisition cost" / "CAC" (input metric, not NSM)
+  #   - "lifetime value" / "LTV" (lagging; output of input metrics)
+  #   - "net promoter score" / "NPS" (satisfaction proxy, not value-delivered)
+  #   - "churn rate" / "retention rate" (lagging; use leading proxies)
+  #   - "gross merchandise value" / "GMV" (lagging; transaction-game specific)
+  #   - "downloads" (top-of-funnel, not value)
+  #   - "time on site" / "session duration" (only valid for attention games; vanity for productivity)
+  #   - "engagement score" (composite; usually masks value-delivery question)
+  #   - "feature adoption rate" (specific-feature; not whole-product NSM)
+  #
+  # For each: confirm with a wiki anti-pattern slug OR a wiki debate slug. If it's debated,
+  # don't put it here — put it in the wiki/debates/ instead and let the LLM Auditor handle it.

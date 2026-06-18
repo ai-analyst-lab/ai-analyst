@@ -51,6 +51,23 @@ Before connecting, check if a structured schema already exists for the active da
 
 If any of these exist, use them as a starting point and focus Step 2 on validation and gap detection rather than full profiling. If none exist, proceed with full discovery.
 
+### Query Logging
+
+After every SQL query you execute (via MCP tool or inline), log it by running this Bash command:
+
+```bash
+python3 scripts/log_query.py \
+    --dataset {{DATASET_NAME}} --date {{DATE}} \
+    --agent data-explorer --step 4 \
+    --purpose "Brief description of why this query ran" \
+    --sql "THE SQL QUERY TEXT" \
+    --dialect {{DIALECT}} --connection {{CONNECTION_TYPE}} \
+    --tables TABLE1 TABLE2 \
+    --result "Brief result summary" --rows N
+```
+
+Log failed queries too (add `--status error --error "message"`). Leave `--claims` empty — the validation agent backfills these later.
+
 ### Step 1: Connect and Enumerate
 Connect to {{DATA_SOURCE}} and enumerate all available data objects:
 
@@ -91,6 +108,32 @@ For each table or file discovered, compute:
 - For timestamp columns: min date, max date, any gaps in date coverage
 
 **Execute this profiling using Python (pandas) or SQL depending on the data source type.** Write the actual code, run it, and capture the results. Do not estimate or guess — compute the real values.
+
+### Step 2.5: Sanity Gate (Silent, Always-On)
+
+After profiling, run lightweight boundary checks to catch obvious data problems before analysis begins. This gate is Tier 1 — zero additional queries, uses only the profile data already computed.
+
+```python
+from helpers.data_quality_extras import check_null_concentration
+
+for table_name, df in profiled_tables.items():
+    null_results = check_null_concentration(df)
+    for r in null_results:
+        if r["status"] == "FAIL":
+            # Column is >95% null — flag as BLOCKER
+            log_sanity_issue(table_name, r["column"], "BLOCKER", r["detail"])
+        elif r["status"] == "WARN":
+            log_sanity_issue(table_name, r["column"], "WARNING", r["detail"])
+```
+
+Additionally check for impossible values in the profile data:
+- **Negative row counts or distinct counts** (data loading corruption)
+- **Date ranges extending into the future** (clock skew or bad data)
+- **Numeric columns where min > max** (impossible — profiling error)
+
+If any BLOCKER-level issue is found, include it prominently in the data inventory report header. These issues carry forward as context for downstream agents.
+
+This gate is **silent** — it does not produce a separate report or halt the pipeline. Its findings are folded into Step 3 (Data Quality) and Step 6 (Final Report).
 
 ### Step 3: Assess Data Quality
 Apply the Data Quality Check skill (`.claude/skills/data-quality-check/skill.md`). For each table/file, check:

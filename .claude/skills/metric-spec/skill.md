@@ -1,3 +1,8 @@
+---
+name: metric-spec
+description: Define any metric clearly and completely using a standardized template so there is no ambiguity about what is being measured, how it's calculated, or how to interpret it. Use this skill whenever someone mentions defining a metric, documenting a metric, specifying how a metric is calculated, creating a metric spec, clarifying what a metric means, standardizing metric definitions, writing metric documentation, explaining how to measure something, or whenever you encounter a metric name that lacks a clear definition. Apply this skill when users say things like "define this metric", "how should we measure X?", "what's the right way to calculate Y?", "document our metrics", "create a metric definition", "I'm confused about how this metric works", "we need a standardized way to track Z", "different teams are measuring this differently", or when you notice a metric being used in analysis without a clear specification. Also use when registering metrics in the knowledge system, when building metric dictionaries, when onboarding new team members to metrics, or anytime someone references a ratio, rate, count, or business metric without specifying the denominator, time window, filters, or calculation method.
+---
+
 # Skill: Metric Spec
 
 ## Purpose
@@ -83,6 +88,43 @@ or [parent metric] = [driver 1] + [driver 2] + [driver 3] (for additive)
 3. **Always specify the time window** — "DAU" measured daily is different from "DAU" measured as a 7-day average
 4. **Always specify exclusions** — which users/events are filtered out? (test accounts, internal users, bots)
 5. **Thresholds should be based on historical data** — not gut feel. State the basis: "Based on 6-month average of 3.8% ± 0.4%"
+
+### Workflow: Write Spec → Register to Knowledge System
+
+**IMPORTANT:** After writing the metric spec using the template above, you MUST register it to the knowledge system. This is not optional — it ensures the metric becomes discoverable and reusable across analyses.
+
+**Registration Steps (execute these immediately after completing the metric spec):**
+
+1. **Read active dataset ID:** Read `.knowledge/active.yaml` to get the active dataset name
+2. **Check metrics directory:** Verify `.knowledge/datasets/{active}/metrics/` directory exists. If not, create it.
+3. **Generate metric ID:** Convert metric name to ID format: lowercase, hyphens, no spaces
+   - Example: "Checkout Conversion Rate" → `checkout-conversion-rate`
+4. **Check for existing entry:** Read `.knowledge/datasets/{active}/metrics/index.yaml`. If the metric ID exists, you're updating. If not, you're creating new.
+5. **Write metric YAML:** Create `.knowledge/datasets/{active}/metrics/{id}.yaml` with:
+   - `name`: The metric's display name
+   - `definition.plain_english`: Copy from Plain English field
+   - `definition.formula`: Copy from Formula field
+   - `definition.unit`: Infer from formula (%, count, currency, ratio)
+   - `definition.direction`: Infer from thresholds (higher_is_better / lower_is_better)
+   - `source.tables`: List primary table(s) from Data Source section
+   - `source.sql`: Copy reference query if provided
+   - `dimensions`: Array of dimension column names from Segmentation Dimensions
+   - `thresholds`: Map threshold conditions to values
+   - `limitations`: Array of strings from Known Limitations
+6. **Update index:** Update `.knowledge/datasets/{active}/metrics/index.yaml` with an entry:
+   ```yaml
+   - id: checkout-conversion-rate
+     name: Checkout Conversion Rate
+     category: conversion  # infer: conversion, engagement, revenue, retention, etc.
+     created: YYYY-MM-DD
+     updated: YYYY-MM-DD
+   ```
+
+**Why this matters:** Registering metrics to the knowledge system enables:
+- Future analyses can reference the canonical definition
+- Other analysts can discover what metrics already exist
+- The system can warn when metrics are being redefined differently
+- Metric lineage and usage can be tracked
 
 ## Examples
 
@@ -235,24 +277,6 @@ Revenue = Active Users × Orders per User × Average Order Value
 
 **Verification:** Revenue = Active Users × Orders per User × AOV
 ```
-
-## Auto-Registration in Metric Dictionary
-
-After writing a metric spec, automatically register it in the metric dictionary:
-
-1. Read `.knowledge/active.yaml` to get the active dataset ID.
-2. Check `.knowledge/datasets/{active}/metrics/index.yaml` exists. If not, create it.
-3. Generate a metric `id` from the metric name: lowercase, hyphens, no spaces (e.g., "Checkout Conversion Rate" → `checkout-conversion-rate`).
-4. If the metric ID already exists in `index.yaml`, update the entry. If new, append it.
-5. Write a YAML file at `.knowledge/datasets/{active}/metrics/{id}.yaml` following the schema in `.knowledge/datasets/_metric_schema.yaml`. Map metric spec fields to YAML fields:
-   - `definition.formula` ← Formula from spec
-   - `definition.unit` ← Infer from formula (%, count, currency, ratio)
-   - `definition.direction` ← Infer from thresholds (higher_is_better / lower_is_better)
-   - `source.tables` ← Primary table from Data Source section
-   - `source.sql` ← Reference query if provided
-   - `dimensions` ← Segmentation Dimensions column names
-   - `guardrails` ← Thresholds section values
-6. Update `index.yaml` with the new/updated entry.
 
 ## Anti-Patterns
 

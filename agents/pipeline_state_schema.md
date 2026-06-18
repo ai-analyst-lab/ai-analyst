@@ -37,10 +37,13 @@ directly with the `registry.yaml` agent names.
       "status": "in_progress",
       "started_at": "2026-02-23T09:35:00Z"
     },
-    "source-tieout": {
+    "cross-verification": {
       "status": "pending"
     },
     "descriptive-analytics": {
+      "status": "pending"
+    },
+    "validation": {
       "status": "pending"
     },
     "chart-maker": {
@@ -85,7 +88,7 @@ directly with the `registry.yaml` agent names.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `status` | enum | `pending`, `in_progress`, `complete`, `degraded`, `failed`, `skipped` |
+| `status` | enum | `pending`, `in_progress`, `complete`, `degraded`, `failed`, `skipped`, `completed_legacy` |
 | `started_at` | ISO datetime | When the agent began executing. Absent when `pending`. |
 | `completed_at` | ISO datetime | When the agent finished. Absent when `pending` or `in_progress`. |
 | `output_file` | string | Relative path to the primary output file. Absent when `pending`. |
@@ -101,6 +104,7 @@ directly with the `registry.yaml` agent names.
 | `degraded` | Non-critical agent failed. Pipeline continued with a warning. |
 | `failed` | Critical agent failed. Pipeline halted. |
 | `skipped` | Agent was not needed for this run (e.g., conditional agent, alternative not selected). |
+| `completed_legacy` | Agent completed in a pre-migration run. Output exists but was produced by a legacy agent (e.g., source-tieout before cross-verification migration). |
 
 ## Status Transitions
 
@@ -139,3 +143,24 @@ paused  → running     (resumed via /resume-pipeline)
 - **Agent keys match registry**: JSON keys in `agents` must exactly match agent `name` values from `registry.yaml`.
 - **Sparse entries**: Only include agents that are part of the current run. Agents not selected (e.g., `cohort-analysis` when `descriptive-analytics` was chosen) are omitted entirely — do not add them as `skipped`.
 - **output_file is relative**: Paths in `output_file` are relative to the repo root (e.g. `working/storyboard_my_dataset.md`, `outputs/question_brief_2026-02-23.md`).
+- **Validation tier**: The pipeline state records which validation tier was selected at CP 2.1. This informs downstream agents and resume logic.
+
+## Validation Tier Field
+
+When a user selects a validation tier at CP 2.1 (Validation Menu), record the choice:
+
+```json
+{
+  "validation_tier": {
+    "selected": "tier_2",
+    "timestamp": "2026-02-23T10:20:00Z",
+    "preference_count": 3
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `validation_tier.selected` | enum | `tier_1_only`, `tier_2`, `tier_3` |
+| `validation_tier.timestamp` | ISO datetime | When the selection was made |
+| `validation_tier.preference_count` | number | How many consecutive times this tier was chosen (for auto-apply logic) |

@@ -1,0 +1,57 @@
+# ChapterMapAtom.yaml — per-chapter inventory produced by structural-mapper.
+# One atom per chapter of the playbook. Gives the swarm a structural index.
+
+schema_version: 1
+schema_name: ChapterMapAtom
+extends: Atom
+
+required_fields:
+  - id
+  - type
+  - schema_version
+  - extracted_by
+  - extracted_at
+  - source
+  - controlled_terms
+  - tier
+  - confidence
+  - confidence_derivation
+  - curator_status
+  - reconciliation_status
+  - indices
+
+type_specific_required:
+  - chapter_number
+  - chapter_title
+  - page_range             # 2-int array [first_page, last_page]
+  - sections               # array of section identifiers (referencing SectionMapAtom IDs)
+  - summary                # ≤150 words
+  - key_concepts           # array of canonical glossary terms introduced or expanded
+
+type_specific_optional:
+  - notable_figures        # array of figure atom IDs
+  - notable_pro_tips       # array of pro-tip atom IDs
+  - notable_cases          # array of case_id values introduced in this chapter
+
+enums:
+  type: [chapter-map]
+  tier: [1, 2, 3]
+  confidence: [high, medium, low]
+  curator_status: [pending, approved, rejected, revision_requested]
+  reconciliation_status: [pending, reconciled, conflict, waived]
+
+field_constraints:
+  chapter_number:
+    type: integer
+    minimum: 1
+  page_range:
+    type: array
+    items: integer
+    length: 2
+  sections:
+    type: array
+    items: string
+    min_items: 1
+
+id_pattern: "^chapter-map-p[0-9]{3}-l[0-9]{4}-[a-z0-9-]{1,40}$"
+page_size_cap_words: null

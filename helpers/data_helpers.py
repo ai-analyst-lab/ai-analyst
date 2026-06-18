@@ -28,6 +28,7 @@ Usage:
     info = get_data_source_info()
 """
 
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -254,6 +255,20 @@ def detect_active_source():
     conn = manifest.get("connection", {})
     local_data = manifest.get("local_data", {})
 
+    # Expand "$ENV_VAR" placeholders in the connection block (e.g. credentials).
+    def _expand_env(value):
+        if isinstance(value, str) and value.startswith("$"):
+            return os.environ.get(value[1:], "")
+        return value
+    conn = {k: _expand_env(v) for k, v in conn.items()}
+
+    # A remote source can be declared at the manifest top level
+    # ("connection_type: snowflake") or inside the connection block ("type: ...").
+    # It is only used when opted into via AAP_USE_REMOTE, so the default/offline
+    # path stays on the local DuckDB file (unchanged behaviour for students).
+    declared_type = str(manifest.get("connection_type") or conn.get("type") or "").lower()
+    use_remote = os.environ.get("AAP_USE_REMOTE", "").lower() in ("1", "true", "yes")
+
     source_info = {
         "source": active_dataset,
         "display_name": manifest.get("display_name", active_dataset),
@@ -265,8 +280,11 @@ def detect_active_source():
     }
 
     # --- Determine best available connection type ---
-    # Priority: motherduck > local duckdb > csv
-    if conn.get("type") == "motherduck":
+    # Opted-in remote (snowflake/postgres/bigquery/motherduck) > local duckdb > csv
+    if declared_type in ("snowflake", "postgres", "bigquery") and use_remote:
+        source_info["type"] = declared_type
+        source_info["schema_prefix"] = conn.get("schema", "") or manifest.get("schema_prefix", "")
+    elif conn.get("type") == "motherduck" or (declared_type == "motherduck" and use_remote):
         source_info["type"] = "motherduck"
     elif source_info["duckdb_path"] and Path(source_info["duckdb_path"]).exists():
         source_info["type"] = "duckdb"

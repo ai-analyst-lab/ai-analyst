@@ -38,7 +38,7 @@ def theme() -> dict:
     return {
         "colors": {
             "primary": "#4878CF",
-            "secondary": "#6ACC65",
+            "secondary": "#5ABF55",
             "accent": "#D65F5F",
             "neutral": "#B0B0B0",
             "background": "#F7F6F2",
@@ -46,11 +46,11 @@ def theme() -> dict:
             "text_light": "#666666",
             "categorical": [
                 "#4878CF",
-                "#6ACC65",
+                "#5ABF55",
                 "#B47CC7",
                 "#D65F5F",
                 "#C4AD66",
-                "#77BEDB",
+                "#5FAECC",
                 "#D68E5C",
                 "#8C8C8C",
             ],
@@ -62,7 +62,7 @@ def theme() -> dict:
             "diverging": {
                 "negative": "#D65F5F",
                 "neutral": "#F7F6F2",
-                "positive": "#6ACC65",
+                "positive": "#5ABF55",
             },
             "highlight": {
                 "focus": "#4878CF",

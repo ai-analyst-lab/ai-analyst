@@ -1,0 +1,50 @@
+# FigureElementAtom.yaml — per-labeled-element decomposition of a figure.
+# Producer: figure-describer. One atom per box/arrow/node/legend-entry in a parent FigureAtom.
+
+schema_version: 1
+schema_name: FigureElementAtom
+extends: Atom
+
+required_fields:
+  - id
+  - type
+  - schema_version
+  - extracted_by
+  - extracted_at
+  - source
+  - controlled_terms
+  - tier
+  - confidence
+  - confidence_derivation
+  - curator_status
+  - reconciliation_status
+  - indices
+
+type_specific_required:
+  - parent_figure_id       # FigureAtom ID this element belongs to
+  - element_label          # the label text as printed in the figure
+  - element_role           # node | arrow | annotation | legend-entry | axis-label | data-point | region
+  - meaning                # what this element conveys in the figure's argument
+  - why_atomic
+
+type_specific_optional:
+  - connects_from          # for arrows: source element_label
+  - connects_to            # for arrows: target element_label
+  - controlled_term        # if the label maps to a glossary term
+
+enums:
+  type: [figure-element]
+  element_role: [node, arrow, annotation, legend-entry, axis-label, data-point, region]
+  tier: [1, 2, 3]
+  confidence: [high, medium, low]
+  curator_status: [pending, approved, rejected, revision_requested]
+  reconciliation_status: [pending, reconciled, conflict, waived]
+
+field_constraints:
+  parent_figure_id:
+    type: string
+    pattern: "^figure-p[0-9]{3}-l[0-9]{4}-[a-z0-9-]{1,40}$"
+    cross_check: existing_atom_id
+
+id_pattern: "^figure-element-p[0-9]{3}-l[0-9]{4}-[a-z0-9-]{1,40}$"
+page_size_cap_words: null

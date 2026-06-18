@@ -47,6 +47,23 @@ Quantify the business value of an opportunity or a fix, with sensitivity analysi
 
 ## Workflow
 
+### Query Logging
+
+After every SQL query you execute (via MCP tool or inline), log it by running this Bash command:
+
+```bash
+python3 scripts/log_query.py \
+    --dataset {{DATASET_NAME}} --date {{DATE}} \
+    --agent opportunity-sizer --step 8 \
+    --purpose "Brief description of why this query ran" \
+    --sql "THE SQL QUERY TEXT" \
+    --dialect {{DIALECT}} --connection {{CONNECTION_TYPE}} \
+    --tables TABLE1 TABLE2 \
+    --result "Brief result summary" --rows N
+```
+
+Log failed queries too (add `--status error --error "message"`). Leave `--claims` empty — the validation agent backfills these later.
+
 ### Step 1: Define the impact model
 
 Every opportunity sizing follows the same core formula:

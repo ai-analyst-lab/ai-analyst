@@ -288,6 +288,14 @@ class ConnectionManager:
         elif self._conn_type == "postgres" and self._connection:
             return pd.read_sql(sql, self._connection)
 
+        elif self._conn_type == "snowflake" and self._connection:
+            cur = self._connection.cursor()
+            try:
+                cur.execute(sql)
+                return cur.fetch_pandas_all() if cur.description else pd.DataFrame()
+            finally:
+                cur.close()
+
         raise RuntimeError(
             f"SQL queries not supported for connection type: {self._conn_type}. "
             "Use read_table() for CSV data."
@@ -422,7 +430,7 @@ class ConnectionManager:
             )
 
         conn_config = self._config.get("connection", {})
-        self._connection = snowflake.connector.connect(
+        connect_kwargs = dict(
             account=conn_config.get("account", ""),
             user=conn_config.get("user", ""),
             password=conn_config.get("password", ""),
@@ -430,5 +438,8 @@ class ConnectionManager:
             database=conn_config.get("database", ""),
             schema=conn_config.get("schema", "public"),
         )
+        if conn_config.get("role"):
+            connect_kwargs["role"] = conn_config["role"]
+        self._connection = snowflake.connector.connect(**connect_kwargs)
         self._schema_prefix = conn_config.get("schema", "public")
         self._conn_type = "snowflake"

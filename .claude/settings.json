@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "mcp__snowflake__run_snowflake_query",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/log-snowflake-query.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

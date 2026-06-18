@@ -61,7 +61,7 @@ class LineageTracker:
     # Core API
     # ------------------------------------------------------------------
 
-    def record(self, step, agent, inputs, outputs, metadata=None):
+    def record(self, step, agent, inputs, outputs, metadata=None, provenance_block=None):
         """Append a lineage entry and auto-link parents.
 
         Args:
@@ -70,6 +70,10 @@ class LineageTracker:
             inputs: List of input file paths consumed by this step.
             outputs: List of output file paths produced by this step.
             metadata: Optional dict of extra context (row counts, tables, etc.).
+            provenance_block: Optional ProvenanceBlock dict from
+                helpers.provenance_assembler. When provided, attached to the
+                lineage entry so downstream consumers can trace data provenance
+                alongside file lineage.
         """
         try:
             entry_id = f"lin_{len(self._entries) + 1:03d}"
@@ -85,6 +89,8 @@ class LineageTracker:
                 "metadata": metadata if metadata is not None else {},
                 "parent_ids": parent_ids,
             }
+            if provenance_block is not None:
+                entry["provenance_block"] = provenance_block
             self._entries.append(entry)
         except Exception as exc:
             warnings.warn(f"LineageTracker.record failed: {exc}")
@@ -241,7 +247,7 @@ def get_tracker():
     return _singleton_tracker
 
 
-def track(step, agent, inputs, outputs, metadata=None):
+def track(step, agent, inputs, outputs, metadata=None, provenance_block=None):
     """Record a lineage entry using the module-level singleton tracker.
 
     Convenience wrapper around get_tracker().record().
@@ -252,5 +258,8 @@ def track(step, agent, inputs, outputs, metadata=None):
         inputs: List of input file paths.
         outputs: List of output file paths.
         metadata: Optional dict of extra context.
+        provenance_block: Optional ProvenanceBlock dict from
+            helpers.provenance_assembler.
     """
-    get_tracker().record(step, agent, inputs, outputs, metadata=metadata)
+    get_tracker().record(step, agent, inputs, outputs, metadata=metadata,
+                         provenance_block=provenance_block)

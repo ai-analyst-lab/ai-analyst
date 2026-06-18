@@ -1,0 +1,12 @@
+{
+  "true_effect": "10.5% relative lift in checkout completion (15.2% \u2192 16.8%)",
+  "baseline_rate": 0.152,
+  "treatment_rate": 0.168,
+  "relative_lift": 0.105,
+  "aov_control": 47.2,
+  "aov_treatment": 45.8,
+  "srm": "PASS",
+  "guardrails": "AOV slightly lower in treatment \u2014 investigate trade-off",
+  "expected_verdict": "SHIP with AOV monitoring",
+  "notes": "Matches lesson 4.10c and 4.19a numbers. Conversion up, AOV slightly down."
+}

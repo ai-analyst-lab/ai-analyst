@@ -49,13 +49,12 @@ The 18-step pipeline is grouped into five phases for summary purposes:
 - **Tables explored:** [count]
 - **Total rows:** [count across all tables]
 - **Date range:** [earliest] to [latest]
-- **Source tie-out:** PASS / FAIL
+- **Data sanity gate:** PASS / FAIL
 - **Quality issues:** [count] blockers, [count] warnings
 - **Tracking gaps:** [count] gaps identified, [count] with workarounds
 - **Files:**
   - `outputs/data_inventory_{{DATE}}.md`
   - `working/data_inventory_raw.md`
-  - `working/source_tieout_{{DATASET_NAME}}.md`
 
 ---
 

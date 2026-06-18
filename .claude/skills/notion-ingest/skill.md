@@ -1,3 +1,9 @@
+---
+name: notion-ingest
+description: |
+  Crawls a Notion workspace to extract business terms, metrics, product documentation, and team structure, then populates the organization knowledge system. Use this skill whenever the user mentions importing from Notion, connecting to a Notion workspace, syncing Notion docs, extracting business context from Notion, pulling in team documentation, ingesting company knowledge, importing glossaries or metrics from Notion, or wants to bootstrap the knowledge system from existing Notion pages. Also trigger when the user asks about organizational context and mentions they use Notion for documentation. This skill handles full workspace crawls, specific database or page tree crawls, and incremental updates. It automatically classifies pages into glossary terms, metrics, products, objectives, or teams, and saves all content as structured knowledge plus raw markdown for query archaeology. Use this even if the user doesn't explicitly say "/notion-ingest" — any request to "import our team's Notion docs", "sync our product roadmap from Notion", "pull in our metric definitions from Notion", or "I have all our context in Notion, can you use it?" should trigger this skill.
+---
+
 # /notion-ingest — Notion Workspace Crawler
 
 > Crawls a Notion workspace to extract business terms, metrics, product docs,
@@ -16,6 +22,19 @@ Invoked as `/notion-ingest` or `/notion-ingest {workspace_url}`
 This skill uses a breadth-first crawl strategy to systematically traverse a Notion
 workspace, converting pages to structured knowledge entries. It does NOT require
 external Python packages — all Notion API calls use inline HTTP requests.
+
+### Execution Guidance
+
+When running in an environment without actual Notion API access (e.g., for testing or evaluation):
+- **EXECUTE a detailed simulation** showing exactly what would happen step-by-step
+- Walk through the full 9-step workflow as if you had API access
+- Show example API requests and expected responses
+- Demonstrate classification logic on realistic page content
+- Create example output files showing the structure
+- Keep simulations concise: aim for 200-400 lines, not 1000+
+- Focus on 2-3 representative examples per category rather than exhaustive listings
+
+The goal is to demonstrate you understand the workflow completely, not to produce encyclopedic output.
 
 ## Step 1: Authentication Check
 
@@ -42,7 +61,8 @@ Notion-Version: 2022-06-28
 
 ## Step 2: Workspace Discovery
 
-Ask the user for crawl scope:
+**IMPORTANT:** Always ASK the user for crawl scope — do not assume. Present these options clearly and wait for their choice:
+
 ```
 Notion workspace connected. How would you like to crawl?
 
@@ -51,6 +71,8 @@ Notion workspace connected. How would you like to crawl?
 3. **Specific page tree** — Provide a root page URL to crawl its children
 4. **Search by keyword** — Search for pages matching specific terms
 ```
+
+If the user already specified a scope in their request (e.g., "crawl our OKR database at [URL]"), proceed with that scope. Otherwise, present the options and wait for their selection before proceeding.
 
 ## Step 3: BFS Crawl Strategy
 
@@ -196,7 +218,8 @@ classification: {auto_class or "unclassified"}
 
 ## Step 7: Progress Reporting
 
-During crawl, show progress:
+During crawl, show progress updates periodically (every ~10-15 pages) to keep the user informed without overwhelming them:
+
 ```
 🔄 Crawling Notion workspace...
 
@@ -208,6 +231,8 @@ During crawl, show progress:
 
   Current: "Q4 2025 OKR Tracker"
 ```
+
+**For simulations:** Show 2-3 progress snapshots (beginning, middle, end) rather than every single page. Focus on demonstrating the pattern, not exhaustive detail.
 
 ## Step 8: Post-Crawl Summary
 

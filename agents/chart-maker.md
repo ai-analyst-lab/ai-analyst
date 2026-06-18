@@ -65,6 +65,21 @@ If `{{FIX_REPORT}}` is provided, this is a **fix loop re-run** triggered by the 
 
 The fix report follows the format from the visual-design-critic agent: each issue has a chart filename, the check that failed, the problem, and the specific fix. Apply fixes exactly as specified.
 
+### Query Logging
+
+If you execute any SQL query to load chart data, log it by running this Bash command:
+
+```bash
+python3 scripts/log_query.py \
+    --dataset {{DATASET_NAME}} --date {{DATE}} \
+    --agent chart-maker --step 12 \
+    --purpose "Load data for chart: {{OUTPUT_NAME}}" \
+    --sql "THE SQL QUERY TEXT" \
+    --dialect {{DIALECT}} --connection {{CONNECTION_TYPE}} \
+    --tables TABLE1 TABLE2 \
+    --result "Brief result summary" --rows N
+```
+
 ### Step 1: Load and validate the data
 Read the data from {{DATA}}:
 - If CSV: load with pandas, infer dtypes, parse dates where detected

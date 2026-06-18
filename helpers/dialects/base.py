@@ -192,3 +192,46 @@ class SQLDialect:
             f"WHERE table_name = '{table}' "
             "ORDER BY ordinal_position"
         )
+
+    # ------------------------------------------------------------------
+    # Validation methods (used by cross-verification)
+    # ------------------------------------------------------------------
+
+    def count_rows(self, table: str) -> str:
+        """Return a query that counts total rows in a table."""
+        return f"SELECT COUNT(*) AS row_count FROM {table}"
+
+    def count_nulls(self, table: str, column: str) -> str:
+        """Return a query that counts null values in a column."""
+        return f"SELECT COUNT(*) - COUNT({column}) AS null_count FROM {table}"
+
+    def sum_column(self, table: str, column: str) -> str:
+        """Return a query that sums a numeric column."""
+        return f"SELECT SUM({column}) AS total FROM {table}"
+
+    def count_distinct(self, table: str, column: str,
+                       approximate: bool = False) -> str:
+        """Return a query for distinct value count.
+
+        Args:
+            table: Table to query.
+            column: Column to count distinct values for.
+            approximate: If True, use warehouse-specific approximate
+                function when available. Falls back to exact if not.
+        """
+        return f"SELECT COUNT(DISTINCT {column}) AS distinct_count FROM {table}"
+
+    def date_range(self, table: str, column: str) -> str:
+        """Return a query for the min and max of a date column."""
+        return f"SELECT MIN({column}) AS date_min, MAX({column}) AS date_max FROM {table}"
+
+    def row_checksum(self, table: str, columns: list[str]) -> str:
+        """Return a query that computes a deterministic checksum per row.
+
+        Used for reproducibility checks — run twice and compare.
+        Default: MD5 of concatenated column values cast to text.
+        """
+        col_concat = " || '|' || ".join(
+            f"COALESCE(CAST({c} AS VARCHAR), '')" for c in columns
+        )
+        return f"SELECT MD5({col_concat}) AS row_hash FROM {table}"

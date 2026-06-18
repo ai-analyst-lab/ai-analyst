@@ -1,0 +1,38 @@
+# GlossaryTerm.yaml — return type for glossary lookups against wiki/GLOSSARY.yaml.
+# Source: wiki/GLOSSARY.yaml, derived from raw/atoms/_glossary.yaml + DefinitionAtom backfills.
+
+schema_version: 1
+schema_name: GlossaryTerm
+extends: null
+
+required_fields:
+  - canonical              # snake_case canonical ID (e.g., north_star_metric)
+  - definition             # the formal definition prose
+  - variants               # array of surface forms (ordered most-used-first)
+  - source                 # nested: {definition_atom_path, wiki_path, playbook_pages}
+  - confidence_envelope    # mandatory
+
+type_specific_optional:
+  - distinct_from          # array of related canonical IDs it should NOT be conflated with
+  - first_appears          # nested {page, line}
+  - related_concepts       # array of wiki concept paths
+
+required_subfields:
+  source:
+    - definition_atom_path # nullable until concept-extractor backfills
+    - wiki_path            # e.g., wiki/concepts/north-star-metric.md
+    - playbook_pages       # array of integers
+  first_appears:
+    - page
+    - line
+
+field_constraints:
+  schema_version: { type: integer, const: 1 }
+  canonical: { type: string, pattern: "^[a-z][a-z0-9_]*$" }
+  variants: { type: array, items: string, min_items: 1 }
+  confidence_envelope:
+    type: object
+    extends_schema: ConfidenceEnvelope
+
+id_pattern: null
+page_size_cap_words: null

@@ -1,0 +1,59 @@
+# DebateArticle.yaml — wiki page surfacing a contested or unresolved question in the playbook.
+# Producer: debates-assembler. Page-size cap: ≤1500 words.
+
+schema_version: 1
+schema_name: DebateArticle
+extends: null
+
+required_fields:
+  - title
+  - type
+  - schema_version
+  - sources
+  - related
+  - playbook_pages
+  - tier
+  - confidence
+  - confidence_derivation
+  - curator_status
+  - verified
+  - created
+  - updated
+  - contested              # type-specific: one-sentence statement of the contested question
+  - current_consensus      # type-specific: one of [strong, weak, none, evolving]
+
+type_specific_required:
+  - contested
+  - current_consensus
+  - tl_dr                  # body "## TL;DR" — ≤80 words
+  - arguments_for          # body "## Arguments for"
+  - arguments_against      # body "## Arguments against"
+
+type_specific_optional:
+  - stakeholders           # who holds each side
+  - open_questions
+  - curated_by
+  - curated_at
+
+enums:
+  type: [debate]
+  current_consensus: [strong, weak, none, evolving]
+  tier: [1, 2, 3]
+  confidence: [high, medium, low]
+  curator_status: [pending, approved, rejected, revision_requested]
+
+field_constraints:
+  schema_version: { type: integer, const: 1 }
+  sources: { type: array, items: string, min_items: 1 }
+  playbook_pages: { type: array, items: integer, min_items: 1 }
+  verified: { type: boolean }
+  tl_dr_word_count: { type: integer, maximum: 80 }
+
+required_body_sections:
+  - "## TL;DR"
+  - "## Arguments for"
+  - "## Arguments against"
+  - "## Current consensus"
+
+page_size_cap_words: 1500
+id_pattern: null

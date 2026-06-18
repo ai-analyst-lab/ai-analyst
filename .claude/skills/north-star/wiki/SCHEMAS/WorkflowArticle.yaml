@@ -1,0 +1,58 @@
+# WorkflowArticle.yaml — wiki page describing a named workflow.
+# Producer: workflows-assembler. Page-size cap: ≤1200 words prose + companion _steps/{id}.yaml.
+
+schema_version: 1
+schema_name: WorkflowArticle
+extends: null
+
+required_fields:
+  - title
+  - type
+  - schema_version
+  - sources                # array of WorkflowStepAtom paths
+  - related
+  - playbook_pages
+  - tier
+  - confidence
+  - confidence_derivation
+  - curator_status
+  - verified
+  - created
+  - updated
+  - workflow_id            # type-specific per WIKI_SCHEMA frontmatter table
+  - estimated_lookups      # type-specific
+
+type_specific_required:
+  - workflow_id
+  - estimated_lookups
+  - tl_dr                  # body "## TL;DR" — ≤80 words
+  - steps_file             # relative path to companion _steps/{workflow_id}.yaml
+
+type_specific_optional:
+  - prerequisites
+  - expected_outputs
+  - curated_by
+  - curated_at
+
+enums:
+  type: [workflow]
+  tier: [1, 2, 3]
+  confidence: [high, medium, low]
+  curator_status: [pending, approved, rejected, revision_requested]
+
+field_constraints:
+  schema_version: { type: integer, const: 1 }
+  workflow_id: { type: string, pattern: "^[a-z][a-z0-9-]{1,60}$" }
+  estimated_lookups: { type: integer, minimum: 1 }
+  sources: { type: array, items: string, min_items: 1 }
+  playbook_pages: { type: array, items: integer, min_items: 1 }
+  verified: { type: boolean }
+  tl_dr_word_count: { type: integer, maximum: 80 }
+  steps_file: { type: string, pattern: "^.*_steps/[a-z0-9-]+\\.yaml$" }
+
+required_body_sections:
+  - "## TL;DR"
+  - "## Steps"
+
+page_size_cap_words: 1200
+id_pattern: null

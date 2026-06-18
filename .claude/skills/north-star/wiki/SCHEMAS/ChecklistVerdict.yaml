@@ -1,0 +1,41 @@
+# ChecklistVerdict.yaml — return type for evaluate_checklist(candidate_nsm, context, ...).
+# Source: wiki/concepts/checklist.md yaml-rules block + 7 ChecklistItemAtom entries.
+
+schema_version: 1
+schema_name: ChecklistVerdict
+extends: null
+
+required_fields:
+  - candidate_nsm          # echo of input
+  - overall                # pass | fail | conditional
+  - per_criterion          # array of length 7 (one per checklist question)
+  - failing_criteria       # array of checklist_id values that failed (may be empty)
+  - confidence_envelope    # mandatory
+
+type_specific_optional:
+  - notes
+  - linked_anti_patterns   # array of anti_pattern_id values for failing criteria
+  - linked_fix_recipes     # array of wiki paths to anti-pattern articles with fix recipes
+
+required_subfields:
+  per_criterion:
+    - checklist_id
+    - question
+    - verdict              # pass | fail | unknown
+    - reasoning            # short rationale
+    - linked_anti_pattern_id   # nullable
+    - linked_fix_recipe_path   # nullable
+
+enums:
+  overall: [pass, fail, conditional]
+  per_criterion_verdict: [pass, fail, unknown]
+
+field_constraints:
+  schema_version: { type: integer, const: 1 }
+  per_criterion: { type: array, length: 7 }
+  confidence_envelope:
+    type: object
+    extends_schema: ConfidenceEnvelope
+
+id_pattern: null
+page_size_cap_words: null

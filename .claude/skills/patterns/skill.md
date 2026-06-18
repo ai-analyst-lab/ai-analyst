@@ -1,3 +1,8 @@
+---
+name: patterns
+description: Browse, search, and leverage recurring analytical patterns discovered across past analyses. Use this skill when users want to see what patterns have emerged from previous work, check if a current finding matches a known pattern, search for patterns by keyword or metric, view pattern details, understand established behavioral patterns in their data, or get reminded of recurring observations at session start. This skill is especially valuable when users say things like "what patterns have we seen?", "have we seen this behavior before?", "show me recurring patterns", "what's consistent in our data?", "any known patterns about [metric/segment]?", "search patterns for [keyword]", or during exploratory analysis when you want to contextualize new findings against historical observations. The skill manages pattern extraction automatically after each analysis archive, incrementing occurrence counts when findings match existing patterns and creating new pattern entries when the same behavior appears across multiple analyses. Always trigger this when users mention patterns, recurring behaviors, historical observations, or when a new finding might match something previously documented. Also consider triggering proactively at session start to remind users of established patterns in their dataset.
+---
+
 # Skill: Patterns
 
 ## Purpose
@@ -18,10 +23,21 @@ appear consistently in the data.
 
 ## Instructions
 
+### Step 0: Determine Active Dataset
+Before loading patterns, identify the active dataset:
+
+1. Read `.knowledge/active.yaml` to get the active dataset name
+2. If the file doesn't exist or is empty, default to checking all datasets
+3. Use this dataset name when filtering patterns and referencing dataset-specific files
+
+This ensures you're searching patterns for the correct dataset and providing accurate context.
+
 ### Step 1: Load Patterns
-1. Read `.knowledge/analyses/_patterns.yaml` for the active dataset.
-2. If `--global` flag: also read `.knowledge/global/cross_dataset_observations.yaml`.
-3. If empty: "No patterns recorded yet. Complete a few analyses and patterns will emerge."
+1. Check if `.knowledge/analyses/_patterns.yaml` exists:
+   - If it doesn't exist: "No patterns recorded yet. The pattern system initializes after your first analysis is archived."
+   - If it exists but is empty: "No patterns recorded yet. Complete 2-3 analyses and recurring patterns will emerge."
+2. If `--global` flag: also check and read `.knowledge/global/cross_dataset_observations.yaml` (same existence checks apply).
+3. Load pattern data from existing files.
 
 ### Step 2: Execute Command
 
@@ -38,7 +54,10 @@ appear consistently in the data.
 
 **Search (`/patterns search={term}`):**
 - Search across description, dimensions, metrics, tags
+- Use flexible matching: include synonyms and related terms (e.g., "mobile" matches "device", "platform")
 - Display matching patterns as a table
+- If no matches: suggest related terms or broader searches
+- Always explain why you found/didn't find matches
 
 **Global (`/patterns --global`):**
 - Include cross-dataset observations alongside per-dataset patterns
@@ -49,6 +68,15 @@ After displaying patterns:
 - "Want to check if {pattern} still holds in the current data?"
 - "Want to use {pattern} as context for a new analysis?"
 - "This pattern was last seen {N} days ago — may need revalidation."
+
+**For empty state (0 patterns):**
+Keep the response concise (under 50 lines). Focus on:
+1. Why no patterns exist (need 2+ analyses with consistent findings)
+2. How many analyses are currently archived
+3. What happens after completing more analyses
+4. 1-2 suggested next actions
+
+Avoid lengthy explanations of how the pattern system works — users want quick answers when nothing exists yet.
 
 ## Pattern Extraction (Auto)
 

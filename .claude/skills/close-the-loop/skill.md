@@ -1,10 +1,48 @@
+---
+name: close-the-loop
+description: Ensure every analysis that includes a recommendation ends with a clear, actionable follow-up plan. CRITICAL RULE - Only use this skill AFTER a specific recommendation has been made. Use this skill at the end of ANY analysis that produces a recommendation, action item, suggested fix, proposed investment, or conclusion that says "we should do X." This skill is CRITICAL for turning analytical insights into actual business outcomes — without it, recommendations get forgotten and never evaluated. Apply this skill whenever you complete an analysis with findings that suggest a course of action, finish a root cause investigation that identifies a fix, complete an opportunity sizing that recommends an investment, produce a deck or report with recommendations, or any time the analysis concludes with "we should..." or "I recommend...". Even if the user doesn't explicitly ask for follow-up tracking, add the close-the-loop checklist automatically — it's a mandatory step for any analysis with recommendations. DO NOT USE this skill for exploratory questions like "should we investigate this?", "what's causing this pattern?", "is this worth looking into?" — these are pre-recommendation questions. Wait until the recommendation is clear, THEN apply close-the-loop. Skip for pure exploratory analyses with no recommendations or action items.
+---
+
 # Skill: Close-the-Loop
 
 ## Purpose
 Ensure every analysis that includes a recommendation ends with a clear follow-up plan — who decides, what metric tracks success, when to check back, and what to do if the expected outcome doesn't materialize.
 
 ## When to Use
-Apply this skill at the end of any analysis that produces a recommendation or action item. If the analysis concludes with "we should do X," this skill ensures X actually gets tracked and evaluated. Skip only for pure exploratory analyses with no recommendation.
+
+**IMPORTANT: This skill only applies AFTER a recommendation has been made. If the user is still exploring, asking questions, or investigating whether to act, do NOT apply this skill yet.**
+
+### Triggering Test (use this decision tree)
+
+Ask yourself: "Has a specific recommendation or action item been made?"
+
+- **YES** → Apply Close-the-Loop
+- **NO** → Skip (even if a decision is needed, wait until the recommendation is formulated)
+
+### Apply this skill when:
+- The analysis concludes with a recommendation ("we should do X")
+- Root cause investigation identifies a fix ("deploy the hotfix", "roll back v3.2")
+- Opportunity sizing recommends an investment ("invest 2 eng-months to recover $2.1M")
+- Multiple options are presented and a decision is needed ("Option A vs B vs C")
+- The analysis outputs action items that need tracking
+
+### Skip this skill when:
+- Pure exploratory analysis with no recommendations ("interesting pattern, still investigating")
+- User is asking whether to investigate ("should we look into this?" — this is premature, no recommendation yet)
+- Questions about causality ("is this correlation or causation?" — wait until you recommend a course of action)
+- Descriptive reports with no proposed actions ("here's what happened last quarter")
+- Data quality assessments (unless they recommend fixes)
+- Answering factual questions ("what was revenue last month?")
+
+### Common False Positives (Do NOT trigger on these)
+
+These sound like decisions but are NOT yet ready for close-the-loop:
+- "Should we investigate further?" — This is asking whether to investigate, not recommending a product change
+- "What do you think is causing this?" — Exploratory question, no recommendation yet
+- "Is this worth looking into?" — User is seeking direction, not ready to track an action
+- "We found a pattern — what should we do?" — The recommendation hasn't been formulated yet
+
+**The key test:** Has a specific recommendation been made? If the analysis is still figuring out what to recommend, skip Close-the-Loop. Come back to it after the recommendation is clear.
 
 ## Instructions
 
@@ -79,6 +117,49 @@ When the user must fill in fields, prompt them explicitly:
 > 2. By when does this need to be decided? (deadline)
 > 3. Who will check whether it worked? (follow-up owner)
 
+### Handling Multiple Recommendation Options
+
+When the analysis presents multiple mutually exclusive options (Option A, B, or C), structure the checklist to handle conditional success tracking:
+
+```markdown
+## Close the Loop
+
+### Decision
+- **Recommendation:** Three options presented:
+  - **Option A:** [Description + key metrics]
+  - **Option B:** [Description + key metrics]
+  - **Option C:** [Description + key metrics]
+- **Decision maker:** [Who will choose between options]
+- **Decision deadline:** [When to decide]
+- **Decision made:** [ ] Option A / [ ] Option B / [ ] Option C / [ ] Hybrid / [ ] Deferred
+- **Decision outcome:** _[pending]_
+
+### Success Tracking
+
+#### If Option A is selected
+- **Success metric:** [metric specific to Option A]
+- **Current baseline:** [value]
+- **Target:** [value]
+- **Measurement window:** [timeframe]
+
+#### If Option B is selected
+- **Success metric:** [metric specific to Option B]
+- **Current baseline:** [value]
+- **Target:** [value]
+- **Measurement window:** [timeframe]
+
+[Repeat for each option]
+
+### Follow-Up
+- **Check-in date:** [varies by option selected]
+- **Owner:** [same across options or varies]
+- **If successful (Option A):** [what to do next]
+- **If successful (Option B):** [what to do next]
+- **If unsuccessful (any option):** [fallback plan that works regardless of choice]
+```
+
+This ensures each option has clear, measurable success criteria before the decision is made.
+
 ### Connecting to Opportunity Sizing
 
 If the analysis used the Opportunity Sizer agent, connect the success tracking to the sizing model:
@@ -94,6 +175,22 @@ If the analysis used the Opportunity Sizer agent, connect the success tracking t
 ```
 
 This directly links the "was it worth it?" question to the sizing model's assumptions.
+
+### Integration with Other Skills
+
+Close-the-Loop works best when combined with these other analytical skills:
+
+- **Before Close-the-Loop:**
+  - **Triangulation**: Validate findings before committing to a follow-up plan. If the analysis hasn't been cross-checked, note it in the confidence level.
+  - **Stress Test**: Pressure-test the recommendation for methodological flaws before setting success metrics.
+
+- **During Close-the-Loop:**
+  - **Guardrails Awareness**: If the recommendation has positive expected impact, check for potential negative side effects. Include guardrail metrics in Success Tracking.
+
+- **After Close-the-Loop:**
+  - **Archive Analysis**: Save the analysis with its close-the-loop plan to the knowledge system for future reference.
+
+When applying Close-the-Loop, check whether these skills have been applied. If not, flag it in the Analysis Provenance confidence level (e.g., "MEDIUM — findings not yet triangulated").
 
 ## Examples
 

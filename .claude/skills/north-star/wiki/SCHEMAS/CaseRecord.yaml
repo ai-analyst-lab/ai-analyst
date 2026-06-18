@@ -1,0 +1,46 @@
+# CaseRecord.yaml — return type for lookup_examples(game, industry, stage, ...).
+# Source: CASES_INDEX.yaml row; one CaseRecord per case_id.
+
+schema_version: 1
+schema_name: CaseRecord
+extends: null
+
+required_fields:
+  - case_id
+  - company
+  - game
+  - industry
+  - stage
+  - nsm
+  - inputs
+  - outcome
+  - source                 # nested: {wiki_path, atom_paths, playbook_pages}
+  - confidence_envelope    # mandatory per WIKI_SCHEMA §Runtime API contract
+
+type_specific_optional:
+  - evolution              # array of stage-changes; may be empty
+  - tensions               # nested text or null
+
+required_subfields:
+  source:
+    - wiki_path            # e.g., wiki/cases/burger-king.md
+    - atom_paths           # array
+    - playbook_pages       # array of integers
+  nsm:
+    - statement
+    - grain
+
+enums:
+  game: [transaction, attention, productivity]
+  outcome: [still_active, retired, pivoted, unknown]
+
+field_constraints:
+  schema_version: { type: integer, const: 1 }
+  case_id: { type: string, pattern: "^case-[a-z0-9-]{1,60}$" }
+  inputs: { type: array, items: string, min_items: 1 }
+  confidence_envelope:
+    type: object
+    extends_schema: ConfidenceEnvelope
+
+id_pattern: null
+page_size_cap_words: null

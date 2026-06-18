@@ -1,0 +1,59 @@
+# AntiPatternArticle.yaml — wiki page for one anti-pattern.
+# Producer: anti-patterns-assembler. Page-size cap: ≤500 words.
+
+schema_version: 1
+schema_name: AntiPatternArticle
+extends: null
+
+required_fields:
+  - title
+  - type
+  - schema_version
+  - sources
+  - related
+  - playbook_pages
+  - tier
+  - confidence
+  - confidence_derivation
+  - curator_status
+  - verified
+  - created
+  - updated
+  - anti_pattern_id        # type-specific
+  - severity               # type-specific
+
+type_specific_required:
+  - anti_pattern_id
+  - severity
+  - tl_dr                  # body "## TL;DR" — ≤80 words
+  - spot_signals           # body "## Spot signals" — derived from AntiPatternAtom.spot_signals
+  - fix_recipe             # body "## Fix recipe" — derived from AntiPatternAtom.fix_recipe
+
+type_specific_optional:
+  - examples               # body "## Examples" — references to example atoms
+  - curated_by
+  - curated_at
+
+enums:
+  type: [anti-pattern]
+  severity: [high, medium, low]
+  tier: [1, 2, 3]
+  confidence: [high, medium, low]
+  curator_status: [pending, approved, rejected, revision_requested]
+
+field_constraints:
+  schema_version: { type: integer, const: 1 }
+  anti_pattern_id: { type: string, pattern: "^[a-z][a-z0-9-]{1,60}$" }
+  sources: { type: array, items: string, min_items: 1 }
+  playbook_pages: { type: array, items: integer, min_items: 1 }
+  verified: { type: boolean }
+  tl_dr_word_count: { type: integer, maximum: 80 }
+
+required_body_sections:
+  - "## TL;DR"
+  - "## Spot signals"
+  - "## Fix recipe"
+  - "## Examples"
+
+page_size_cap_words: 500
+id_pattern: null

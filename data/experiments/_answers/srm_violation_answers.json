@@ -1,0 +1,8 @@
+{
+  "true_effect": "None (SRM invalidates results)",
+  "observed_split": "52/48",
+  "expected_split": "50/50",
+  "srm": "BLOCK",
+  "expected_verdict": "INVALID",
+  "notes": "Assignment bug caused 52/48 split. Chi-squared should reject."
+}

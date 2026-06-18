@@ -1,0 +1,54 @@
+# SectionMapAtom.yaml — per-section inventory produced by structural-mapper.
+# Finer-grained than ChapterMapAtom; one atom per named section within a chapter.
+
+schema_version: 1
+schema_name: SectionMapAtom
+extends: Atom
+
+required_fields:
+  - id
+  - type
+  - schema_version
+  - extracted_by
+  - extracted_at
+  - source
+  - controlled_terms
+  - tier
+  - confidence
+  - confidence_derivation
+  - curator_status
+  - reconciliation_status
+  - indices
+
+type_specific_required:
+  - section_id             # stable kebab-case identifier
+  - section_title
+  - parent_chapter_id      # ID of the ChapterMapAtom this section belongs to
+  - page_range             # 2-int array
+  - summary                # ≤100 words
+  - key_concepts           # array of canonical glossary terms
+
+type_specific_optional:
+  - notable_figures
+  - notable_pro_tips
+  - notable_cases
+
+enums:
+  type: [section-map]
+  tier: [1, 2, 3]
+  confidence: [high, medium, low]
+  curator_status: [pending, approved, rejected, revision_requested]
+  reconciliation_status: [pending, reconciled, conflict, waived]
+
+field_constraints:
+  parent_chapter_id:
+    type: string
+    pattern: "^chapter-map-p[0-9]{3}-l[0-9]{4}-[a-z0-9-]{1,40}$"
+    cross_check: existing_atom_id
+  page_range:
+    type: array
+    items: integer
+    length: 2
+
+id_pattern: "^section-map-p[0-9]{3}-l[0-9]{4}-[a-z0-9-]{1,40}$"
+page_size_cap_words: null

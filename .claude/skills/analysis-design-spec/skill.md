@@ -1,3 +1,9 @@
+---
+name: analysis-design-spec
+description: |
+  Produce an Analysis Design Spec before running any data query or analysis. Use this skill at the start of EVERY analytical request — whether it's "analyze why conversion dropped", "investigate this metric", "compare segments", "what was X last week", or any question involving data. This skill prevents wasted work by defining the question, decision, data needs, dimensions, time range, output format, and success criteria upfront. Apply even when users say "quick question" or "just pull this number" — the spec ensures you understand the decision context before querying. Skip ONLY if the user's request already explicitly states all seven fields (Question, Decision, Data Needed, Dimensions, Time Range, Output Format, Success Criteria) — which virtually never happens. The spec takes 2-5 minutes but prevents hours of rework from scope creep, misaligned analysis, or discovering data gaps mid-stream. When in doubt, use this skill. Trigger on phrases like: analyze, investigate, look into, what happened with, compare, segment, breakdown, explore, root cause, deep dive, trend, pattern, why did, what caused, show me, pull, calculate, measure. DISAMBIGUATION: this is the quick 7-field framing GATE that runs before every analysis — NOT the full design pipeline. When the user wants a multi-stage investigation design (hypothesis sharpening, confound scan, V1→V2 redesign after feedback), use `analysis-design` instead.
+---
+
 # Skill: Analysis Design Spec
 
 ## Purpose
@@ -8,7 +14,7 @@ Apply this skill at the start of every new analysis, before running the Data Exp
 
 ## Instructions
 
-### The Analysis Design Spec
+### Step 1: Produce the Spec
 
 Before touching data, fill in this template. Every field is required. If you can't fill a field, ask the user.
 
@@ -53,11 +59,25 @@ How will we know the analysis answered the question?
 or "Determine whether the change is statistically meaningful at the segment level"]
 ```
 
+### Step 2: STOP and Present the Spec
+
+**After filling in all 7 fields, STOP before running any queries.**
+
+Present the spec to the user and say:
+
+> "I've drafted an Analysis Design Spec to ensure we're aligned before I start querying data. Please review the 7 sections above. Does this capture what you need? Any adjustments before I proceed?"
+
+**Why this matters:** The spec might reveal data gaps, scope mismatches, or missing context. Catching these upfront saves hours of rework. The user might say "actually, I only need X" or "I forgot to mention Y" — that's gold.
+
+### Step 3: Adjust if Needed
+
+If the user requests changes, update the spec. Once aligned, proceed with the analysis.
+
 ### How to Use the Spec
 
 **Before analysis:**
 1. Fill in all 7 fields
-2. Confirm with the user if any field required assumptions
+2. **STOP and confirm with the user** — don't assume the spec is correct
 3. Flag any data gaps in field 3 (apply the Tracking Gaps skill if needed)
 4. Use field 4 to inform which agents to invoke and what segmentation to run
 
@@ -73,16 +93,16 @@ or "Determine whether the change is statistically meaningful at the segment leve
 
 ### Scope Calibration
 
-Not every request needs the same depth. Use the question to calibrate:
+Not every request needs the same depth. Match the spec verbosity to the request type:
 
-| Request Type | Depth | Typical Agents | Time |
-|-------------|-------|----------------|------|
-| **Number pull** | "What was X last month?" | Data Explorer only | Minutes |
-| **Monitoring** | "How is X trending?" | Overtime/Trend | 15-30 min |
-| **Exploration** | "What's happening with X?" | Descriptive Analytics | 30-60 min |
-| **Deep dive** | "Why did X change?" | Full pipeline including Root Cause Investigator | 1-2 hours |
+| Request Type | Spec Depth | Example | Typical Fields |
+|-------------|-----------|---------|----------------|
+| **Number pull** | Lightweight (1-2 sentences per field) | "What was revenue last month?" | Brief question, simple decision threshold, single metric, no dimensions |
+| **Monitoring** | Medium (2-3 sentences per field) | "How is retention trending?" | Specific metric definition, comparison period, success thresholds |
+| **Exploration** | Full (3-5 sentences per field) | "What's happening with signups?" | Multiple dimensions, hypotheses, data gaps documented |
+| **Deep dive** | Comprehensive (full sections with sub-bullets) | "Why did conversion drop?" | Detailed data audit, 4+ dimensions with rationale, multiple success criteria |
 
-Match the analysis depth to the question. A number pull doesn't need a full investigation pipeline.
+**Rule of thumb:** A number pull spec should fit on one screen. A deep dive spec may span 2-3 screens with data limitation sections and pre-flight checklists.
 
 ### Writing Rules
 
@@ -170,3 +190,4 @@ A single conversion rate number with context (vs. recent average). If below thre
 3. **Never ignore the spec mid-analysis** — if you discover something more interesting, note it as a follow-up question but finish what was asked first
 4. **Never over-scope** — if the user asked a monitoring question, don't design a deep dive. Match the depth to the request.
 5. **Never skip dimensions** — "Let me segment by everything" is not a plan. Choose 2-4 dimensions with reasons.
+6. **Never proceed without user confirmation** — after producing the spec, STOP and ask if it looks right before running queries.

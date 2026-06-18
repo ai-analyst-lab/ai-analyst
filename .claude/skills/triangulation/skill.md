@@ -1,3 +1,11 @@
+---
+name: triangulation
+description: |
+  Cross-reference and validate analytical findings before presenting them to stakeholders. Use this skill after EVERY analysis — whenever you produce findings, complete a data exploration, finish a metrics investigation, run descriptive analytics, or are about to present results. This skill prevents the most common analytical errors that lead to bad decisions: Simpson's Paradox (aggregate trends that reverse at segment level), denominator changes (rates that change because the population changed, not the behavior), survivorship bias (analyzing only data that survived filtering), incomplete time windows (comparing partial periods), and plausibility violations (results that defy industry benchmarks).
+
+  Trigger this skill when you're ready to validate findings, before sharing results, when a finding seems surprising or counterintuitive, after running queries, when preparing executive summaries, before creating charts or decks, when the user says "sanity check this", "validate these numbers", "does this make sense?", "cross-check this analysis", "verify the findings", or any time you've generated analytical conclusions that will inform decisions. The skill runs a mandatory segment-first Simpson's Paradox check (the #1 source of misleading conclusions), then validates internal arithmetic consistency, cross-references findings against alternative data sources, and checks external plausibility against industry benchmarks. Every finding gets a confidence grade (HIGH/MEDIUM/LOW) and caveats for stakeholder communication.
+---
+
 # Skill: Triangulation / Sanity Check
 
 ## Purpose
@@ -6,6 +14,23 @@ Cross-reference analytical findings against multiple data sources, external benc
 ## When to Use
 Apply this skill after every analysis, before presenting findings to stakeholders, and whenever a result seems surprising. If a finding would change a decision, it MUST be triangulated first.
 
+## Output Style Guidance
+
+**Target 100-150 lines for most validations.** Longer reports dilute impact and slow decisions.
+
+**Adapt depth to the situation:**
+
+- **Quick validation** (user asks "sanity check this" or "is this close enough?"): Lead with verdict in 3-4 sentences. Then 3-5 bullet checks (✅/⚠️/❌). Bottom line: can they proceed? **Target: 50-80 lines. Never exceed 100 lines.**
+
+- **Pre-presentation validation** (findings going to stakeholders): Run all 4 checks systematically. Use compact validation table format (see examples). Confidence rating + 2-3 sentence stakeholder guidance. **Target: 100-150 lines. Never exceed 200 lines.**
+
+- **High-stakes findings** (will drive major decisions, numbers seem implausible): All 4 checks + SQL investigation queries + benchmark comparisons. **Target: 150-200 lines. Hard cap at 250 lines.**
+
+**When outputs approach 200+ lines**, you're over-explaining. Cut:
+- Redundant explanations (don't repeat what's in the table)
+- SQL queries that aren't critical to the verdict
+- Verbose examples when a bullet will do
+
 ## Instructions
 
 ### Triangulation Framework
@@ -13,11 +38,16 @@ Apply this skill after every analysis, before presenting findings to stakeholder
 Every finding gets checked through four lenses — starting with the most common source of misleading results:
 
 ```
-CHECK 0: SEGMENT-FIRST  → Does this hold at the segment level, or is it a Simpson's Paradox?
-CHECK 1: INTERNAL        → Do the numbers add up within the analysis?
+CHECK 0: SEGMENT-FIRST  → Do segment-level trends match aggregate? (Simpson's Paradox check)
+CHECK 1: INTERNAL       → Do the numbers add up within the analysis?
 CHECK 2: CROSS-REFERENCE → Does another data source agree?
-CHECK 3: PLAUSIBILITY    → Does this make sense given what we know about the world?
+CHECK 3: PLAUSIBILITY   → Does this make sense given what we know about the world?
 ```
+
+**Before running ANY checks**, verify data source availability:
+- If user mentions a table/database, confirm it exists in the active dataset
+- If it doesn't exist, flag this FIRST before running validation checks
+- Check `.knowledge/datasets/{active}/manifest.yaml` or use available data tables
 
 ### Check 0: Segment-First (Mandatory)
 
@@ -29,10 +59,19 @@ CHECK 3: PLAUSIBILITY    → Does this make sense given what we know about the w
 3. Geography / region (US vs. EU vs. APAC)
 4. Acquisition channel (organic vs. paid vs. referral)
 
+**Quick validation approach:** Check 1-2 key segments (typically device + user type). If you have data access, run the queries. If you don't have data, flag this check as REQUIRED and provide 1-2 specific SQL queries the user should run.
+
+**Full validation approach:** Check all 4 default segments if available in data.
+
+**What you're looking for:** Does ANY segment show a trend **opposite** to the aggregate? This is Simpson's Paradox.
+
 **Process for each aggregate finding:**
-1. Compute the finding metric for the aggregate (all users/records)
-2. Compute the same metric for each value of at least 2 default segment dimensions
-3. Check: does ANY segment show a trend **opposite** to the aggregate?
+1. State the aggregate trend (e.g., "Overall conversion increased from 3% to 4%")
+2. Compute the same metric for 1-2 key segments (device + user type preferred)
+3. Check: Does ANY segment show the **opposite direction**?
+   - If aggregate UP, is any segment DOWN? → Paradox detected
+   - If aggregate DOWN, is any segment UP? → Paradox detected
+   - All segments match aggregate direction? → No paradox, trend is real
 
 **If opposite trends detected:**
 ```
@@ -175,6 +214,24 @@ def check_internal_consistency(findings):
 
 ### Output Format: Validation Report
 
+**For quick validations** (user asks "is this OK?" or "sanity check this"):
+```markdown
+## Validation: [Finding Name]
+
+**Verdict:** [VALIDATED / NEEDS INVESTIGATION / REJECTED]
+
+**Confidence:** [HIGH / MEDIUM / LOW]
+
+**Key Checks:**
+- ✅/⚠️/❌ Segment-first: [1-2 sentence summary]
+- ✅/⚠️/❌ Internal consistency: [1-2 sentence summary]
+- ✅/⚠️/❌ Cross-reference: [1-2 sentence summary]
+- ✅/⚠️/❌ Plausibility: [1-2 sentence summary]
+
+**Bottom line:** [2-3 sentences: can they proceed, what caveats, what to check next]
+```
+
+**For full validations** (findings going to stakeholders):
 ```markdown
 # Validation Report: [Analysis Name]
 ## Date: [YYYY-MM-DD]
@@ -186,10 +243,10 @@ def check_internal_consistency(findings):
 #### Finding 1: [statement]
 | Check | Result | Detail |
 |-------|--------|--------|
+| Segment-first | PASS/WARN/FAIL | [specifics] |
 | Internal consistency | PASS/WARN/FAIL | [specifics] |
 | Cross-reference | PASS/WARN/FAIL | [specifics] |
 | External plausibility | PASS/WARN/FAIL | [specifics] |
-| Analytical errors | PASS/WARN/FAIL | [which errors checked, any found] |
 | **Confidence** | **HIGH/MEDIUM/LOW** | [summary justification] |
 
 [Repeat for each finding]

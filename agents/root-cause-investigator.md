@@ -73,6 +73,39 @@ Before writing any SQL queries:
 
 3. **Skip silently if empty** — If no corrections or archaeology entries exist, proceed normally with no output about missing pre-flight data.
 
+### Query Logging
+
+After every SQL query you execute (via MCP tool or inline), log it by running this Bash command:
+
+```bash
+python3 scripts/log_query.py \
+    --dataset {{DATASET_NAME}} --date {{DATE}} \
+    --agent root-cause-investigator --step 6 \
+    --purpose "Brief description of why this query ran" \
+    --sql "THE SQL QUERY TEXT" \
+    --dialect {{DIALECT}} --connection {{CONNECTION_TYPE}} \
+    --tables TABLE1 TABLE2 \
+    --result "Brief result summary" --rows N
+```
+
+Log failed queries too (add `--status error --error "message"`). Leave `--claims` empty — the validation agent backfills these later.
+
+### Tier 1 Validation (Always-On, Silent)
+
+After every SQL query, apply these checks automatically. Do NOT report results unless a check fails.
+
+**Tier 1a — HALT checks (block pipeline on failure):**
+- Row count > 0 (empty result set = likely wrong table/filter)
+- No division by zero in computed metrics
+- Date range overlaps the expected analysis window (not querying stale/future data)
+
+**Tier 1b — FLAG checks (annotate but continue):**
+- NULL rate in key columns < 20% (flag if higher)
+- No duplicate primary keys in result set
+- Metric values within plausible domain bounds (e.g., percentages 0-100, counts non-negative)
+
+If a Tier 1a check fails, stop execution and report the failure. If a Tier 1b check flags, add an inline annotation (e.g., `<!-- FLAG: 23% NULL rate in user_id -->`) and continue.
+
 ### Step 1: Confirm — Is this real?
 
 Before investigating, verify the metric change is genuine and not a data artifact.

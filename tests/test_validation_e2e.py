@@ -457,7 +457,7 @@ class TestConfidenceScoring:
         assert 0 <= confidence["score"] <= 100
         assert confidence["grade"] in ("A", "B", "C", "D", "F")
         assert isinstance(confidence["factors"], dict)
-        assert len(confidence["factors"]) == 7
+        assert len(confidence["factors"]) == 9
         assert isinstance(confidence["blockers"], list)
         assert isinstance(confidence["interpretation"], str)
         assert isinstance(confidence["recommendation"], str)
@@ -765,7 +765,7 @@ class TestFullPipelineChain:
         assert len(badge) > 0
 
         # All 7 factors are present
-        assert len(confidence["factors"]) == 7
+        assert len(confidence["factors"]) == 9
         for factor_name, factor in confidence["factors"].items():
             assert "score" in factor
             assert "max" in factor

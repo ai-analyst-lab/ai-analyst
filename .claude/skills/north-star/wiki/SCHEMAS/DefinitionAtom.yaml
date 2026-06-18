@@ -1,0 +1,46 @@
+# DefinitionAtom.yaml — formal definitions of vocabulary terms.
+# Producer: concept-extractor. Each definition backfills _glossary.yaml's definition_atom slot.
+
+schema_version: 1
+schema_name: DefinitionAtom
+extends: Atom
+
+required_fields:
+  - id
+  - type
+  - schema_version
+  - extracted_by
+  - extracted_at
+  - source
+  - controlled_terms
+  - tier
+  - confidence
+  - confidence_derivation
+  - curator_status
+  - reconciliation_status
+  - indices
+
+type_specific_required:
+  - term                   # canonical snake_case key, MUST exist in _glossary.yaml
+  - definition             # the formal definition prose
+  - why_atomic
+
+type_specific_optional:
+  - variants               # surface forms (mirror of glossary entry)
+  - distinct_from          # array of related terms it should NOT be conflated with
+
+enums:
+  type: [definition]
+  tier: [1, 2, 3]
+  confidence: [high, medium, low]
+  curator_status: [pending, approved, rejected, revision_requested]
+  reconciliation_status: [pending, reconciled, conflict, waived]
+
+field_constraints:
+  term:
+    type: string
+    pattern: "^[a-z][a-z0-9_]*$"
+    cross_check: glossary_keys
+
+id_pattern: "^definition-p[0-9]{3}-l[0-9]{4}-[a-z0-9-]{1,40}$"
+page_size_cap_words: null

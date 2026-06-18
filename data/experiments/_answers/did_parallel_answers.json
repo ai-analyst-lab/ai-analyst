@@ -1,0 +1,8 @@
+{
+  "true_effect": "+3.0 orders per user per week",
+  "treatment_group": "ios",
+  "control_group": "android",
+  "intervention_week": 5,
+  "parallel_trends": "PASS (both groups trend at +0.5/week pre-treatment)",
+  "expected_verdict": "Significant DiD estimate ~3.0"
+}

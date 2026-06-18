@@ -1,0 +1,61 @@
+# ChecklistItemAtom.yaml — atoms for the 7-question NSM-qualification rubric.
+# Producer: checklist-extractor. Exactly 7 atoms expected, step_order 1–7.
+
+schema_version: 1
+schema_name: ChecklistItemAtom
+extends: Atom
+
+required_fields:
+  - id
+  - type
+  - schema_version
+  - extracted_by
+  - extracted_at
+  - source
+  - controlled_terms
+  - tier
+  - confidence
+  - confidence_derivation
+  - curator_status
+  - reconciliation_status
+  - indices
+  - step_order             # promoted to required; MUST be 1..7
+
+type_specific_required:
+  - checklist_id           # stable kebab-case identifier per criterion
+  - question               # the question text as stated in the playbook
+  - criterion              # restatement as a pass/fail rule
+  - checklist_pass_criteria   # array of strings — what "pass" looks like
+  - checklist_fail_examples   # array of strings — what failure looks like
+  - step_order             # 1..7
+  - why_atomic
+
+type_specific_optional:
+  - related_anti_patterns  # array of anti_pattern_id values that this question guards against
+
+enums:
+  type: [checklist-item]
+  tier: [1, 2, 3]
+  confidence: [high, medium, low]
+  curator_status: [pending, approved, rejected, revision_requested]
+  reconciliation_status: [pending, reconciled, conflict, waived]
+
+field_constraints:
+  checklist_id:
+    type: string
+    pattern: "^checklist-q[1-7]-[a-z0-9-]{1,40}$"
+  step_order:
+    type: integer
+    minimum: 1
+    maximum: 7
+  checklist_pass_criteria:
+    type: array
+    items: string
+    min_items: 1
+  checklist_fail_examples:
+    type: array
+    items: string
+    min_items: 1
+
+id_pattern: "^checklist-item-p[0-9]{3}-l[0-9]{4}-[a-z0-9-]{1,40}$"
+page_size_cap_words: null

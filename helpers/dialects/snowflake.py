@@ -116,3 +116,21 @@ class SnowflakeDialect(SQLDialect):
         'DESCRIBE TABLE customers'
         """
         return f"DESCRIBE TABLE {table}"
+
+    # ------------------------------------------------------------------
+    # Validation methods
+    # ------------------------------------------------------------------
+
+    def count_distinct(self, table: str, column: str,
+                       approximate: bool = False) -> str:
+        """Snowflake: use APPROX_COUNT_DISTINCT (HLL) when approximate=True."""
+        if approximate:
+            return f"SELECT APPROX_COUNT_DISTINCT({column}) AS distinct_count FROM {table}"
+        return f"SELECT COUNT(DISTINCT {column}) AS distinct_count FROM {table}"
+
+    def row_checksum(self, table: str, columns: list[str]) -> str:
+        """Snowflake: use TO_VARCHAR for casting (CAST AS VARCHAR also works)."""
+        col_concat = " || '|' || ".join(
+            f"COALESCE(TO_VARCHAR({c}), '')" for c in columns
+        )
+        return f"SELECT MD5({col_concat}) AS row_hash FROM {table}"

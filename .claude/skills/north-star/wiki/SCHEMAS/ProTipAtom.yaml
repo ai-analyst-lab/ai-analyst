@@ -1,0 +1,45 @@
+# ProTipAtom.yaml — PRO TIP / callout-box atoms.
+# Producer: concept-extractor. Feeds wiki/PRO_TIPS.yaml keyed by concept_id.
+
+schema_version: 1
+schema_name: ProTipAtom
+extends: Atom
+
+required_fields:
+  - id
+  - type
+  - schema_version
+  - extracted_by
+  - extracted_at
+  - source
+  - controlled_terms
+  - tier
+  - confidence
+  - confidence_derivation
+  - curator_status
+  - reconciliation_status
+  - indices
+
+type_specific_required:
+  - tip                    # the pro-tip body (imperative or advisory)
+  - concept_id             # the concept atom this tip elaborates; MUST reference an existing concept atom ID
+  - why_atomic
+
+type_specific_optional:
+  - applies_when           # context guard ("when designing your NSM ...")
+
+enums:
+  type: [pro-tip]
+  tier: [1, 2, 3]
+  confidence: [high, medium, low]
+  curator_status: [pending, approved, rejected, revision_requested]
+  reconciliation_status: [pending, reconciled, conflict, waived]
+
+field_constraints:
+  concept_id:
+    type: string
+    pattern: "^concept-p[0-9]{3}-l[0-9]{4}-[a-z0-9-]{1,40}$"
+    cross_check: existing_atom_id
+
+id_pattern: "^pro-tip-p[0-9]{3}-l[0-9]{4}-[a-z0-9-]{1,40}$"
+page_size_cap_words: null

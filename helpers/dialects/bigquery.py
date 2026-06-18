@@ -134,3 +134,21 @@ class BigQueryDialect(SQLDialect):
             f"SELECT column_name, data_type FROM {info_schema} "
             f"WHERE table_name = '{table}'"
         )
+
+    # ------------------------------------------------------------------
+    # Validation methods
+    # ------------------------------------------------------------------
+
+    def count_distinct(self, table: str, column: str,
+                       approximate: bool = False) -> str:
+        """BigQuery: use APPROX_COUNT_DISTINCT when approximate=True."""
+        if approximate:
+            return f"SELECT APPROX_COUNT_DISTINCT({column}) AS distinct_count FROM {table}"
+        return f"SELECT COUNT(DISTINCT {column}) AS distinct_count FROM {table}"
+
+    def row_checksum(self, table: str, columns: list[str]) -> str:
+        """BigQuery: use CAST AS STRING and CONCAT for row hashing."""
+        col_list = ", '|', ".join(
+            f"COALESCE(CAST({c} AS STRING), '')" for c in columns
+        )
+        return f"SELECT TO_HEX(MD5(CONCAT({col_list}))) AS row_hash FROM {table}"

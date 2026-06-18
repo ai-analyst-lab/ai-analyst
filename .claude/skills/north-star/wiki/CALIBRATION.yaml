@@ -1,0 +1,99 @@
+# CALIBRATION.yaml — (vertical × game × verb) calibration coverage matrix.
+#
+# Schema version: 1
+# Owned by: Shane (curator) + cohort calibration outcomes update this each version
+# Read by: helpers/north_star/vertical_classifier.py
+# Used by: Boundary Sentinel (the LLM half of the R1 false-fluency defense)
+#
+# Coverage states:
+#   validated      — passed calibration cohort; Boundary Sentinel allows verb to fire
+#   experimental   — fired in cohort but not yet at acceptance bar; allowed under
+#                    filter_mode='exploratory'; refused under filter_mode='trust'
+#   not-calibrated — never tested; always refused with explicit "outside calibration"
+#
+# Coverage growth roadmap:
+#   v0.1 = 12 cells validated (this file)
+#   v0.5 = ~25 cells
+#   v1.0 = ~40 cells
+#   v1.5 = ~60 cells
+#
+# Verbs that ship in v0.1: audit, triage, explain, draft, inputs.
+# Verbs that ship in v0.5+: classify, pressure-test, compare, transplant, defend,
+#   diagnose, evolve, etc. — these all start at not-calibrated for every vertical
+#   when introduced; cohorts move them to validated.
+
+schema_version: 1
+generated_at: '2026-05-27'
+generated_by: shane
+
+# v0.1 — 12 validated cells across the highest-volume vertical/game combinations.
+# Stratification rationale matches the W6 cohort plan (4 attention / 3 transaction
+# / 2 productivity / 1 edge-case).
+cells:
+
+  # ---- b2b-saas (the deepest-calibrated vertical) ----
+  - vertical_id: b2b-saas-productivity
+    verb: audit
+    status: validated
+    notes: "Strongest wiki coverage (case-amplitude); cohort target N=3."
+  - vertical_id: b2b-saas-productivity
+    verb: triage
+    status: validated
+  - vertical_id: b2b-saas-productivity
+    verb: explain
+    status: validated
+  - vertical_id: b2b-saas-productivity
+    verb: draft
+    status: validated
+    notes: "Constrained-template mode only at v0.1."
+  - vertical_id: b2b-saas-productivity
+    verb: inputs
+    status: validated
+    notes: "Greenfield-only at v0.1."
+
+  - vertical_id: b2b-saas-transaction
+    verb: audit
+    status: validated
+  - vertical_id: b2b-saas-transaction
+    verb: triage
+    status: validated
+
+  # ---- consumer-subscription (attention game) ----
+  - vertical_id: consumer-subscription-attention
+    verb: audit
+    status: validated
+    notes: "Strong wiki coverage (case-netflix); cohort target N=2."
+  - vertical_id: consumer-subscription-attention
+    verb: triage
+    status: validated
+  - vertical_id: consumer-subscription-attention
+    verb: explain
+    status: validated
+
+  # ---- fintech (transaction game) ----
+  - vertical_id: fintech-transaction
+    verb: audit
+    status: validated
+    notes: "Wiki coverage: case-dave-banking + case-hypothetical-financial-institution; cohort target N=1."
+  - vertical_id: fintech-transaction
+    verb: explain
+    status: validated
+
+  # ---- marketplace (transaction game) ----
+  - vertical_id: marketplace-transaction
+    verb: audit
+    status: validated
+    notes: "Wiki coverage: case-happy-deliveries + case-hypothetical-grocery-delivery (both in CASES_INDEX). Retail/e-commerce orders products classify here; needed so an orders-based NSM (e.g. 'weekly completed orders') reaches the 7-question checklist instead of a boundary refusal."
+  - vertical_id: marketplace-transaction
+    verb: explain
+    status: validated
+
+  # ---- edge case (cohort plan slot for 1 edge-case PM) ----
+  - vertical_id: edge-multi-game-hybrid
+    verb: explain
+    status: validated
+    notes: "explain-only at v0.1 — edge case PM gets cited explainers but no full audit (calibration too thin for confident verdicts on multi-game products until v0.5+)."
+
+# All other (vertical_id × verb) combinations default to 'not-calibrated'.
+# The vertical_classifier returns coverage status for ANY cell at query time;
+# missing cells return not-calibrated automatically (no need to enumerate).

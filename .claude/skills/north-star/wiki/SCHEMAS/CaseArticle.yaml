@@ -1,0 +1,79 @@
+# CaseArticle.yaml — wiki page composing case-study-fragment + example atoms for one company.
+# Producer: cases-assembler. Page-size cap: ≤600 words prose; rich frontmatter.
+
+schema_version: 1
+schema_name: CaseArticle
+extends: null
+
+required_fields:
+  - title
+  - type
+  - schema_version
+  - sources
+  - related
+  - playbook_pages
+  - tier
+  - confidence
+  - confidence_derivation
+  - curator_status
+  - verified
+  - created
+  - updated
+  # Case-specific frontmatter (per WIKI_SCHEMA §Frontmatter required fields per type):
+  - case_id
+  - company
+  - game
+  - industry
+  - stage
+  - nsm
+  - inputs
+  - evolution
+  - outcome
+
+type_specific_required:
+  - case_id
+  - company
+  - game
+  - industry
+  - stage
+  - nsm                    # nested object: {statement, grain}
+  - inputs                 # array of strings
+  - evolution              # array of {date|stage, change} entries; may be empty
+  - outcome                # one of: still_active | retired | pivoted | unknown
+  - tl_dr                  # body "## TL;DR" — ≤80 words
+
+type_specific_optional:
+  - tensions               # body "## What broke" notes
+  - curated_by
+  - curated_at
+
+enums:
+  type: [case]
+  game: [transaction, attention, productivity]
+  outcome: [still_active, retired, pivoted, hypothetical, historical, unknown]
+  tier: [1, 2, 3]
+  confidence: [high, medium, low]
+  curator_status: [pending, approved, rejected, revision_requested]
+
+field_constraints:
+  schema_version: { type: integer, const: 1 }
+  case_id: { type: string, pattern: "^case-[a-z0-9-]{1,60}$" }
+  inputs: { type: array, items: string, min_items: 1 }
+  evolution: { type: array, items: object }
+  sources: { type: array, items: string, min_items: 1 }
+  playbook_pages: { type: array, items: integer, min_items: 1 }
+  verified: { type: boolean }
+  tl_dr_word_count: { type: integer, maximum: 80 }
+
+required_subfields:
+  nsm:
+    - statement
+    - grain
+
+required_body_sections:
+  - "## TL;DR"
+  - "## Story"
+  - "## Why it works"
+
+page_size_cap_words: 600
+id_pattern: null

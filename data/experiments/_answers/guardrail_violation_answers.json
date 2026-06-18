@@ -1,0 +1,7 @@
+{
+  "true_effect": "+6% relative lift in conversion",
+  "guardrail_violation": "+15% increase in page load time",
+  "srm": "PASS",
+  "expected_verdict": "INVESTIGATE (Mixed Results Framework)",
+  "notes": "Primary metric up but latency guardrail violated. Net impact analysis needed. Bumped from +3% to +6% so the lift reliably lands at p<0.05 at n=5000."
+}

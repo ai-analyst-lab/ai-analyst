@@ -1,0 +1,49 @@
+# ExampleAtom.yaml — single illustrations used to ground a concept or anti-pattern.
+# Producer: example-harvester. Use CaseStudyFragmentAtom for multi-atom decompositions sharing a case_id.
+
+schema_version: 1
+schema_name: ExampleAtom
+extends: Atom
+
+required_fields:
+  - id
+  - type
+  - schema_version
+  - extracted_by
+  - extracted_at
+  - source
+  - controlled_terms
+  - tier
+  - confidence
+  - confidence_derivation
+  - curator_status
+  - reconciliation_status
+  - indices
+
+type_specific_required:
+  - example                # the example body (≤200 words)
+  - illustrates            # array of concept/principle/anti-pattern atom IDs it illustrates
+  - why_atomic
+
+type_specific_optional:
+  - company                # if the example names one
+  - industry
+  - case_id                # only if this example was later promoted into a case-study-fragment chain
+
+enums:
+  type: [example]
+  tier: [1, 2, 3]
+  confidence: [high, medium, low]
+  curator_status: [pending, approved, rejected, revision_requested]
+  reconciliation_status: [pending, reconciled, conflict, waived]
+
+field_constraints:
+  illustrates:
+    type: array
+    items: string
+    min_items: 1
+    item_pattern: "^(concept|principle|anti-pattern)-p[0-9]{3}-l[0-9]{4}-[a-z0-9-]{1,40}$"
+    cross_check: existing_atom_id
+
+id_pattern: "^example-p[0-9]{3}-l[0-9]{4}-[a-z0-9-]{1,40}$"
+page_size_cap_words: null

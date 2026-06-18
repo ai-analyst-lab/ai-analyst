@@ -1,0 +1,47 @@
+# QuoteAtom.yaml — attributed quotations from named individuals or companies.
+# Producer: concept-extractor. Feeds wiki/QUOTES.yaml.
+
+schema_version: 1
+schema_name: QuoteAtom
+extends: Atom
+
+required_fields:
+  - id
+  - type
+  - schema_version
+  - extracted_by
+  - extracted_at
+  - source
+  - controlled_terms
+  - tier
+  - confidence
+  - confidence_derivation
+  - curator_status
+  - reconciliation_status
+  - indices
+
+type_specific_required:
+  - quote_text             # verbatim quote, MUST equal source.span_quote
+  - speaker                # named person or company; "unknown" allowed only if source is ambiguous
+  - why_atomic
+
+type_specific_optional:
+  - speaker_role           # e.g., "VP Product, Burger King"
+  - speaker_company
+  - context                # one sentence on the surrounding setup
+
+enums:
+  type: [quote]
+  tier: [1, 2, 3]
+  confidence: [high, medium, low]
+  curator_status: [pending, approved, rejected, revision_requested]
+  reconciliation_status: [pending, reconciled, conflict, waived]
+
+field_constraints:
+  quote_text:
+    type: string
+    max_length: 300
+    must_equal: source.span_quote
+
+id_pattern: "^quote-p[0-9]{3}-l[0-9]{4}-[a-z0-9-]{1,40}$"
+page_size_cap_words: null

@@ -1,3 +1,9 @@
+---
+name: data-quality-check
+description: |
+  Validate data completeness, consistency, and coverage before any analysis begins, flagging issues with severity ratings so the analyst knows what blocks analysis vs. what to note as a caveat. Use this skill at the start of EVERY new analysis — whenever you're about to query data, explore a dataset, design an investigation, or answer an analytical question. Also apply when connecting to a new data source, when results look suspicious or unexpected, when a user mentions data quality concerns, when switching datasets, when profiling a new table, or any time before drawing conclusions from data. Trigger on phrases like "analyze this data", "explore the dataset", "what's in this data", "investigate why", "check data quality", "is the data clean", "profile this table", "validate the data", "run a quality check", "before we analyze", "what's the coverage", or any request that involves querying or analyzing data. **This skill also fires whenever the user asks about a specific named table** — e.g., "tell me about the {table} table", "describe {table}", "what's in {table}", "show me {table}" — even if the question looks like a simple schema lookup. Schema-only answers from `.knowledge/datasets/{active}/schema.md` are insufficient; always pair them with a minimum DQ probe (row count, null rates, date range on primary timestamp, duplicate check on PK, and surfacing anything from `quirks.md`). This skill is essential for preventing misleading analysis caused by incomplete or inconsistent data — always run quality checks BEFORE making analytical conclusions. Even if the user doesn't explicitly ask for quality checks, proactively apply this whenever starting work with data to ensure findings are reliable.
+---
+
 # Skill: Data Quality Check
 
 ## Purpose
@@ -5,6 +11,16 @@ Validate data completeness, consistency, and coverage before any analysis begins
 
 ## When to Use
 Apply this skill at the start of every new analysis, when connecting to a new data source, or when results look suspicious. Run quality checks BEFORE drawing conclusions from data.
+
+**Also fires on table-scoped questions.** Any question that names a specific table ("tell me about {table}", "describe {table}", "what's in {table}", "show me {table}") triggers this skill. Schema-only answers are insufficient — pair the schema description with a minimum DQ probe:
+
+- Row count
+- Null rate per column (flag anything >5%)
+- Date range on the primary timestamp column
+- Duplicate check on the primary key
+- Surface anything from `.knowledge/datasets/{active}/quirks.md` for that table
+
+If the table is large enough that probing is expensive (>100M rows or warehouse cost concerns), tell the user and ask before running the full probe — but always run at minimum row count + PK duplicate check.
 
 ## Instructions
 
@@ -119,7 +135,7 @@ ORDER BY 1;
 Use the helper functions for systematic outlier and null concentration checks:
 
 ```python
-from helpers.tieout_helpers import check_null_concentration, check_outliers
+from helpers.data_quality_extras import check_null_concentration, check_outliers
 
 # Null concentration — flags columns with high null rates
 null_results = check_null_concentration(df)

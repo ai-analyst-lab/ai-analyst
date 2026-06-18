@@ -201,6 +201,35 @@ Mapping guide:
 | Data source line | `.data-source` |
 | Recommendation | `.rec-row` |
 
+### Step 6c: Embed data stamps per finding
+
+Build provenance blocks for every finding using `helpers/provenance_assembler.py`:
+
+```python
+from helpers.provenance_assembler import build_provenance_blocks, render_data_stamp
+
+blocks = build_provenance_blocks(
+    findings=findings_list,          # From step 2 (extracted findings)
+    cross_verification=cv_data,      # From working/cross_verification_*.yaml (if exists)
+    confidence_result=confidence,    # From validation agent (if exists)
+    query_log_entries=log_entries,   # From working/query_log_*.jsonl (if exists)
+    connection_type=connection_type, # From active dataset manifest
+    database=database_name,
+)
+```
+
+For **each finding** in Key Findings, append the data stamp immediately below the finding block:
+
+```markdown
+### Finding N: [Action headline]
+...existing content...
+**Data Stamp:** [145K rows | Jan-Mar 2026 | ORDERS | Confidence: B (82/100)]
+```
+
+The data stamp is always included — it is not gated on validation tier. If no cross-verification or confidence score exists, use the no-validation format: `[145K rows | Jan-Mar 2026 | ORDERS]`.
+
+Also add a `**Provenance:**` line in the Supporting Data section at the bottom that lists the provenance blocks file path if it was written.
+
 ### Step 7: Write the final document
 Assemble the complete narrative document in the output format specified below. Save to `outputs/`.
 

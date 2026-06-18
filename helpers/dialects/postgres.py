@@ -52,3 +52,19 @@ class PostgresDialect(SQLDialect):
             f"WHERE table_name = '{table}' "
             "ORDER BY ordinal_position"
         )
+
+    # ------------------------------------------------------------------
+    # Validation methods
+    # ------------------------------------------------------------------
+
+    def count_distinct(self, table: str, column: str,
+                       approximate: bool = False) -> str:
+        """Postgres: no built-in APPROX_COUNT_DISTINCT. Always exact."""
+        return f"SELECT COUNT(DISTINCT {column}) AS distinct_count FROM {table}"
+
+    def row_checksum(self, table: str, columns: list[str]) -> str:
+        """Postgres: use ::text cast for string conversion."""
+        col_concat = " || '|' || ".join(
+            f"COALESCE({c}::text, '')" for c in columns
+        )
+        return f"SELECT MD5({col_concat}) AS row_hash FROM {table}"

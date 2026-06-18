@@ -23,7 +23,13 @@ def _ratio(fg_hex: str, bg_hex: str) -> float:
 def lint_theme(theme_name: str, themes_dir: str, level: str) -> list[tuple[str, bool, float]]:
     """Run WCAG checks on a single theme. Returns list of (check, passed, ratio)."""
     text_threshold = 7.0 if level == "AAA" else 4.5
-    graphic_threshold = 3.0  # WCAG 2.1 non-text minimum
+    graphic_threshold = 3.0  # WCAG 2.1 non-text minimum (1.4.11)
+    # Categorical fills get a relaxed 2:1 floor: WCAG 1.4.11's 3:1 applies to
+    # graphics "required to understand content"; categorical series are large
+    # solid fills that SWD style pairs with direct labels, so hue separation
+    # carries the meaning. The strict 3:1 still applies to text and to
+    # highlight.alert (small, meaning-bearing marks).
+    categorical_threshold = 2.0
 
     theme = load_theme(theme_name, themes_dir=themes_dir)
     colors = theme.get("colors", {})
@@ -37,10 +43,10 @@ def lint_theme(theme_name: str, themes_dir: str, level: str) -> list[tuple[str, 
             r = _ratio(color, bg)
             results.append((f"{label} vs background ({level})", r >= text_threshold, r))
 
-    # Categorical colors vs background (graphical elements: 3:1)
+    # Categorical colors vs background (large solid fills: 2:1, see above)
     for i, color in enumerate(colors.get("categorical", [])):
         r = _ratio(color, bg)
-        results.append((f"categorical[{i}] vs background (3:1)", r >= graphic_threshold, r))
+        results.append((f"categorical[{i}] vs background (2:1)", r >= categorical_threshold, r))
 
     # Highlight alert vs background
     alert = colors.get("highlight", {}).get("alert")

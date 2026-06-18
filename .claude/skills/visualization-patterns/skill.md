@@ -1,18 +1,83 @@
+---
+name: visualization-patterns
+description: |
+  Apply this skill whenever you generate ANY chart, graph, or data visualization in this AI Product Analyst tool. This includes bar charts, line charts, scatter plots, heatmaps, funnel charts, distribution plots, or any visual representation of data. Use this skill when creating charts from SQL query results, when the user asks to "visualize" data, when building analysis deliverables that include charts, when the Chart Maker agent runs, when storytelling requires visual evidence, when comparing segments, when showing trends over time, or when illustrating findings. ALWAYS trigger for requests like "make a chart", "show me a graph", "visualize the funnel", "plot revenue over time", "create a distribution", or "build a dashboard". This skill enforces Storytelling with Data (SWD) methodology: gray everything first, color only for focus (max 2 colors + gray), action titles that state the takeaway, direct labels instead of legends, decluttered design, and theme consistency. Apply the appropriate theme (minimal, nyt, economist, corporate) and use the helper functions from `helpers/chart_helpers.py` (swd_style, highlight_bar, highlight_line, action_title, save_chart). This skill ensures every chart tells a clear story and follows professional design standards. DO NOT skip this skill when charting — it prevents common visualization mistakes like rainbow palettes, pie charts, descriptive titles, cluttered layouts, missing annotations, and default matplotlib styling.
+---
+
 # Skill: Visualization Patterns
 
 ## Purpose
 Ensure every chart Claude Code produces follows high-quality design standards with named themes, consistent styling, and clear data communication.
 
 ## When to Use
-Apply this skill whenever generating a chart, graph, or data visualization. Always apply the active theme unless the user specifies otherwise. Default theme: `minimal`.
+Apply this skill whenever generating a chart, graph, or data visualization.
+
+### Default Theme: Minimal
+
+Unless the user specifies otherwise, ALWAYS use the **minimal** theme. It's clean, professional, and suitable for most business contexts:
+- Warm off-white background (#F7F6F2) for reduced eye strain
+- Action Blue accent (#2563EB) for focus
+- Helvetica font family
+- Left-aligned titles, minimal gridlines
+
+The `swd_style()` function automatically loads the minimal theme. Other available themes: `nyt`, `economist`, `corporate` (see Theme Definitions section).
 
 ## Instructions
 
-### Pre-flight: Load Learnings
-Before executing, check `.knowledge/learnings/index.md` for relevant entries:
+### STEP 1: Mandatory Helper Import (DO THIS FIRST)
+
+Before writing ANY charting code, you MUST import and use the SWD helper functions. These functions implement all SWD principles automatically and prevent you from reinventing the wheel.
+
+```python
+from helpers.chart_helpers import (
+    swd_style,        # Apply SWD matplotlib theme
+    highlight_bar,    # Bar chart with one bar highlighted
+    highlight_line,   # Line chart with one series highlighted
+    action_title,     # Action title + subtitle
+    save_chart        # Save with correct DPI and tight layout
+)
+
+# Apply SWD style FIRST (loads .mplstyle, returns color palette)
+colors = swd_style()
+```
+
+**If `helpers/chart_helpers.py` doesn't exist:** Inform the user that chart helpers are missing and you'll need to implement SWD principles manually. Then proceed with manual matplotlib following the SWD principles below.
+
+### STEP 2: Choose Your Helper Function
+
+Use the pre-built helpers instead of manual matplotlib code:
+
+| Chart Type | Helper Function | Example Usage |
+|------------|----------------|---------------|
+| **Bar chart** | `highlight_bar()` | `fig, ax = plt.subplots(figsize=(10, 6))`<br>`highlight_bar(ax, categories=['Desktop', 'Tablet', 'Mobile'], values=[4.6, 4.1, 3.4], highlight='Desktop')`<br>`action_title(ax, 'Desktop converts best at 4.6%')` |
+| **Line chart** | `highlight_line()` | `fig, ax = plt.subplots(figsize=(10, 6))`<br>`highlight_line(ax, x=months, y_dict={'Revenue': revenue_values}, highlight='Revenue')`<br>`action_title(ax, 'Revenue grew 43% after pricing launch')` |
+| **Title only** | `action_title()` | `action_title(ax, title='Finding here', subtitle='Context: time range, data source, sample size')` |
+
+**Key points:**
+- Helpers take a matplotlib `ax` object + arrays of data (not DataFrames)
+- Always create the figure first: `fig, ax = plt.subplots(figsize=(10, 6))`
+- Helpers automatically apply: gray + accent color, direct labels, SWD styling
+- The `highlight` parameter specifies which category/series to emphasize
+
+**For funnel charts, heatmaps, or custom visualizations:** Use manual matplotlib but apply `swd_style()` first and follow the SWD principles below.
+
+### STEP 3: Save Chart to Correct Location
+
+```python
+# Final deliverable charts
+save_chart(fig, "outputs/conversion_by_device.png")
+
+# Exploratory/intermediate charts
+save_chart(fig, "working/exploration_chart.png")
+```
+
+**Naming convention:** `{metric}_{dimension}_{chart_type}.png` (e.g., `revenue_trends_line.png`)
+
+### Pre-flight: Load Learnings (Optional)
+Check `.knowledge/learnings/index.md` for relevant entries:
 - Read the file. If it doesn't exist or is empty, skip silently.
-- Scan for entries under **"Chart Style"** and **"General"** headings (or related categories like "Visualization Insights").
-- If entries exist, incorporate them as constraints for this execution (e.g., preferred chart types, color overrides, annotation preferences).
+- Scan for entries under **"Chart Style"** and **"General"** headings.
+- If entries exist, incorporate them as constraints (e.g., preferred chart types, color overrides).
 - Never block execution if learnings are unavailable.
 
 ### Core Principle: Storytelling with Data (SWD)
@@ -26,14 +91,7 @@ Every chart follows the SWD methodology by Cole Nussbaumer Knaflic:
 - Every visual element must earn its place — if it doesn't help the reader understand the story, remove it.
 - Prefer text over charts for single numbers. Prefer horizontal bars over pie charts. Prefer direct labels over legends.
 
-**Implementation:** Always apply the SWD style before generating any chart:
-```python
-from helpers.chart_helpers import swd_style, highlight_bar, highlight_line, action_title, save_chart
-
-colors = swd_style()  # Loads .mplstyle + returns color palette
-```
-
-Use `highlight_bar()` for bar charts (highlights one bar, grays the rest), `highlight_line()` for line charts (highlights one series, grays the rest), and `action_title()` for all chart titles.
+**Why use the helpers:** They enforce these principles automatically. Manual matplotlib code often forgets to remove borders, uses rainbow colors, or includes legends. The helpers prevent these mistakes.
 
 ### Declutter Checklist
 

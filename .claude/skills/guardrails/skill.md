@@ -1,3 +1,9 @@
+---
+name: guardrails
+description: |
+  Ensure every success metric is paired with guardrail metrics and check for trade-offs before presenting improvements as wins. Guardrails protect against winning the metric game while losing the business game. Apply this skill whenever you define a metric, create a metric spec, document a KPI, report positive findings, present an improvement, analyze metric changes, investigate metric lifts, share good news about metrics, celebrate wins, or present results showing any metric increased. This skill is CRITICAL for preventing false wins where one metric improves at the expense of another (e.g., conversion rate up but average order value down, signup rate up but activation down, resolution time down but customer satisfaction down). Use this skill automatically when you see phrases like "X improved", "X is up", "X increased", "better performance on X", "we're seeing gains in X", or any analysis showing positive metric movement. Also apply when defining metrics alongside the metric-spec skill to ensure guardrails are specified upfront. Never present a metric improvement without running the guardrail check — an improvement with a degraded guardrail is a trade-off or net negative, not a win.
+---
+
 # Skill: Guardrails Awareness
 
 ## Purpose
@@ -54,6 +60,19 @@ After specifying a metric using the Metric Spec skill, add a guardrail section:
 3. The guardrail must be measurable with available data
 4. If no obvious guardrail exists, use customer satisfaction or support ticket volume as defaults
 
+**Guardrail selection framework:** When choosing guardrails, think about what could go wrong if you optimize the success metric aggressively. Ask yourself:
+
+- **Quality vs. Quantity:** If the success metric measures volume (signups, orders, sessions), check quality metrics (conversion rate, AOV, retention)
+- **Speed vs. Accuracy:** If the success metric measures speed (time to resolution, checkout time), check accuracy/quality (error rate, reopen rate, customer satisfaction)
+- **Revenue vs. Experience:** If the success metric measures revenue (RPU, monetization rate), check experience metrics (NPS, support tickets, churn)
+- **Short-term vs. Long-term:** If the success metric measures immediate outcomes, check long-term health (retention, LTV, repeat purchase rate)
+
+**When guardrail data is unavailable:**
+1. **First priority:** Check if the guardrail can be proxied (e.g., if CSAT data doesn't exist, use support ticket volume or product return rate as a quality signal)
+2. **Second priority:** Document the missing guardrail as a known risk and recommend tracking it for future iterations
+3. **Do NOT skip the guardrail check entirely** — use whatever quality signals are available, even if imperfect
+4. **Example:** "Conversion rate improved 20%, but we lack return rate data to confirm quality. As a partial guardrail check, AOV increased 5% (suggesting legitimate demand, not discount-driven conversions). Recommend adding return rate tracking."
+
 #### When Reporting Positive Findings
 
 Before presenting any statement like "[metric] improved by X%," run this check:
@@ -73,6 +92,12 @@ GUARDRAIL CHECK
 | **CLEAR** | Guardrail stable or improved | Present the improvement as a win |
 | **TRADE-OFF** | Guardrail slightly degraded (<10% relative) | Present the improvement AND the trade-off: "Conversion improved 15%, but AOV decreased 5%. Net revenue impact is +8%." |
 | **DEGRADED** | Guardrail significantly degraded (>10% relative) | Do NOT present as a win. Present as: "Conversion improved 15%, but return rate doubled. The net impact may be negative — further investigation needed." |
+
+**Note on thresholds:** The 10% threshold is a starting point, not a universal rule. Adjust based on context:
+- **High-impact guardrails** (e.g., customer churn, security incidents): Even 5% degradation may be DEGRADED
+- **Volatile guardrails** (e.g., daily engagement metrics): 10-15% degradation may be normal variance, use TRADE-OFF
+- **Revenue-critical guardrails** (e.g., AOV, margin): Compute absolute dollar impact to determine severity, not just percentages
+- **When in doubt**: Err on the side of caution — flag smaller degradations and let stakeholders decide if the trade-off is acceptable
 
 ### Guardrail Escalation
 

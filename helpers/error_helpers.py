@@ -213,7 +213,7 @@ def friendly_error(exception, context=None):
             "technical": technical,
         }
 
-    # Unsupported file type (from tieout_helpers)
+    # Unsupported file type
     if isinstance(exception, ValueError) and "unsupported file type" in exc_msg.lower():
         return {
             "error_type": "unsupported_file",

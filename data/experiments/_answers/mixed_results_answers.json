@@ -1,0 +1,9 @@
+{
+  "true_effects": {
+    "sessions_14d": "+10% (primary, positive)",
+    "retained_30d": "-5% (secondary, negative)"
+  },
+  "srm": "PASS",
+  "expected_verdict": "LEARN or INVESTIGATE",
+  "notes": "Engagement up but retention down. Need to weigh trade-offs."
+}

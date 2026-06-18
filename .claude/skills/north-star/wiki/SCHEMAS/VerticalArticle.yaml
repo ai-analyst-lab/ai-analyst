@@ -1,0 +1,56 @@
+# VerticalArticle.yaml — wiki page describing NSM patterns for one (industry, game) combination.
+# Producer: verticals-assembler. Page-size cap: ≤700 words + companion priors YAML block.
+
+schema_version: 1
+schema_name: VerticalArticle
+extends: null
+
+required_fields:
+  - title
+  - type
+  - schema_version
+  - sources
+  - related
+  - playbook_pages
+  - tier
+  - confidence
+  - confidence_derivation
+  - curator_status
+  - verified
+  - created
+  - updated
+  - priors                 # type-specific: structured YAML block of vertical-level priors
+
+type_specific_required:
+  - industry               # e.g., QSR, SaaS, fintech, marketplace
+  - game                   # transaction | attention | productivity
+  - priors                 # nested map: {typical_nsm_patterns, typical_inputs, common_anti_patterns, ...}
+  - tl_dr                  # body "## TL;DR" — ≤80 words
+
+type_specific_optional:
+  - representative_cases   # array of case_id values
+  - curated_by
+  - curated_at
+
+enums:
+  type: [vertical]
+  game: [transaction, attention, productivity]
+  tier: [1, 2, 3]
+  confidence: [high, medium, low]
+  curator_status: [pending, approved, rejected, revision_requested]
+
+field_constraints:
+  schema_version: { type: integer, const: 1 }
+  industry: { type: string, pattern: "^[A-Za-z][A-Za-z0-9_-]{0,40}$" }
+  sources: { type: array, items: string, min_items: 1 }
+  playbook_pages: { type: array, items: integer, min_items: 1 }
+  verified: { type: boolean }
+  tl_dr_word_count: { type: integer, maximum: 80 }
+  priors: { type: object }
+
+required_body_sections:
+  - "## TL;DR"
+  - "## Priors"
+
+page_size_cap_words: 700
+id_pattern: null

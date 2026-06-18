@@ -193,7 +193,6 @@ def check_helper_imports() -> dict:
         "helpers.stats_helpers",
         "helpers.error_helpers",
         "helpers.file_helpers",
-        "helpers.tieout_helpers",
         "helpers.schema_profiler",
         "helpers.connection_manager",
         "helpers.sql_dialect",

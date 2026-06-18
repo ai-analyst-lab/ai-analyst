@@ -1,0 +1,94 @@
+schema_version: 1
+workflow_id: vanity-triage
+title: "Vanity Triage — Sorting Candidate Metrics into NSM / Input / Lagging / Vanity"
+estimated_lookups: 4
+estimated_total_minutes: 15
+prerequisites:
+  - candidate_metrics_list
+expected_outputs:
+  - triage_table
+  - nsm_candidate_shortlist
+  - kill_list
+  - lagging_sanity_dashboard_set
+steps:
+  - step_order: 1
+    id: compare-known-list
+    step_title: "Compare candidates against the known vanity list"
+    step_body: |
+      Pure name-matching. Compare each candidate against DAU, ad impressions,
+      downloads, page views, registered users, story points delivered, time on
+      page. Exact matches → kill bucket. Near-matches → flag for Step 2.
+    inputs: [candidate_metrics_list, named_vanity_list]
+    outputs: [exact_vanity_pile, near_vanity_pile, clear_pile]
+    estimated_minutes: 3
+    linked_atom_id: workflow-step-p018-l0411-vanity-triage-step-1-compare-known-list
+    prompt: "Read each candidate name. Match against the seven canonical vanity metrics. Sort into three piles."
+    expected_output: "Three piles: (a) exact match (kill), (b) near-match (escalate), (c) not on list (forward)."
+    calls: [lookup_examples]
+    on_failure: null
+
+  - step_order: 2
+    id: apply-vanity-test
+    step_title: "Apply the vanity metric test"
+    step_body: |
+      For each surviving or flagged candidate, ask: would a meaningful change
+      in this metric guarantee a meaningful change in customer value? If
+      movement can happen without changing customer value, it's vanity.
+    inputs: [near_vanity_pile, clear_pile, articulated_customer_value]
+    outputs: [vanity_verdicts, value_linked_candidates]
+    estimated_minutes: 5
+    linked_atom_id: workflow-step-p018-l0422-vanity-triage-step-2-apply-vanity-test
+    prompt: "For each candidate, ask the vanity test question. Record verdict per candidate."
+    expected_output: "VANITY → kill; VALUE-LINKED → forward to Step 3."
+    calls: [evaluate_checklist, explain_anti_pattern]
+    on_failure: vanity-metric-as-nsm
+
+  - step_order: 3
+    id: classify-by-role
+    step_title: "Classify value-linked metrics by role"
+    step_body: |
+      Place each value-linked candidate in one of: NSM-CANDIDATE (leading +
+      customer-value + actionable), INPUT (one driver of the NSM), LAGGING-SANITY
+      (revenue/MRR/ARPU — keep on dashboard, not as NSM), or NEEDS-MORE-WORK.
+    inputs: [value_linked_candidates, framework_tree]
+    outputs: [per_candidate_role]
+    estimated_minutes: 5
+    linked_atom_id: workflow-step-p007-l0141-vanity-triage-step-3-classify-by-role
+    prompt: "For each candidate, classify as NSM-candidate | INPUT | LAGGING-SANITY | NEEDS-MORE-WORK."
+    expected_output: "Per-candidate role assignment + rationale."
+    calls: [evaluate_checklist, explain_anti_pattern]
+    on_failure: lagging-indicator-as-nsm
+
+  - step_order: 4
+    id: independence-check
+    step_title: "Confirm input independence and finalize triage table"
+    step_body: |
+      For metrics tagged INPUT, run the independence test: do movements in one
+      input fail to be immediately felt in the others? Inputs that aren't
+      independent collapse together — one survives; the others move to KILL or
+      NEEDS-MORE-WORK. Output is the final triage table.
+    inputs: [per_candidate_role, historical_data_or_qualitative_judgment]
+    outputs: [final_triage_table]
+    estimated_minutes: 2
+    linked_atom_id: workflow-step-p027-l0615-triage-step-4-independence
+    prompt: "For each INPUT candidate, ask the independence question. Collapse correlated inputs."
+    expected_output: "Final per-candidate disposition: NSM | INPUT | LAGGING-SANITY | VANITY-KILL | NEEDS-MORE-WORK."
+    calls: [evaluate_checklist]
+    on_failure: null
+
+source:
+  wiki_path: wiki/workflows/vanity-triage.md
+  steps_yaml_path: wiki/workflows/_steps/vanity-triage.yaml
+  atom_paths:
+    - raw/atoms/workflow-steps/workflow-step-p018-l0411-vanity-triage-step-1-compare-known-list.md
+    - raw/atoms/workflow-steps/workflow-step-p018-l0422-vanity-triage-step-2-apply-vanity-test.md
+    - raw/atoms/workflow-steps/workflow-step-p007-l0141-vanity-triage-step-3-classify-by-role.md
+    - raw/atoms/workflow-steps/workflow-step-p027-l0615-triage-step-4-independence.md
+  playbook_pages: [7, 16, 18, 27]
+
+confidence_envelope:
+  tier: 1
+  confidence: high
+  confidence_derivation: "All 4 atoms Tier 1; derived from named vanity list (p. 18), vanity test (p. 18), leading-vs-lagging (p. 16), independence template (p. 27)."
+  curator_status: pending
+  verified: true

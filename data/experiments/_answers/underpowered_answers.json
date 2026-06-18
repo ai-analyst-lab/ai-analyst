@@ -1,0 +1,8 @@
+{
+  "true_effect": "2% relative lift (real but small)",
+  "sample_size_per_group": 500,
+  "power_to_detect": "<20%",
+  "srm": "PASS",
+  "expected_verdict": "LEARN (underpowered null)",
+  "notes": "True effect exists but experiment too small to detect it."
+}

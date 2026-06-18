@@ -1,0 +1,63 @@
+# Economist brand theme
+# Inherits from themes/_base.yaml — only overrides are listed here.
+# The theme_loader deep-merges this on top of the base at runtime.
+
+theme:
+  name: "economist"
+  display_name: "The Economist"
+  description: "Pale blue-gray background, Economist red highlight, blue-led palette."
+
+colors:
+  primary: "#006BA2"          # Economist blue — key data, first series
+  secondary: "#1E8DA6"        # Teal — secondary emphasis (darkened for contrast)
+  accent: "#E3120B"           # Economist red — alerts, emphasis
+  neutral: "#8B9DAA"          # Cool gray — supporting elements
+  background: "#D5E4EB"       # Pale blue-gray — the signature Economist canvas
+  text: "#333333"             # Charcoal
+  text_light: "#3E4F5A"       # Cool gray — captions, annotations (darkened for AA)
+  categorical:
+    - "#006BA2"   # blue
+    - "#1E8DA6"   # teal (darkened for contrast)
+    - "#379A8B"   # sea green
+    - "#8A6D00"   # gold (darkened for contrast)
+    - "#E3120B"   # red
+    - "#595959"   # dark gray
+    - "#B74F6F"   # muted rose
+    - "#936D3E"   # warm brown
+  sequential:
+    low: "#C0D8E8"
+    mid: "#006BA2"
+    high: "#003A5C"
+  diverging:
+    negative: "#E3120B"
+    neutral: "#D5E4EB"
+    positive: "#006BA2"
+  highlight:
+    focus: "#E3120B"          # Economist red — the highlight bar
+    comparison: "#A8BDC8"     # Muted blue-gray — de-emphasize
+    alert: "#A30D08"          # Darker red — distinct from focus
+
+charts:
+  figure:
+    facecolor: "#D5E4EB"
+  axes:
+    facecolor: "#D5E4EB"
+    spine_color: "#A8BDC8"
+  bar:
+    default_color: "#A8BDC8"
+    highlight_color: "#E3120B"
+  line:
+    default_color: "#A8BDC8"
+    highlight_color: "#E3120B"
+  annotations:
+    color: "#333333"
+    arrow_color: "#5A6F7A"
+
+presentations:
+  slide_background: "#D5E4EB"
+  slide_text: "#333333"
+  slide_accent: "#E3120B"
+  dark:
+    slide_background: "#2A2723"
+    slide_text: "#D5E4EB"
+    slide_accent: "#3EBCD2"

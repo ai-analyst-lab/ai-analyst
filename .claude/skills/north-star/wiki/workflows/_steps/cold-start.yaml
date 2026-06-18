@@ -1,0 +1,157 @@
+schema_version: 1
+workflow_id: cold-start
+title: "Cold Start — Designing an NSM from Scratch"
+estimated_lookups: 8
+estimated_total_minutes: 115
+prerequisites:
+  - product_exists
+  - team_aligned_on_running_nsm_process
+expected_outputs:
+  - nsm_name_and_definition
+  - input_metrics_with_definitions
+  - belief_inventory
+  - key_value_exchanges_list
+  - input_stress_test_verdicts
+steps:
+  - step_order: 1
+    id: classify-game
+    step_title: "Classify the game"
+    step_body: |
+      Decide which of the three games — attention, transaction, or productivity —
+      your product plays. This frames every later NSM candidate. One classification.
+    inputs: [product_description]
+    outputs: [game_classification]
+    estimated_minutes: 5
+    linked_atom_id: workflow-step-p010-l0238-cold-start-step-1-classify-the-game
+    prompt: "Ask the user to describe their product in one paragraph, then classify as attention | transaction | productivity."
+    expected_output: "One of: attention | transaction | productivity, with a one-sentence rationale."
+    calls: [classify_vertical, lookup_examples]
+    on_failure: null
+
+  - step_order: 2
+    id: surface-beliefs
+    step_title: "Surface beliefs and biases"
+    step_body: |
+      Each teammate independently fills five belief templates (competition,
+      tech change, why-we-win, market behavior, customer-need tradeoffs).
+      Surfaces latent assumptions before drafting any NSM.
+    inputs: [game_classification, belief_templates]
+    outputs: [belief_inventory]
+    estimated_minutes: 15
+    linked_atom_id: workflow-step-p035-l0786-cold-start-step-2-surface-beliefs
+    prompt: "Walk the user through the five belief templates, capturing answers per template."
+    expected_output: "Written list of beliefs/assumptions per teammate."
+    calls: [lookup_examples]
+    on_failure: null
+
+  - step_order: 3
+    id: connect-to-vision
+    step_title: "Connect the NSM to your product vision"
+    step_body: |
+      Review the existing product vision (or draft via the Geoffrey Moore template).
+      Extract distinctness/foundational claims the NSM must remain consistent with.
+    inputs: [existing_vision_or_moore_template]
+    outputs: [vision_derived_value_claims]
+    estimated_minutes: 10
+    linked_atom_id: workflow-step-p037-l0838-cold-start-step-3-connect-to-vision
+    prompt: "Ask user for vision statement. If none, walk through Moore template. Extract distinctness claims."
+    expected_output: "List of value claims pulled from vision."
+    calls: [lookup_examples]
+    on_failure: null
+
+  - step_order: 4
+    id: key-value-exchanges
+    step_title: "Identify key value exchanges"
+    step_body: |
+      Map customer journeys; isolate 3-6 essential moments where customers
+      derive value. Includes exchanges outside the product.
+    inputs: [belief_inventory, vision_derived_value_claims]
+    outputs: [key_value_exchanges_list]
+    estimated_minutes: 15
+    linked_atom_id: workflow-step-p038-l0890-cold-start-step-4-key-value
+    prompt: "Walk user through customer journey; isolate 3-6 named value exchanges."
+    expected_output: "List of 3-6 named exchanges (e.g., 'first comment on collaborator's design')."
+    calls: [lookup_examples]
+    on_failure: null
+
+  - step_order: 5
+    id: draft-statement
+    step_title: "Run the statement exercise"
+    step_body: |
+      Fill the four-tier worksheet top-down (statement → inputs → opportunities →
+      interventions) qualitatively, before any numbers. Anchors on ideas, not metrics.
+    inputs: [key_value_exchanges_list, vision_derived_value_claims, belief_inventory, game_classification]
+    outputs: [nsm_statement_qualitative, inputs_qualitative, opportunities, interventions]
+    estimated_minutes: 20
+    linked_atom_id: workflow-step-p019-l0447-cold-start-step-5-draft-statement
+    prompt: "Lead user top-down through the four-tier worksheet. Keep everything qualitative this pass."
+    expected_output: "Filled four-tier worksheet — statement + 3 inputs + 3 opportunities + 3 interventions."
+    calls: [lookup_examples]
+    on_failure: rushing-statement-exercise
+
+  - step_order: 6
+    id: name-and-define
+    step_title: "Name and define the NSM"
+    step_body: |
+      Convert the qualitative statement into a pithy named metric plus a precise
+      measurement definition. Template: "Our NSM is called X, which we define as Y."
+    inputs: [nsm_statement_qualitative]
+    outputs: [nsm_name, nsm_definition]
+    estimated_minutes: 15
+    linked_atom_id: workflow-step-p024-l0537-cold-start-step-6-name-and-define
+    prompt: "Ask user to name the metric pithily, then write a precise measurement definition."
+    expected_output: "Named NSM (e.g., 'Frequent Content Sharers') + measurable definition."
+    calls: [lookup_examples]
+    on_failure: null
+
+  - step_order: 7
+    id: mind-map-inputs
+    step_title: "Mind-map the inputs"
+    step_body: |
+      Three passes: (a) sticky-note dump, (b) cluster into 5-6 inputs, (c) attach
+      a measurement to each. Template: "I believe [NSM] is a function of [X, Y, Z]."
+    inputs: [nsm_name, nsm_definition]
+    outputs: [inputs_with_definitions]
+    estimated_minutes: 20
+    linked_atom_id: workflow-step-p027-l0621-cold-start-step-7-mind-map-inputs
+    prompt: "Run user through three-pass mind-mapping: brainstorm, cluster, measure."
+    expected_output: "~5 named inputs with measurement definitions; passes independence check."
+    calls: [lookup_examples]
+    on_failure: inputs-wrong-granularity
+
+  - step_order: 8
+    id: test-inputs
+    step_title: "Stress-test inputs (Greenfield + roadmap check)"
+    step_body: |
+      Greenfield: two-minute opportunity brainstorm per input (too narrow if you run
+      out, too broad if you swim in ideas). Roadmap check: every initiative traces
+      to an input; orphans signal missing input or wasted work.
+    inputs: [inputs_with_definitions, current_roadmap]
+    outputs: [per_input_verdict, rescoped_inputs_if_needed]
+    estimated_minutes: 15
+    linked_atom_id: workflow-step-p032-l0712-cold-start-step-8-test-inputs
+    prompt: "Time-box two minutes per input for Greenfield; then map roadmap initiatives to inputs."
+    expected_output: "Pass/fail/needs-adjustment verdict per input; orphan roadmap items surfaced."
+    calls: [lookup_examples]
+    on_failure: inputs-wrong-granularity
+
+source:
+  wiki_path: wiki/workflows/cold-start.md
+  steps_yaml_path: wiki/workflows/_steps/cold-start.yaml
+  atom_paths:
+    - raw/atoms/workflow-steps/workflow-step-p010-l0238-cold-start-step-1-classify-the-game.md
+    - raw/atoms/workflow-steps/workflow-step-p035-l0786-cold-start-step-2-surface-beliefs.md
+    - raw/atoms/workflow-steps/workflow-step-p037-l0838-cold-start-step-3-connect-to-vision.md
+    - raw/atoms/workflow-steps/workflow-step-p038-l0890-cold-start-step-4-key-value.md
+    - raw/atoms/workflow-steps/workflow-step-p019-l0447-cold-start-step-5-draft-statement.md
+    - raw/atoms/workflow-steps/workflow-step-p024-l0537-cold-start-step-6-name-and-define.md
+    - raw/atoms/workflow-steps/workflow-step-p027-l0621-cold-start-step-7-mind-map-inputs.md
+    - raw/atoms/workflow-steps/workflow-step-p032-l0712-cold-start-step-8-test-inputs.md
+  playbook_pages: [10, 19, 20, 24, 27, 32, 35, 37, 38]
+
+confidence_envelope:
+  tier: 1
+  confidence: high
+  confidence_derivation: "All 8 step atoms tier 1, reconciled, cross-extractor agreement ≥3/3; traces to Chapters 2-4 of the playbook."
+  curator_status: pending
+  verified: true

@@ -1,0 +1,51 @@
+# ConceptArticle.yaml — wiki page composing concept/principle/definition/quote/pro-tip atoms.
+# Producer: concepts-assembler. Page-size cap: ≤800 words of body prose.
+
+schema_version: 1
+schema_name: ConceptArticle
+extends: null
+
+required_fields:
+  - title
+  - type
+  - schema_version
+  - sources                # array of atom paths (relative to north-star-playbook/raw/atoms/)
+  - related                # array of wiki article paths (relative to north-star-playbook/wiki/)
+  - playbook_pages         # array of integers
+  - tier
+  - confidence
+  - confidence_derivation
+  - curator_status
+  - verified               # derived: tier <= 2 AND confidence != low AND curator_status == approved
+  - created
+  - updated
+
+type_specific_required:
+  - tl_dr                  # body section "## TL;DR" — ≤80 words, agent-readable
+
+type_specific_optional:
+  - decision_rule
+  - yaml_rules             # operationalizable YAML block consumed by runtime
+  - curated_by
+  - curated_at
+
+enums:
+  type: [concept]
+  tier: [1, 2, 3]
+  confidence: [high, medium, low]
+  curator_status: [pending, approved, rejected, revision_requested]
+
+field_constraints:
+  schema_version: { type: integer, const: 1 }
+  sources: { type: array, items: string, min_items: 1 }
+  playbook_pages: { type: array, items: integer, min_items: 1 }
+  verified: { type: boolean }
+  tl_dr_word_count: { type: integer, maximum: 80 }
+  created: { type: string, format: iso8601-date }
+  updated: { type: string, format: iso8601-date }
+
+required_body_sections:
+  - "## TL;DR"
+
+page_size_cap_words: 800
+id_pattern: null

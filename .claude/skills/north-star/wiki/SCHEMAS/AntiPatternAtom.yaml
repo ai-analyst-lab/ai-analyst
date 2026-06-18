@@ -1,0 +1,57 @@
+# AntiPatternAtom.yaml — one atom per named anti-pattern.
+# Producer: anti-pattern-extractor. MUST include spot_signals and fix_recipe per the agent prompt.
+
+schema_version: 1
+schema_name: AntiPatternAtom
+extends: Atom
+
+required_fields:
+  - id
+  - type
+  - schema_version
+  - extracted_by
+  - extracted_at
+  - source
+  - controlled_terms
+  - tier
+  - confidence
+  - confidence_derivation
+  - curator_status
+  - reconciliation_status
+  - indices
+
+type_specific_required:
+  - anti_pattern_id        # stable kebab-case identifier (also used in wiki/anti-patterns/{id}.md)
+  - name                   # human-readable name (e.g., "Lagging-only NSM")
+  - description            # one-sentence summary
+  - spot_signals           # array of strings — symptoms that suggest the anti-pattern is present
+  - fix_recipe             # ordered array of remediation steps
+  - severity               # high | medium | low
+  - why_atomic
+
+type_specific_optional:
+  - examples_in_playbook   # array of atom IDs of examples that illustrate the anti-pattern
+
+enums:
+  type: [anti-pattern]
+  severity: [high, medium, low]
+  tier: [1, 2, 3]
+  confidence: [high, medium, low]
+  curator_status: [pending, approved, rejected, revision_requested]
+  reconciliation_status: [pending, reconciled, conflict, waived]
+
+field_constraints:
+  anti_pattern_id:
+    type: string
+    pattern: "^[a-z][a-z0-9-]{1,60}$"
+  spot_signals:
+    type: array
+    items: string
+    min_items: 1
+  fix_recipe:
+    type: array
+    items: string
+    min_items: 1
+
+id_pattern: "^anti-pattern-p[0-9]{3}-l[0-9]{4}-[a-z0-9-]{1,40}$"
+page_size_cap_words: null

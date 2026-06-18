@@ -1,0 +1,55 @@
+# WorkflowStepAtom.yaml — one atom per step of a named workflow.
+# Producer: workflow-extractor. MUST include workflow_id and step_order.
+
+schema_version: 1
+schema_name: WorkflowStepAtom
+extends: Atom
+
+required_fields:
+  - id
+  - type
+  - schema_version
+  - extracted_by
+  - extracted_at
+  - source
+  - controlled_terms
+  - tier
+  - confidence
+  - confidence_derivation
+  - curator_status
+  - reconciliation_status
+  - indices
+  - workflow_id            # promoted to required for this subtype
+  - step_order             # promoted to required for this subtype
+
+type_specific_required:
+  - workflow_id
+  - step_order
+  - step_title             # short imperative ("Draft a candidate statement")
+  - step_body              # detailed instructions
+  - why_atomic
+
+type_specific_optional:
+  - inputs                 # what the step needs (prior step outputs, external data)
+  - outputs                # what the step produces
+  - estimated_minutes
+  - tool_required          # if a specific tool is named (Amplitude, spreadsheet, etc.)
+  - examples_in_playbook   # array of atom IDs
+
+enums:
+  type: [workflow-step]
+  tier: [1, 2, 3]
+  confidence: [high, medium, low]
+  curator_status: [pending, approved, rejected, revision_requested]
+  reconciliation_status: [pending, reconciled, conflict, waived]
+
+field_constraints:
+  workflow_id:
+    type: string
+    pattern: "^[a-z][a-z0-9-]{1,60}$"
+  step_order:
+    type: integer
+    minimum: 1
+
+id_pattern: "^workflow-step-p[0-9]{3}-l[0-9]{4}-[a-z0-9-]{1,40}$"
+page_size_cap_words: null

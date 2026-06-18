@@ -1,0 +1,42 @@
+# VerticalProfile.yaml — return type for classify_vertical(product_description, ...).
+# Source: wiki/workflows/_steps/vertical-classifier.yaml + wiki/verticals/{industry}/{game}.md.
+
+schema_version: 1
+schema_name: VerticalProfile
+extends: null
+
+required_fields:
+  - industry
+  - game
+  - classification_basis   # short rationale for why this (industry, game) was picked
+  - priors                 # nested map mirroring VerticalArticle.priors
+  - representative_cases   # array of case_id values
+  - source                 # nested: {wiki_path, classifier_yaml_path}
+  - confidence_envelope    # mandatory
+
+type_specific_optional:
+  - alternates             # other plausible (industry, game) pairs with rationale
+  - low_confidence_reasons # array of strings if confidence is medium/low
+
+required_subfields:
+  source:
+    - wiki_path            # e.g., wiki/verticals/qsr/transaction.md
+    - classifier_yaml_path # e.g., wiki/workflows/_steps/vertical-classifier.yaml
+
+enums:
+  game: [transaction, attention, productivity]
+
+field_constraints:
+  schema_version: { type: integer, const: 1 }
+  industry: { type: string, pattern: "^[A-Za-z][A-Za-z0-9_-]{0,40}$" }
+  priors: { type: object }
+  representative_cases:
+    type: array
+    items: string
+    item_pattern: "^case-[a-z0-9-]{1,60}$"
+  confidence_envelope:
+    type: object
+    extends_schema: ConfidenceEnvelope
+
+id_pattern: null
+page_size_cap_words: null

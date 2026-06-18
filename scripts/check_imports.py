@@ -6,7 +6,7 @@ Layer 1: file_helpers
 Layer 2: entity_resolver, business_context, miss_rate_logger,
          archaeology_helpers, context_loader, schema_migration, pipeline_state
 Layer 3: chart_helpers, chart_palette, theme_loader, data_helpers,
-         sql_helpers, tieout_helpers, error_helpers, stats_helpers, sql_dialect,
+         sql_helpers, error_helpers, stats_helpers, sql_dialect,
          connection_manager, schema_profiler
 Layer 4: confidence_scoring, structural_validator, logical_validator,
          business_rules, simpsons_paradox, business_validation,
@@ -31,7 +31,7 @@ LAYER_MAP = {
     "pipeline_state": 2,
     # Layer 3
     "chart_helpers": 3, "chart_palette": 3, "theme_loader": 3,
-    "data_helpers": 3, "sql_helpers": 3, "tieout_helpers": 3,
+    "data_helpers": 3, "sql_helpers": 3,
     "error_helpers": 3, "stats_helpers": 3, "sql_dialect": 3,
     "connection_manager": 3, "schema_profiler": 3,
     # Layer 4

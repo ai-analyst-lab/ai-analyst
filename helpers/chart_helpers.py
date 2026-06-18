@@ -145,6 +145,9 @@ def swd_style(theme: dict | None = None):
         text = colors.get("text", "#333333")
         plt.rcParams["figure.facecolor"] = bg
         plt.rcParams["axes.facecolor"] = bg
+        # The mplstyle pins savefig.facecolor to the default background;
+        # without this override every theme reverts at save time.
+        plt.rcParams["savefig.facecolor"] = bg
         plt.rcParams["text.color"] = text
         plt.rcParams["axes.labelcolor"] = text
 

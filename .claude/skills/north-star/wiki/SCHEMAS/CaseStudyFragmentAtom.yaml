@@ -1,0 +1,53 @@
+# CaseStudyFragmentAtom.yaml — multi-atom case decomposition sharing a case_id.
+# Producer: example-harvester. Each case_id ties together one company's NSM, inputs, evolution, outcome.
+
+schema_version: 1
+schema_name: CaseStudyFragmentAtom
+extends: Atom
+
+required_fields:
+  - id
+  - type
+  - schema_version
+  - extracted_by
+  - extracted_at
+  - source
+  - controlled_terms
+  - tier
+  - confidence
+  - confidence_derivation
+  - curator_status
+  - reconciliation_status
+  - indices
+  - case_id                # promoted from optional to required for this subtype
+
+type_specific_required:
+  - case_id
+  - company                # company name as it appears in the playbook
+  - fragment_role          # one of: nsm | inputs | evolution | outcome | context | counterfactual
+  - fragment_body          # the prose of this fragment
+  - why_atomic
+
+type_specific_optional:
+  - industry               # e.g., QSR, SaaS, fintech
+  - game                   # transaction | attention | productivity (per WIKI_SCHEMA verticals)
+  - stage                  # early | growth | scale
+  - nsm                    # only on fragments where fragment_role = nsm
+  - inputs                 # only on fragments where fragment_role = inputs
+  - outcome                # only on fragments where fragment_role = outcome
+
+enums:
+  type: [case-study-fragment]
+  fragment_role: [nsm, inputs, evolution, outcome, context, counterfactual]
+  tier: [1, 2, 3]
+  confidence: [high, medium, low]
+  curator_status: [pending, approved, rejected, revision_requested]
+  reconciliation_status: [pending, reconciled, conflict, waived]
+
+field_constraints:
+  case_id:
+    type: string
+    pattern: "^case-[a-z0-9-]{1,60}$"
+
+id_pattern: "^case-study-fragment-p[0-9]{3}-l[0-9]{4}-[a-z0-9-]{1,40}$"
+page_size_cap_words: null

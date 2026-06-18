@@ -1,0 +1,7 @@
+{
+  "true_effect": "None (both groups have identical rates)",
+  "baseline_rate": 0.35,
+  "srm": "PASS",
+  "expected_verdict": "ABORT (powered null)",
+  "notes": "No effect. With 5000/group, we had >95% power to detect 5% relative lift."
+}

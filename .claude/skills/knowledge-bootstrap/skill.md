@@ -1,3 +1,8 @@
+---
+name: knowledge-bootstrap
+description: Initialize all knowledge subsystems at session start to load active dataset context, user profile, corrections, learnings, query archaeology, and analysis history into working memory. Use this skill automatically at the start of EVERY new session, immediately after the conversation begins. Also trigger after `/connect-data` or `/switch-dataset` to reload dataset context. Apply when the system detects missing or stale knowledge files, when returning to the tool after a break, during session initialization, at the beginning of any conversation, when Claude Code first starts, when a new Claude conversation opens, or at any session boundary. This skill is critical for contextual awareness — it ensures you understand the user's data environment, preferences, and past work before beginning any analysis. Without running this skill at session start, you lack essential context about what dataset is active, what the user prefers, and what corrections have been logged. Always run this skill first, before responding to any analytical request. Even if the user's first message is a simple question like "what's our conversion rate?", you MUST bootstrap knowledge context before answering so you know which dataset to query and what format the user expects. Make this skill your default session initialization behavior — treat it like loading configuration at startup. If you're ever unsure whether a session just started, err on the side of running bootstrap. The skill gracefully handles missing files, so running it unnecessarily is harmless, but skipping it when needed breaks contextual continuity.
+---
+
 # Skill: Knowledge Bootstrap
 
 ## Purpose
@@ -34,13 +39,27 @@ Read `.knowledge/active.yaml`.
 | `quirks.md` | No | Create empty template |
 | `metrics/index.yaml` | No | Count as 0 |
 
-Schema generation if `schema.md` is missing:
-1. Check `data/schemas/{active}.yaml` -- use `schema_to_markdown()` if found.
-2. Otherwise fall back to `get_connection_for_profiling()`.
-3. Staleness: if `last_profile.md` is newer, regenerate.
+**Schema generation if `schema.md` is missing (REQUIRED):**
 
-Extract system variables from manifest: `{{SCHEMA}}`, `{{DISPLAY_NAME}}`,
-`{{DATE_RANGE}}`, `{{DATABASE}}`.
+The schema is critical for SQL queries and analysis — never proceed without it.
+Follow this sequence:
+
+1. Check `data/schemas/{active}.yaml` — if found, import `schema_to_markdown()` from `helpers/schema_helpers.py` and generate schema.md
+2. If no YAML schema file exists, use `get_connection_for_profiling()` to query the live database and generate schema.md from introspection
+3. For CSV datasets, read the first 1000 rows of each file with pandas, infer dtypes, and write schema.md with table/column/type info
+4. Staleness check: if `last_profile.md` exists and is newer than `schema.md`, regenerate
+
+After generation, write schema.md to `.knowledge/datasets/{active}/schema.md` so future sessions can load it directly.
+
+**System variables from manifest:**
+
+Extract these variables for use in SQL queries and agent prompts:
+- `{{SCHEMA}}` — Schema prefix for external warehouses (e.g., "analytics", "prod")
+- `{{DISPLAY_NAME}}` — User-friendly dataset name for status messages
+- `{{DATE_RANGE}}` — Available date range (e.g., "2024-01-01 to 2026-03-31")
+- `{{DATABASE}}` — Database name or connection string
+
+Use `{{SCHEMA}}` as a prefix in SQL queries when querying external warehouses (BigQuery, Snowflake, Postgres). For local DuckDB/CSV, it's typically null.
 
 ### Step 3: User Profile
 Read `.knowledge/user/profile.md`.
@@ -91,13 +110,28 @@ Read `.knowledge/query-archaeology/curated/index.yaml`.
 ### Step 9: Analysis Archive
 Read `.knowledge/analyses/index.yaml`:
 - Extract `total_analyses` and last 5 entries (title, date, findings count, level).
-- If most recent analysis was <24h ago, flag for continuity.
+- **If most recent analysis was <24h ago:** Add to user-facing status as "Recent work: [title] from [date]" and suggest "Want to build on your recent analysis?" This helps users pick up where they left off.
 
 Read `.knowledge/analyses/_patterns.yaml`:
 - Count `patterns[]` entries and note pattern names if any.
 - **If missing:** Note "Patterns: not yet populated".
 
-### Step 10: Report Readiness
+### Step 10: Mark Bootstrap Complete
+
+Write a completion signal so agents can check if bootstrap already ran this session:
+
+```python
+import yaml
+from datetime import datetime
+
+timestamp = datetime.now().isoformat()
+with open('.knowledge/.bootstrap_timestamp', 'w') as f:
+    yaml.dump({'last_bootstrap': timestamp, 'status': 'complete'}, f)
+```
+
+This prevents redundant re-runs mid-session. To check if bootstrap is needed, read this file and compare timestamps — if <5 minutes old, skip re-running.
+
+### Step 11: Report Readiness
 
 Compile an **internal context summary** (held in working memory, not shown raw):
 

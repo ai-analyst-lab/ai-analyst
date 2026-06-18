@@ -18,11 +18,15 @@ inputs:
     type: str
     source: user
     required: false
+  - name: CROSS_VERIFICATION_REPORT
+    type: file
+    source: agent:cross-verification
+    required: false
 outputs:
   - path: outputs/validation_{{DATASET_NAME}}_{{DATE}}.md
     type: markdown
 depends_on:
-  - root-cause-investigator
+  - cross-verification
 knowledge_context:
   - .knowledge/datasets/{active}/schema.md
   - .knowledge/datasets/{active}/quirks.md
@@ -51,6 +55,47 @@ Read {{ANALYSIS_RESULTS}} end to end. Extract every quantitative claim into a nu
 - **Derivable?**: Whether the claim can be independently re-derived from the code and data (yes/no)
 
 If {{VALIDATION_SCOPE}} specifies particular findings, only extract claims from those findings.
+
+### Query Logging
+
+After every SQL query you execute for re-derivation or validation, log it by running this Bash command:
+
+```bash
+python3 scripts/log_query.py \
+    --dataset {{DATASET_NAME}} --date {{DATE}} \
+    --agent validation --step 7 \
+    --purpose "Re-derive: [claim being verified]" \
+    --sql "THE SQL QUERY TEXT" \
+    --dialect {{DIALECT}} --connection {{CONNECTION_TYPE}} \
+    --tables TABLE1 TABLE2 \
+    --result "Brief result summary" --rows N
+```
+
+### Step 1.5: Backfill query log gaps
+Check if `working/query_log_{{DATASET_NAME}}_{{DATE}}.jsonl` exists.
+
+**If the file does not exist:**
+```
+⚠️ QUERY LOG MISSING
+
+No query log found at working/query_log_{{DATASET_NAME}}_{{DATE}}.jsonl.
+This means upstream agents did not log their queries.
+
+Action: Proceeding with validation, but query provenance coverage will be 0%.
+Flag this in the validation report as a DATA QUALITY warning.
+```
+
+Do NOT silently continue with 0% coverage — explicitly report this gap.
+
+**If the file exists:** Read it using `helpers/query_log.py`. Run `coverage_report()` to check how many claims from Step 1 have matching query log entries. If coverage < 80%, backfill missing entries by scanning {{ANALYSIS_CODE}} for SQL queries and calling `backfill_entry()` for each unmatched claim. Log backfill count. Target: >= 80% coverage without further backfill.
+
+### Step 1.6: Ingest cross-verification report
+If {{CROSS_VERIFICATION_REPORT}} is provided (from `working/cross_verification_{{DATASET_NAME}}_{{DATE}}.md`):
+1. Read the cross-verification report and its companion YAML (`working/cross_verification_{{DATASET_NAME}}_{{DATE}}.yaml`)
+2. Extract the cross-verification confidence score (0-10) and reproducibility score (0-5)
+3. For each claim, check if a matching verification record exists. If yes, carry forward its status (PASS/WARN/FAIL) — do not re-run the same checks
+4. For claims NOT covered by cross-verification, flag them for Step 2 re-derivation
+5. If the cross-verification overall status is FAIL, note this prominently in the validation report
 
 ### Step 2: Re-derive key numbers from code
 Read {{ANALYSIS_CODE}}. For each derivable claim:

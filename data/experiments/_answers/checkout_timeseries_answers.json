@@ -1,0 +1,10 @@
+{
+  "true_effect": "+1.2pp adjusted conversion lift (14.9% \u2192 16.3% raw)",
+  "pre_period": "2026-02-01 to 2026-02-28",
+  "post_period": "2026-03-01 to 2026-03-28",
+  "intervention": "2026-03-01 (checkout redesign launch)",
+  "seasonality": "Day-of-week: higher on Thu/Fri, lower on weekends",
+  "organic_drift": "+0.01pp/day upward trend",
+  "expected_analysis": "Pre-post with day-of-week controls",
+  "notes": "Matches lesson 4.18b. 56 days of daily conversion data."
+}

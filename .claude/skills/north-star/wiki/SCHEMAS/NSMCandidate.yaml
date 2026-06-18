@@ -1,0 +1,40 @@
+# NSMCandidate.yaml — return/input type for NSM candidate proposals and structured evaluation handoffs.
+# Used by skill-internal workflows and as the `candidate` argument to evaluate_checklist / explain_anti_pattern.
+
+schema_version: 1
+schema_name: NSMCandidate
+extends: null
+
+required_fields:
+  - statement              # the candidate NSM statement (≤200 chars)
+  - grain                  # e.g., per-user-per-month, per-session, per-account-per-week
+  - inputs                 # array of candidate input metrics
+  - context                # nested: {company, industry, game, stage, product_description}
+  - confidence_envelope    # mandatory; high when authored by a curated source, low for raw user input
+
+type_specific_optional:
+  - rationale              # one paragraph on why the proposer picked this candidate
+  - alternates             # array of alternate candidates considered
+  - hypothesized_evolution # ordered array of likely future evolutions
+
+required_subfields:
+  context:
+    - company              # nullable
+    - industry             # nullable until classify_vertical runs
+    - game                 # nullable until classify_vertical runs
+    - stage                # early | growth | scale | null
+    - product_description  # string (the seed user input)
+
+enums:
+  stage: [early, growth, scale]
+
+field_constraints:
+  schema_version: { type: integer, const: 1 }
+  statement: { type: string, max_length: 200 }
+  inputs: { type: array, items: string, min_items: 0 }
+  confidence_envelope:
+    type: object
+    extends_schema: ConfidenceEnvelope
+
+id_pattern: null
+page_size_cap_words: null

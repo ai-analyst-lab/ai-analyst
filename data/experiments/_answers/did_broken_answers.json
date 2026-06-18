@@ -1,0 +1,8 @@
+{
+  "true_effect": "+3.0 but DiD estimate will be BIASED",
+  "treatment_group": "ios",
+  "control_group": "android",
+  "intervention_week": 5,
+  "parallel_trends": "FAIL (iOS pre-trend 1.2/week vs Android 0.5/week)",
+  "expected_verdict": "Parallel trends test should FAIL. Honest caveat required."
+}

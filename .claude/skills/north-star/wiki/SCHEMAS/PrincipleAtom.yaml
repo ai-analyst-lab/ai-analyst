@@ -1,0 +1,40 @@
+# PrincipleAtom.yaml — stated rules (often imperative).
+# Producer: concept-extractor.
+
+schema_version: 1
+schema_name: PrincipleAtom
+extends: Atom
+
+required_fields:
+  - id
+  - type
+  - schema_version
+  - extracted_by
+  - extracted_at
+  - source
+  - controlled_terms
+  - tier
+  - confidence
+  - confidence_derivation
+  - curator_status
+  - reconciliation_status
+  - indices
+
+type_specific_required:
+  - rule                   # imperative statement of the principle
+  - why_atomic
+
+type_specific_optional:
+  - rationale              # why this rule exists, if stated in source
+  - exceptions             # array of caveats called out in source
+  - implicit_content_captured
+
+enums:
+  type: [principle]
+  tier: [1, 2, 3]
+  confidence: [high, medium, low]
+  curator_status: [pending, approved, rejected, revision_requested]
+  reconciliation_status: [pending, reconciled, conflict, waived]
+
+id_pattern: "^principle-p[0-9]{3}-l[0-9]{4}-[a-z0-9-]{1,40}$"
+page_size_cap_words: null

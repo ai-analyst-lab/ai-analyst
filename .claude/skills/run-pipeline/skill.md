@@ -1,3 +1,9 @@
+---
+name: run-pipeline
+description: |
+  Execute the complete end-to-end analysis pipeline — from raw data and business question to validated slide deck with charts. This is your power tool for delivering full analyses fast. Use this skill whenever the user wants to run a comprehensive analysis workflow, needs a complete deck with insights and recommendations, says things like "/run-pipeline", "run the full pipeline", "analyze this end-to-end", "take this through the full workflow", "I need a complete analysis", "build me a deck", "investigate this data thoroughly", "do the full analytical treatment", or when you detect a complex analytical request (L4-L5 from question-router) that requires multiple phases. This skill manages the entire DAG-based execution engine: pre-flight validation, per-run directory isolation, dynamic dependency resolution, parallel agent execution, checkpoint gates, chart fan-out, automated validation loops, Marp linting, PDF/HTML export, metric capture, and analysis archival. It handles crash recovery, timeout management, circuit breakers, and progress reporting. Always consider this skill when an analysis requires more than just data exploration — when you need hypothesis generation, root cause investigation, opportunity sizing, storyboarding, charting, narrative writing, and deck creation all orchestrated together. This is the skill that turns "why did our conversion rate drop?" into a polished 15-slide presentation with validated findings and actionable recommendations.
+---
+
 # Skill: Run Pipeline
 
 ## Purpose
@@ -5,6 +11,45 @@ Single entry point for end-to-end analysis — from raw data to finished slide d
 
 ## When to Use
 Invoke with: `/run-pipeline`, "run the full pipeline", "analyze end-to-end", or "take this data through the full workflow".
+
+## CRITICAL: Completion Guarantee
+
+**You MUST deliver a complete deck.** This is non-negotiable. The pipeline's purpose is to produce presentation-ready slides — everything else (validation, checkpoints, metrics) serves that goal.
+
+**If you cannot complete the full DAG:**
+1. **Produce a minimal viable deck** using whatever phase you've reached:
+   - Got to data exploration? → Create a 5-slide "Data Profile" deck
+   - Got to analysis? → Create an 8-slide "Findings" deck with charts
+   - Got to storyboard? → Create a draft deck from storyboard beats
+2. **Mark pipeline_state.json as `degraded`** and document which phases were skipped
+3. **Save all completed artifacts** to outputs/ so the work isn't lost
+4. **Tell the user** what was completed and what would improve with `/resume-pipeline`
+
+**Never stop with only intermediate files (question briefs, hypotheses, data inventories).** If you produce those, you MUST also produce slides, even if they're draft quality.
+
+## Fast Path Guidance
+
+The full DAG with all 11 rules is designed for complex L4-L5 analyses. For simpler cases, you can streamline:
+
+**When to use the simplified path:**
+- User provides ALL required arguments inline (`/run-pipeline data_path=... question=... theme=...`)
+- The question is focused and doesn't require hypothesis generation (e.g., "compare conversion rates")
+- Time or context constraints make full execution challenging
+
+**Fast path workflow:**
+1. Skip or abbreviate framing (use question as-is)
+2. Run data exploration + basic analysis inline (no separate agents)
+3. Generate 2-3 key charts directly
+4. Create a short deck (5-10 slides) with findings
+5. Export to PDF/HTML if Marp CLI available
+
+**Still required on fast path:**
+- R1 (theme handling), R2 (chart ≠ headline), R3 (chart background), R7 (figsize)
+- At least one chart
+- A Marp deck (even if short)
+- HTML components (can be minimal - just `.so-what` + `.chart-container`)
+
+The fast path prioritizes **delivery over perfection** - a 7-slide deck with 2 charts beats stopping partway through a 20-slide masterpiece.
 
 ## Accepted Arguments
 
@@ -64,14 +109,23 @@ Every chart is generated at (10, 6) figsize / 150 DPI (~1500x900px) and used dir
 ### R8: Agent Files Must Be Read from Disk
 At each phase, read the agent file from its path on disk. Do NOT rely on cached knowledge or memory.
 
-### R9: Source Tie-Out Before Analysis
-After data exploration and before analysis, run Source Tie-Out to verify data loading integrity. HALT on mismatch.
+### R9: Cross-Verification After Analysis
+After analysis agents complete and before storytelling, run the Cross-Verification agent (step 6.5) to verify analytical findings via same-source, different-calculation-path checks. The data-explorer sanity gate (step 2.5, always-on) handles pre-analysis boundary checks. HALT if cross-verification confidence score is 0-7.
 
 ### R10: All Marp Decks Must Use HTML Components
 Every Marp deck must use at least 3 different HTML component types from the theme (e.g., `.kpi-row`, `.so-what`, `.finding`, `.rec-row`, `.chart-container`). Valid slide classes include `chart-full`, `kpi`, `takeaway`, `recommendation`, `appendix` (new one-job-per-slide classes) and all existing classes (`insight`, `impact`, `chart-left`, `chart-right`, `two-col`, `diagram`, `section-opener`, `title`). Plain-markdown-only insight slides are a pipeline failure. The deck-creator agent must read `templates/marp_components.md` for the snippet library and `templates/deck_skeleton.marp.md` for the skeleton template. Frontmatter must include all 6 required keys: `marp`, `theme`, `size`, `paginate`, `html`, `footer`. Run `helpers/marp_linter.py` to validate.
 
 ### R11: Pipeline Exports Both PDF and HTML
 After deck creation and Checkpoint 4, the pipeline must export the deck to both PDF and HTML using `helpers/marp_export.py`. Export paths are recorded in `pipeline_state.json`. If Marp CLI is not available, log a warning and skip export (do not HALT). The exported files go alongside the deck: `outputs/deck_{{DATASET_NAME}}_{{DATE}}.pdf` and `outputs/deck_{{DATASET_NAME}}_{{DATE}}.html`.
+
+### R12: Query Log — Every SQL Query Gets Logged
+Every data-touching agent must log every SQL query using `append_entry()` from `helpers/query_log.py`. The log file is `working/query_log_{dataset}_{date}.jsonl`. Required fields: agent name, pipeline step, purpose (analytical reason, not SQL content), SQL text, tables accessed, result summary, row count. Failed queries are logged with `status="error"`. The query log feeds the validation agent (claim matching) and the receipt generator (audit trail). Agents that do not run SQL (question-framing, hypothesis, story-architect, deck-creator) are exempt.
+
+### R13: Tier 1 Validation is Always-On
+All analysis agents must run Tier 1 checks before writing findings. Tier 1a (hard boundaries: negative revenue, % > 100, future dates, zero denominators) → HALT on failure. Tier 1b (soft: SQL sanity, arithmetic consistency, source citation) → FLAG only. Zero additional queries. Results logged to `working/tier1_checks_{{DATASET_NAME}}.md`.
+
+### R14: Data Stamps on Every Finding
+Every finding presented to the user — in terminal, slides, Google Docs, Notion, or Slack — must include a data stamp. The storytelling agent calls `build_provenance_blocks()` from `helpers/provenance_assembler.py` and embeds `data_stamp.one_liner` per finding. Format: `[{row_count} rows | {date_range} | {primary_table} | Confidence: {grade} ({score}/100)]`. Data stamps are assembled from provenance blocks if available, or from analysis metadata if not. Data stamps are never gated on validation tier — they appear at all tiers, all export formats.
 
 ---
 
@@ -119,7 +173,7 @@ Before any execution, validate the registry:
 5. **Compute execution tiers:** Group agents into tiers where all agents in a tier have their dependencies satisfied by agents in earlier tiers.
    ```
    Tier 0: agents with no dependencies (e.g., question-framing, data-explorer)
-   Tier 1: agents depending only on Tier 0 agents (e.g., hypothesis, source-tieout)
+   Tier 1: agents depending only on Tier 0 agents (e.g., hypothesis)
    Tier 2: agents depending on Tier 0-1 agents (e.g., descriptive-analytics)
    ...
    ```
@@ -152,12 +206,19 @@ Before any execution, validate the registry:
    copy final artifacts into `{RUN_DIR}/working/` and `{RUN_DIR}/outputs/` so the run
    directory is self-contained.
 
+**Initialize query log** in `{RUN_DIR}/working/`:
+- Create the empty JSONL file: `{RUN_DIR}/working/query_log_{DATASET_NAME}_{DATE}.jsonl`
+- Also create a symlink or copy at `working/query_log_{DATASET_NAME}_{DATE}.jsonl` for backward compatibility
+- Set `{{QUERY_LOG}}` = the full path to this file for all agent context assembly
+- All agents that execute SQL will log to this file via `python3 scripts/log_query.py`
+
 **Initialize pipeline_state.json** in `{RUN_DIR}/` per the schema in `agents/pipeline_state_schema.md`:
 - Set `pipeline_id` to current ISO timestamp
 - Set `run_dir` to the full run directory path
 - Set `dataset` from active dataset
 - Set `question` from user input
-- Initialize all included agents as `pending`, skipped agents as `skipped`
+- Initialize **ALL** agents from the plan's allow-list as `pending`, skipped agents as `skipped`
+- **CRITICAL:** Include `cross-verification` if it is in the plan. The `full_presentation` and `deep_dive` plans both include it. Do NOT omit it — cross-verification depends on `root-cause-investigator` (AND-gate) and at least one of `descriptive-analytics|overtime-trend|cohort-analysis` (OR-gate via `depends_on_any`).
 - Set pipeline `status: running`
 
 If **resuming** (pipeline_state.json already exists with `status: paused` or `status: failed`):
@@ -178,6 +239,15 @@ FOR each tier in execution_tiers:
      - ALL `depends_on` agents have completed (AND-gate)
      - At least ONE `depends_on_any` agent has completed, if specified (OR-gate)
      (after plan filtering and skipping)
+
+     IMPORTANT: `depends_on_any` is an OR-gate. For example, cross-verification
+     has `depends_on: [root-cause-investigator]` AND `depends_on_any: [descriptive-analytics,
+     overtime-trend, cohort-analysis]`. It is READY when root-cause-investigator is
+     completed AND at least ONE of the three analysis agents is completed. Do NOT
+     require all three — that would be an AND-gate, not an OR-gate.
+
+     If an agent in `depends_on_any` was skipped (not in the plan), it does NOT
+     count as completed. Only agents with `status: completed` satisfy OR-gates.
 
   2. If READY_SET is empty AND pending agents remain → deadlock → HALT
 
@@ -283,18 +353,59 @@ Present summary:
 
 **Skip if:** User said "just do it" or provided all params.
 
-### Checkpoint 2 — Analysis Verification (after opportunity-sizer completes)
+### Checkpoint 2 — Analysis Verification (after cross-verification completes)
 
 **Type:** A (automated). **Plans:** full_presentation, deep_dive.
 
 Verify:
-- [ ] Source tie-out passed
+- [ ] Cross-verification confidence score >= 8 (from `working/cross_verification_{{DATASET_NAME}}_{{DATE}}.md`)
+- [ ] No Tier 1a boundary check failures (HALT if any)
 - [ ] Root cause is specific and actionable
-- [ ] Findings are validated (SQL spot-checked)
+- [ ] Findings are validated via Type B-D checks
+- [ ] Query log coverage >= 80%
 - [ ] Data quality issues documented
 - [ ] Opportunity sizing includes sensitivity analysis
 
-If root cause is vague, re-run root-cause-investigator.
+If cross-verification score is 0-7, HALT. If root cause is vague, re-run root-cause-investigator.
+
+### Checkpoint 2.1 — Validation Menu (after validation completes)
+
+**Type:** B (user-facing). **Plans:** full_presentation, deep_dive.
+
+Offer the user a validation menu based on the question level:
+
+**L3 (Guided Analysis) — Compact offer:**
+```
+Validation passed (score: {score}/100, grade {grade}).
+Run deeper verification? (y/N)
+```
+Default: skip. If yes → run Tier 2 standard (Types A+B always, C+D when schema affords, 3-run reproducibility).
+
+**L4/L5 (Investigation/Presentation) — Full menu:**
+```
+Validation passed (score: {score}/100, grade {grade}).
+Choose validation depth:
+  (a) Standard — Types A+B, 3-run reproducibility (default)
+  (b) Deep — All types + 5-run reproducibility + full receipt
+  (c) Skip — Proceed without additional validation
+```
+Default: (a) Standard. Option (b) sets `validation_tier=3` and triggers receipt generation at step 18.5.
+
+**Skip conditions (CP 2.1 does not fire):**
+- User said "just do it" or passed `validation_tier` explicitly
+- Question level is L1/L2 (Tier 1 always-on is sufficient)
+- Preference learning auto-apply is active (see below)
+
+**Preference learning:**
+Track the user's validation choices per question level across pipeline runs. Store in `working/validation_preferences.yaml`:
+```yaml
+preferences:
+  L3: {choice: skip, run_count: 3}
+  L4: {choice: standard, run_count: 5}
+```
+After 3 consecutive same-choice runs at a given level, auto-apply on the 4th without asking. Print: `"Auto-applying your usual choice ({choice}) for L{level}. Use /validate reset-preferences to see the menu again."`
+
+The user can reset with `/validate reset-preferences` to clear saved preferences and restore the menu.
 
 ### Checkpoint 2.5 — Storyboard Review (after narrative-coherence-reviewer completes)
 
@@ -323,7 +434,10 @@ After the visual-design-critic completes, read `working/design_review_{{DATASET}
 
 **Type:** A (automated). **Plans:** full_presentation, refresh_deck.
 
-Verify: R1 (theme), R2 (titles), R3 (backgrounds), R4 (recommendation order), R5 (banned words), R6 (breathing slides), R7 (chart figsize), R10 (HTML components), R11 (export), deck size 8-22 slides, speaker notes present.
+Verify: R1 (theme), R2 (titles), R3 (backgrounds), R4 (recommendation order), R5 (banned words), R6 (breathing slides), R7 (chart figsize), R10 (HTML components), R11 (export), deck size 8-22 slides, speaker notes present, receipt generated (if Tier 3).
+
+**Receipt check (Tier 3 only):**
+If `validation_tier == "tier_3"`, verify that `outputs/analysis_receipt_*.md` exists and is non-empty. If missing, trigger the receipt-generator agent at step 18.5 before completing the checkpoint. If the receipt-generator fails, WARN but do not FAIL the checkpoint.
 
 **Marp Lint Gate (R10):**
 Run `helpers/marp_linter.py` against the deck output. Print the lint report.
@@ -382,9 +496,9 @@ Each agent has a 5-minute execution timeout:
    - **Retry once** with the same context
 3. If the retry also times out:
    - Mark agent as `failed` with error: `"Timeout after 2 attempts (5min each)"`
-   - Apply degradation policy: if the agent is non-critical (visual-design-critic, narrative-coherence-reviewer), continue pipeline with a warning. If critical (source-tieout, validation), HALT.
+   - Apply degradation policy: if the agent is non-critical (visual-design-critic, narrative-coherence-reviewer), continue pipeline with a warning. If critical (cross-verification, validation), HALT.
 
-**Critical agents** (HALT on timeout): source-tieout, validation, data-explorer
+**Critical agents** (HALT on timeout): cross-verification, validation, data-explorer
 **Non-critical agents** (degrade on timeout): visual-design-critic, narrative-coherence-reviewer, opportunity-sizer
 
 ---
@@ -463,7 +577,7 @@ At the start and end of each tier (mapped to phases), emit progress:
 | Phase | Agents | Name |
 |-------|--------|------|
 | 1 | question-framing, hypothesis | Framing |
-| 2 | data-explorer, source-tieout, descriptive-analytics, root-cause-investigator, validation, opportunity-sizer | Exploration & Analysis |
+| 2 | data-explorer, descriptive-analytics, root-cause-investigator, cross-verification, validation, opportunity-sizer | Exploration & Analysis |
 | 3 | story-architect, narrative-coherence-reviewer, chart-maker, visual-design-critic | Storytelling & Charts |
 | 4 | storytelling, deck-creator, visual-design-critic-slides, close-the-loop | Deck & Delivery |
 

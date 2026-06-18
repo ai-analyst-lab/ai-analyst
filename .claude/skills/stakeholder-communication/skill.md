@@ -1,3 +1,8 @@
+---
+name: stakeholder-communication
+description: Adapt analytical findings to the audience — same insight, different framing, detail level, and format depending on who will read it. Use this skill whenever producing a narrative, creating a deck, writing an executive summary, drafting a report, generating stakeholder communications, or whenever the user mentions an audience (executive, PM, engineer, data scientist, leadership team, stakeholders, decision-makers). Apply when users say things like "prepare this for leadership", "write this for the product team", "explain this to engineering", "create a deck for the VP", "draft a summary for stakeholders", "make this executive-friendly", "adapt this for data scientists", "what should I tell the CEO", "how do I present this", "tailor this for the audience", or any request involving communication, presentation, reporting, or sharing findings with others. Always apply when the Storytelling agent runs, when the Deck Creator agent runs, when drafting communications, when exporting results, or when the output will be read by someone other than the user. Default to Product Team format if no audience is specified.
+---
+
 # Skill: Stakeholder Communication Matrix
 
 ## Purpose
@@ -9,11 +14,20 @@ Apply this skill when producing a narrative (Storytelling agent), creating a dec
 ## Instructions
 
 ### Pre-flight: Load Learnings
-Before executing, check `.knowledge/learnings/index.md` for relevant entries:
-- Read the file. If it doesn't exist or is empty, skip silently.
-- Scan for entries under **"Communication"** and **"General"** headings (or related categories like "Stakeholder Preferences").
-- If entries exist, incorporate them as constraints for this execution (e.g., audience-specific preferences, formatting conventions).
-- Never block execution if learnings are unavailable.
+Before executing, check `.knowledge/learnings/index.md` for relevant communication preferences:
+1. **Try to read the file**: Use the Read tool on `.knowledge/learnings/index.md`
+2. **If it exists**, scan for entries under these headings:
+   - **"Communication"** - stakeholder preferences, formatting conventions
+   - **"General"** - cross-cutting preferences that apply to all work
+   - **"Stakeholder Preferences"** - audience-specific guidance
+3. **If it doesn't exist or is empty**, skip silently and proceed with standard stakeholder matrix
+4. **If entries exist**, incorporate them as constraints (e.g., "VP prefers 1-page summaries", "always include confidence grades for data team")
+5. **Never block execution** if learnings are unavailable - this is an enhancement, not a blocker
+
+Example learnings that would apply:
+- "Executive team prefers dashboards over text reports"
+- "Product team wants effort estimates in days, not story points"
+- "Data team requires p-values for all statistical claims"
 
 ### The Stakeholder Matrix
 
@@ -34,13 +48,29 @@ Different audiences care about different things. For the same finding, adapt:
 
 #### Step 1: Identify the Audience
 
-If the user specifies an audience, use that. If not, ask or default to Product Team.
+Detect the audience from both **explicit mentions** and **context clues**. Never guess blindly - if unclear after checking these signals, ask the user to clarify.
 
-Common signals:
-- "Prepare this for the leadership team" → Executive
-- "What should we do about this?" → Product Team
-- "Can you dig into the root cause?" → Engineering
-- "How confident are we in this finding?" → Data Team
+**Explicit signals** (direct audience mentions):
+- "Prepare this for the leadership team" / "my VP wants to see this" / "present to the CEO" → Executive
+- "present to the product team" / "sprint planning" / "PM review" → Product Team
+- "Can you dig into the root cause?" / "engineering needs this" → Engineering
+- "data science team wants to understand" / "review before we present" / "peer review" → Data Team
+
+**Context clues** (implicit signals):
+- **Urgency + Business outcome** → likely Executive
+  - "tomorrow morning" / "board meeting Friday" / "urgent update needed"
+  - Combined with business language ($, revenue, users, risk)
+- **Planning context** → likely Product Team
+  - "sprint planning" / "roadmap discussion" / "prioritization meeting"
+  - Questions like "what should we do?" / "how do we prioritize?"
+- **Technical investigation** → likely Engineering
+  - "root cause" / "debug" / "fix" / "error logs" / "latency issue"
+  - Focus on specific systems, code, or infrastructure
+- **Methodology questions** → likely Data Team
+  - "how confident are we?" / "validate this" / "peer review"
+  - Requests for methodology, statistical rigor, caveats
+
+If no audience is specified and no clear context clues, default to **Product Team** format (most versatile).
 
 #### Step 2: Select the Lead
 
@@ -79,14 +109,28 @@ Each level includes everything above it plus more depth.
 
 ### Multi-Audience Documents
 
-When a document serves multiple audiences (common for analysis reports):
+**Use multi-audience format when:**
+- The document will be shared widely (emailed to a distribution list with mixed roles, posted to wiki)
+- It's a formal analysis report that serves as a reference document
+- The user explicitly says "this needs to work for everyone" or mentions multiple audience types
+- You're creating an artifact that will be archived/referenced later by different stakeholders
+- **Unclear who the audience is** (when in doubt, default to multi-audience with labeled sections)
 
-1. **Start with Executive Summary** — 3-5 sentences, bottom line first
-2. **Key Findings for Product** — what happened, why, what to do
-3. **Technical Details for Engineering** — root cause, affected systems, fix scope
-4. **Methodology for Data** — how the analysis was done, validation, caveats
+**Use single-audience format when:**
+- The user specifies a single audience ("prepare this for my VP", "write this for engineering")
+- It's a live presentation (deck, meeting brief) — pick the primary audience in the room
+- Time is constrained ("tomorrow morning") — optimize for one audience, don't try to serve everyone
+- The context is meeting-specific ("sprint planning", "board meeting") — tailor to that meeting's attendees
 
-Label sections clearly so readers can jump to their level.
+**Default rule:** When unclear about the audience, ASK the user "Who will read this?" before proceeding. A quick clarification question saves rework.
+
+**Multi-audience structure** (when needed):
+1. **Executive Summary** (Level 1) — 3-5 sentences, bottom line first
+2. **Key Findings for Product** (Level 2) — what happened, why, what to do
+3. **Technical Details for Engineering** (Level 3) — root cause, affected systems, fix scope
+4. **Methodology for Data** (Level 4) — how the analysis was done, validation, caveats
+
+Label sections clearly so readers can jump to their level. This creates a "pyramid" structure where each level contains everything above it plus more depth.
 
 ### Output Format
 
@@ -97,6 +141,37 @@ When applying this skill, note the audience adaptation at the top of the deliver
 **Adapted for:** [Name or role, if known]
 **Detail level:** [Level 1-4]
 ```
+
+#### Template Mode vs Analysis Presentation
+
+Distinguish between drafting a structure and presenting actual findings:
+
+**If you're drafting a template or structure** (user hasn't done analysis yet):
+- Use clearly marked placeholders: `[Insert actual value from analysis]` or `[$X in lost revenue - from analysis]`
+- Never fabricate numbers or statistics to illustrate the template
+- Focus on structure, format, and what goes where
+- Example: "Revenue at risk: `[$X/month from mobile checkout funnel analysis]`"
+
+**If you're presenting actual analysis results**:
+- Use concrete numbers from your analysis or the user's findings
+- Cite the data source (table, query, date range) inline
+- Show your work (include supporting queries/charts as appendices for technical audiences)
+- Example: "Revenue at risk: $47K/month (from orders.checkout_completed, Oct 2024)"
+
+This prevents hallucination while preserving the skill's value for both planning and presenting.
+
+#### Source Attribution by Audience
+
+For every quantitative claim, cite the source appropriate to the audience:
+
+| Audience | Attribution Style | Example |
+|----------|------------------|---------|
+| **Executive** | Brief inline citation | "based on mobile checkout data, Oct 2024" |
+| **Product** | Table/column reference | "from orders.checkout_completed events" |
+| **Engineering** | Full query in appendix with explanation | "See Appendix A: checkout_drop_query.sql lines 15-23" |
+| **Data** | Complete query + validation + data quality notes | "Query validates with row count match (n=15,234), no nulls in key fields, 2% outlier rate within expected bounds" |
+
+This builds trust and allows stakeholders to verify claims independently.
 
 ## Examples
 

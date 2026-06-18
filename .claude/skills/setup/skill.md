@@ -1,8 +1,16 @@
+---
+name: setup
+description: |
+  Run a 4-phase conversational interview that populates the knowledge system from the user's real context. Turns a blank `.knowledge/` directory into a fully configured analytical environment. Use this skill whenever the user wants to set up the AI Analyst, configure their environment, get started with the tool, onboard themselves, connect their data for the first time, initialize their profile, or set up the system. Also trigger when users say things like "let's get started", "I'm new here", "configure the analyst", "set up my environment", "onboard me", "connect my data", "initialize", "first time setup", "get this working", "how do I begin", or invoke `/setup`. This skill handles both fresh setup (no existing profile) and resuming partial setup (picking up where they left off). It's especially important to use this skill when you detect the user has no `.knowledge/user/profile.md` or when they explicitly want to reconfigure their settings.
+---
+
 # Skill: /setup
 
 Run a 4-phase conversational interview that populates the knowledge system
 from the user's real context. Turns a blank `.knowledge/` directory into a
 fully configured analytical environment.
+
+This skill is about DOING, not describing. Every "Outputs" section contains tool-use instructions you must execute immediately, not descriptions of what should happen later.
 
 ## Parameters
 
@@ -25,15 +33,14 @@ fully configured analytical environment.
    weave context forward ("Got it — as a PM on a marketplace team, you
    probably care about GMV and take rate. Let me ask about your data next.").
 2. **2-3 questions at a time, max.** Never dump a wall of questions. Group
-   them thematically and wait for a response before continuing.
+   them thematically, ask 2-3, then STOP and wait for a response before continuing.
 3. **Validate responses.** If a role sounds unusual or a path does not exist,
    confirm before recording. ("You said your CSV directory is `data/sales/`.
    I do not see that directory — did you mean `data/`?")
 4. **Allow skipping.** Mark optional fields clearly. If the user says "skip"
    or "I'll do this later", record `null` and move on. Never block progress
    on optional fields.
-5. **Show progress.** After each phase, display a brief summary of what was
-   captured and what comes next.
+5. **Show progress.** After each phase, display the exact summary format specified.
 
 ---
 
@@ -74,9 +81,11 @@ phases:
 **Goal:** Understand who the user is so we can adapt communication style,
 technical depth, and default output formats.
 
-### Questions (ask in 1-2 groups)
+### Questions
 
-**Group 1:**
+**IMPORTANT**: Ask Group 1 questions (below). STOP after asking them. Wait for the user's response. Do NOT ask Group 2 questions yet.
+
+**Group 1 (ask these now, then wait):**
 1. "What's your role? (e.g., Product Manager, Data Scientist, Engineer,
    Marketing Analyst, exec)"
 2. "How technical are you with data? Pick the one that fits best:
@@ -84,7 +93,7 @@ technical depth, and default output formats.
    - **Intermediate** — I can write SQL and read basic stats
    - **Advanced** — I build models, write complex SQL, and review pipelines"
 
-**Group 2:**
+**Group 2 (ask AFTER Group 1 response):**
 3. "What team or department are you on?" _(optional)_
 4. "What domain does your product operate in? (e.g., e-commerce, SaaS,
    fintech, marketplace, healthcare, media)" _(optional)_
@@ -96,9 +105,16 @@ technical depth, and default output formats.
   "analyst" -> Analyst, "eng" -> Engineer.
 - Technical level must resolve to one of: beginner, intermediate, advanced.
 
-### Outputs
+### File Creation (Execute Now)
 
-Write to `.knowledge/user/profile.md` (create directory if needed):
+After collecting all Phase 1 responses:
+
+**Step 1**: Create the user directory if it doesn't exist:
+```bash
+mkdir -p .knowledge/user
+```
+
+**Step 2**: Use the Write tool to create `.knowledge/user/profile.md` with this exact structure:
 
 ```markdown
 # User Profile
@@ -107,8 +123,8 @@ Write to `.knowledge/user/profile.md` (create directory if needed):
 
 - **Role:** {role}
 - **Technical level:** {technical_level}
-- **SQL comfort:** {inferred from technical_level: none|basic|intermediate|advanced}
-- **Statistics comfort:** {inferred: none|basic|intermediate|advanced}
+- **SQL comfort:** {inferred from technical_level: none for beginner, basic for intermediate, intermediate/advanced for advanced}
+- **Statistics comfort:** {inferred: none for beginner, basic for intermediate, intermediate/advanced for advanced}
 - **Domain:** {domain or "not specified"}
 - **Team:** {team or "not specified"}
 
@@ -121,23 +137,55 @@ _Set in Phase 4._
 <!-- Format: YYYY-MM-DD | What was wrong | What was right -->
 ```
 
-Update `.knowledge/setup-state.yaml`:
-- Set `phases.role_and_team.status: complete`
-- Set `phases.role_and_team.completed_at` to current timestamp
+Replace `{role}`, `{technical_level}`, etc. with actual values from the user's responses.
 
-### Phase 1 Summary
+**Step 3**: Update `.knowledge/setup-state.yaml`:
 
-Display:
+If the file doesn't exist yet, use Write tool to create it with:
+```yaml
+setup_version: 1
+started_at: "{current timestamp in YYYY-MM-DDTHH:MM:SS format}"
+last_updated: "{current timestamp}"
+status: "in-progress"
+
+phases:
+  role_and_team:
+    status: "complete"
+    completed_at: "{current timestamp}"
+  data_connection:
+    status: "pending"
+    completed_at: null
+  business_context:
+    status: "pending"
+    completed_at: null
+  preferences:
+    status: "pending"
+    completed_at: null
 ```
-Phase 1 complete — Role & Team
+
+If it already exists, use Edit tool to set:
+- `phases.role_and_team.status: complete`
+- `phases.role_and_team.completed_at: "{current timestamp}"`
+- `last_updated: "{current timestamp}"`
+
+**Step 4 - CHECKPOINT**: Verify the files were created successfully by using Read tool on `.knowledge/user/profile.md`. If it doesn't exist, something went wrong. Fix it before proceeding.
+
+### Phase 1 Summary (Display Now)
+
+After all files are created, display this exact format:
+
+```
+✓ Phase 1 complete — Role & Team
 
   Role:       {role}
   Tech level: {technical_level}
-  Domain:     {domain}
-  Team:       {team}
+  Domain:     {domain or "not specified"}
+  Team:       {team or "not specified"}
 
 Next up: Phase 2 — Data Connection
 ```
+
+Then proceed to Phase 2.
 
 ---
 
@@ -145,68 +193,66 @@ Next up: Phase 2 — Data Connection
 
 **Goal:** Get the user's data connected so analyses can run.
 
-### Questions
+### Questions (2 at a time max)
 
-**Group 1:**
+**Group 1 (ask now, then wait):**
 1. "Let's connect your data. What do you have?
    - **CSV files** in a local directory
    - **DuckDB** database file
    - **Cloud warehouse** (MotherDuck, Postgres, BigQuery, Snowflake)
    - **Nothing yet** — I want to use a sample dataset"
 
+STOP. Wait for response before continuing.
+
 ### Branch Logic
+
+The user's answer to Group 1 determines what happens next.
 
 **If CSV:**
 - Ask: "What's the path to your CSV directory? (relative to this repo root)"
-- Verify the directory exists and list .csv files found.
-- If directory not found, suggest alternatives (check `data/`, `data/examples/`).
-- If confirmed, invoke the Connect Data skill internally (`/connect-data type=csv`)
-  to create the dataset brain and profile schema.
+- Use Glob tool to verify the directory exists and list .csv files.
+- If directory not found, use Bash tool to check `data/` and `data/examples/` directories, then suggest alternatives.
+- If path is confirmed, invoke the Connect Data skill: use the Skill tool with `skill: "connect-data"` and `args: "type=csv path={the_path}"`.
+- The Connect Data skill will handle creating dataset brain, profiling schema, updating active.yaml.
+- After Connect Data returns, check if `.knowledge/datasets/{dataset_name}/manifest.yaml` exists to confirm success.
 
 **If DuckDB:**
 - Ask: "What's the path to your .duckdb file?"
-- Verify it exists.
-- If confirmed, invoke `/connect-data type=duckdb` to set up the connection.
+- Use Read or Bash tool to verify the file exists.
+- If confirmed, invoke Connect Data: `skill: "connect-data"`, `args: "type=duckdb path={the_path}"`.
+- Check for manifest.yaml to confirm success.
 
 **If Cloud warehouse:**
 - Explain: "Cloud warehouses connect via MCP (Model Context Protocol). This
   requires configuring `.claude/mcp.json` with your credentials."
-- Route to `/connect-data` for full setup.
-- Mark this phase as `partial` with `partial_reason: warehouse_mcp_needed`.
-- **Do not block Phase 3.** Continue the interview — data connection can be
-  completed separately.
+- Invoke Connect Data: `skill: "connect-data"`, `args: "type={warehouse_type}"` (warehouse_type = motherduck, postgres, bigquery, or snowflake).
+- Connect Data will guide the MCP setup.
+- After Connect Data returns, check its status. If it says "MCP configuration needed", mark Phase 2 as `partial`.
+- **Do not block Phase 3.** Continue the interview even if warehouse setup is incomplete.
 
 **If Nothing yet / sample dataset:**
-- Check `data/examples/` for available sample datasets.
-- List them with brief descriptions.
-- If user picks one, copy/link it and invoke `/connect-data type=csv`.
-- If user wants to skip: mark phase as `skipped`, note that `/connect-data`
-  is available later.
+- Use Bash tool to list directories in `data/examples/`: `ls -la data/examples/`
+- Show brief descriptions if available (check for README files).
+- If user picks one, invoke Connect Data with the sample dataset path.
+- If user wants to skip: mark phase as `skipped` in next step.
 
-### Fork Decision
+### State Update (Execute Now)
 
-After Phase 2:
-- If `data_connection.status == "complete"`: data is available. Continue to
-  Phase 3.
-- If `data_connection.status == "partial"` (warehouse MCP needed): continue
-  to Phase 3 anyway. The user can finish data connection separately.
-- If `data_connection.status == "skipped"`: continue to Phase 3.
+After data connection attempt:
 
-### Outputs
+Use Edit tool on `.knowledge/setup-state.yaml` to set:
+- `phases.data_connection.status`:
+  - `"complete"` if manifest.yaml exists for the connected dataset
+  - `"partial"` if warehouse MCP setup is pending
+  - `"skipped"` if user chose to skip
+- `phases.data_connection.completed_at`: current timestamp (or null if skipped)
+- `phases.data_connection.partial_reason`: `"warehouse_mcp_needed"` if partial, otherwise null
+- `last_updated`: current timestamp
 
-Dataset artifacts are created by the `/connect-data` skill (manifest.yaml,
-schema.md, active.yaml). Phase 2 only tracks the interview state.
+### Phase 2 Summary (Display Now)
 
-Update `.knowledge/setup-state.yaml`:
-- Set `phases.data_connection.status` appropriately
-- Set `phases.data_connection.completed_at` or leave null if partial/skipped
-- Set `phases.data_connection.partial_reason` if applicable
-
-### Phase 2 Summary
-
-Display:
 ```
-Phase 2 complete — Data Connection
+✓ Phase 2 complete — Data Connection
 
   Source:     {type} ({path or "pending MCP setup"})
   Tables:     {N} tables found  (or "N/A — skipped")
@@ -215,6 +261,8 @@ Phase 2 complete — Data Connection
 Next up: Phase 3 — Business Context
 ```
 
+Then proceed to Phase 3 (even if data connection is partial or skipped).
+
 ---
 
 ## Phase 3: Business Context
@@ -222,20 +270,24 @@ Next up: Phase 3 — Business Context
 **Goal:** Understand the business so analyses produce relevant insights, not
 just numbers.
 
-### Questions (ask in 2-3 groups)
+### Questions (ask in groups of 2, wait between groups)
 
-**Group 1:**
+**Group 1 (ask now, then STOP):**
 1. "What does your company/product do? Just a sentence or two is fine."
 2. "What are the 2-3 metrics your team cares about most? (e.g., conversion
    rate, MRR, DAU, retention, NPS)"
 
-**Group 2:**
+Wait for response.
+
+**Group 2 (ask after Group 1 response, optional):**
 3. "What business question or problem are you trying to answer right now?
-   This helps me prioritize what to explore first." _(optional)_
+   This helps me prioritize what to explore first." _(optional — user can skip)_
 4. "Are there any current OKRs or goals I should know about?"
    _(optional)_
 
-**Group 3 (if domain warrants it):**
+Wait for response.
+
+**Group 3 (ask only if domain warrants it, optional):**
 5. "Any key segments I should know about? (e.g., free vs paid users,
    regions, platforms)" _(optional)_
 6. "Is there seasonality or known patterns in your data? (e.g., holiday
@@ -245,59 +297,78 @@ just numbers.
 
 - Metrics: normalize common names ("CVR" -> "conversion rate", "rev" ->
   "revenue"). If a metric is ambiguous, ask for a brief definition.
-- Business question: if provided, classify it using the Question Router
-  skill (L1-L5) and note the level. This seeds the first analysis.
+- Business question: if provided, note it for future use. Do NOT run Question Router here — just capture the text.
 
-### Outputs
+### File Creation (Execute Now)
 
-Write to `.knowledge/user/business-context.md`:
+**Step 1**: Use Write tool to create `.knowledge/user/business-context.md`:
 
 ```markdown
 # Business Context
 
 ## Company & Product
 
-{company_description}
+{company_description from Group 1 Q1}
 
 ## Key Metrics
 
 | Metric | Definition | Notes |
 |--------|-----------|-------|
-| {metric_1} | {definition or "TBD"} | {any notes} |
-| {metric_2} | {definition or "TBD"} | |
+| {metric_1 from Group 1 Q2} | {definition if user provided one, otherwise "TBD"} | |
+| {metric_2 from Group 1 Q2} | {definition if provided, otherwise "TBD"} | |
+| {metric_3 if provided} | {definition if provided, otherwise "TBD"} | |
 
 ## Current Focus
 
-- **Primary question:** {business_question or "Not specified"}
-- **OKRs/Goals:** {okrs or "Not specified"}
+- **Primary question:** {business_question from Group 2 Q3, or "Not specified"}
+- **OKRs/Goals:** {okrs from Group 2 Q4, or "Not specified"}
 
 ## Segments & Patterns
 
-- **Key segments:** {segments or "Not specified"}
-- **Seasonality:** {seasonality or "Not specified"}
+- **Key segments:** {segments from Group 3 Q5, or "Not specified"}
+- **Seasonality:** {seasonality from Group 3 Q6, or "Not specified"}
 ```
 
-If the user provided metrics and a dataset is connected, seed
-`.knowledge/datasets/{active}/metrics/index.yaml` with stub entries for each
-metric (name + empty definition). These can be fleshed out later with
-`/metrics`.
+**Step 2** (Optional - only if dataset is connected AND user provided metrics):
 
-Update `.knowledge/setup-state.yaml`:
-- Set `phases.business_context.status: complete`
-- Set `phases.business_context.completed_at`
+If Phase 2 status is "complete" (not skipped or partial), AND the user provided metrics in Group 1 Q2:
+- Read `.knowledge/active.yaml` to get the active dataset name
+- Check if `.knowledge/datasets/{active}/metrics/index.yaml` exists
+- If it doesn't exist, create it with stub entries for each metric:
 
-### Phase 3 Summary
+```yaml
+metrics:
+  - name: "{metric_1}"
+    definition: ""
+    sql: ""
 
-Display:
+  - name: "{metric_2}"
+    definition: ""
+    sql: ""
 ```
-Phase 3 complete — Business Context
 
-  Product:    {one-line summary}
-  Key metrics: {metric_1}, {metric_2}, {metric_3}
+If it already exists, skip this step (don't overwrite existing metrics).
+
+**Step 3**: Use Edit tool on `.knowledge/setup-state.yaml` to set:
+- `phases.business_context.status: complete`
+- `phases.business_context.completed_at: "{current timestamp}"`
+- `last_updated: "{current timestamp}"`
+
+**Step 4 - CHECKPOINT**: Use Read tool to verify `.knowledge/user/business-context.md` exists and contains the user's responses.
+
+### Phase 3 Summary (Display Now)
+
+```
+✓ Phase 3 complete — Business Context
+
+  Product:    {one-line summary from company_description}
+  Key metrics: {metric_1}, {metric_2}, {metric_3 if provided}
   Focus:      {business_question or "General exploration"}
 
 Next up: Phase 4 — Preferences
 ```
+
+Then proceed to Phase 4.
 
 ---
 
@@ -306,9 +377,9 @@ Next up: Phase 4 — Preferences
 **Goal:** Configure output style and communication preferences so results
 match what the user actually wants.
 
-### Questions (ask in 1-2 groups)
+### Questions (ask in groups of 2, wait between groups)
 
-**Group 1:**
+**Group 1 (ask now, then STOP):**
 1. "How much detail do you usually want in results?
    - **Executive summary** — just the key findings and recommendations
    - **Standard** — findings with supporting evidence and charts
@@ -318,7 +389,9 @@ match what the user actually wants.
    - **Standard** — a chart for each key finding
    - **Chart-heavy** — visualize everything possible"
 
-**Group 2:**
+Wait for response.
+
+**Group 2 (ask after Group 1 response, optional):**
 3. "How do you usually share results? (helps me format exports)
    - Slide deck
    - Email summary
@@ -332,36 +405,37 @@ match what the user actually wants.
 
 ### Validation
 
-- Detail level must resolve to: executive-summary, standard, deep-dive.
-- Chart preference must resolve to: minimal, standard, chart-heavy.
-- Export channels are free-form but normalize to the `/export` format list.
+- Detail level must resolve to: executive-summary, standard, or deep-dive.
+- Chart preference must resolve to: minimal, standard, or chart-heavy.
+- Export channels: record as-is (free-form).
 
-### Outputs
+### File Updates (Execute Now)
 
-Update `.knowledge/user/profile.md` — fill in the Communication Preferences
-section:
+**Step 1**: Use Edit tool on `.knowledge/user/profile.md` to fill in the Communication Preferences section (currently says "_Set in Phase 4._").
+
+Replace that line with:
 
 ```markdown
 ## Communication Preferences
 
-- **Detail level:** {detail_level}
-- **Chart preference:** {chart_preference}
-- **Narrative style:** {inferred: bullet-points for exec-summary, prose for deep-dive, mixed for standard}
-- **Preferred exports:** {export_channels}
-- **Custom notes:** {anything_else or "None"}
+- **Detail level:** {detail_level from Group 1 Q1}
+- **Chart preference:** {chart_preference from Group 1 Q2}
+- **Narrative style:** {infer: bullet-points for executive-summary, prose for deep-dive, mixed for standard}
+- **Preferred exports:** {export_channels from Group 2 Q3, or "Not specified"}
+- **Custom notes:** {anything_else from Group 2 Q4, or "None"}
 ```
 
-Update `.knowledge/setup-state.yaml`:
-- Set `phases.preferences.status: complete`
-- Set `phases.preferences.completed_at`
-- Set `status: complete` (or `partial` if data_connection was partial)
-- Set `last_updated`
+**Step 2**: Use Edit tool on `.knowledge/setup-state.yaml` to set:
+- `phases.preferences.status: complete`
+- `phases.preferences.completed_at: "{current timestamp}"`
+- `status: "complete"` (or `"partial"` if data_connection status was partial)
+- `last_updated: "{current timestamp}"`
 
----
+**Step 3 - CHECKPOINT**: Use Read tool to verify `.knowledge/user/profile.md` now contains the Communication Preferences section with actual values (not "_Set in Phase 4._").
 
-## Setup Complete Summary
+### Setup Complete Summary (Display Now)
 
-After Phase 4, display the final summary:
+After Phase 4 completes, display this comprehensive summary:
 
 ```
 === SETUP COMPLETE ===
@@ -369,11 +443,12 @@ After Phase 4, display the final summary:
   Role:         {role} ({technical_level})
   Domain:       {domain}
   Data:         {dataset_name} — {N} tables ({source_type})
+              ({or "None connected" if data was skipped})
   Key metrics:  {metric_1}, {metric_2}, {metric_3}
   Detail level: {detail_level}
   Charts:       {chart_preference}
 
-  Status: {"Ready for analysis" | "Partial — data connection pending"}
+  Status: {"✓ Ready for analysis" | "⚠ Partial — data connection pending"}
 
 Get started:
   - Ask a question: "What's our {metric_1} trend?"
@@ -393,7 +468,16 @@ If setup status is `partial`, also display:
 
 Show the current setup state by reading `.knowledge/setup-state.yaml`.
 
-### Output Format
+### Execution Steps
+
+**Step 1**: Check if `.knowledge/setup-state.yaml` exists using Read tool.
+
+**Step 2**: If file doesn't exist, display:
+```
+Setup has not been started yet. Run /setup to begin.
+```
+
+**Step 3**: If file exists, read it and display:
 
 ```
 Setup Status
@@ -401,17 +485,13 @@ Setup Status
 
   Phase 1 — Role & Team:       {status}  {completed_at or ""}
   Phase 2 — Data Connection:   {status}  {completed_at or ""}
+              {partial_reason if status is partial}
   Phase 3 — Business Context:  {status}  {completed_at or ""}
   Phase 4 — Preferences:       {status}  {completed_at or ""}
 
   Overall: {status}
   Started: {started_at}
   Updated: {last_updated}
-```
-
-If no setup-state.yaml exists:
-```
-Setup has not been started yet. Run /setup to begin.
 ```
 
 ---
@@ -425,34 +505,55 @@ Two-tier reset system to prevent accidental data loss.
 Clears profile and preferences (Phase 1 + Phase 4 data). Does NOT touch
 data connections or business context.
 
-**What it does:**
-1. Delete `.knowledge/user/profile.md`
-2. Reset `phases.role_and_team` and `phases.preferences` to `pending` in
-   setup-state.yaml
-3. Set `status: partial`
-4. Set `last_updated`
+### CONFIRMATION REQUIRED
 
-**Confirmation required:** Ask once: "This will reset your role profile and
-output preferences. Your data connections and business context are safe.
-Continue? (yes/no)"
+Before proceeding, ask the user:
+
+```
+This will reset your role profile and output preferences. Your data connections and business context are safe.
+
+Continue? (yes/no)
+```
+
+STOP. Wait for explicit "yes" before continuing. If user says anything other than "yes" (including "no", "cancel", "wait", etc.), respond:
+
+```
+Reset cancelled. Your setup is unchanged.
+```
+
+And DO NOT proceed with deletion.
+
+### Execution (only after "yes" confirmation)
+
+**Step 1**: Use Bash tool to delete profile:
+```bash
+rm -f .knowledge/user/profile.md
+```
+
+**Step 2**: Use Edit tool on `.knowledge/setup-state.yaml` to set:
+- `phases.role_and_team.status: pending`
+- `phases.role_and_team.completed_at: null`
+- `phases.preferences.status: pending`
+- `phases.preferences.completed_at: null`
+- `status: partial`
+- `last_updated: "{current timestamp}"`
+
+**Step 3**: Display:
+```
+✓ Profile and preferences reset. Your data and business context are preserved.
+
+Run /setup to reconfigure your profile.
+```
 
 ### Tier 2: `/setup reset everything`
 
 Clears the entire setup — profile, preferences, business context, AND
-dataset connections. This is a destructive operation.
+dataset connections. This is destructive.
 
-**What it does:**
-1. Delete `.knowledge/user/profile.md`
-2. Delete `.knowledge/user/business-context.md`
-3. Delete all `.knowledge/datasets/*/` directories
-4. Reset `.knowledge/active.yaml` to `active_dataset: null`
-5. Reset `.knowledge/setup-state.yaml` to all-pending state
-6. Clear `data_sources.yaml` entries added by setup
+### CONFIRMATION REQUIRED (Stricter)
 
-**Confirmation required:** The user must type the exact phrase
-`reset everything` to confirm.
+Display this prompt:
 
-Prompt:
 ```
 This will erase your entire setup:
   - User profile and preferences
@@ -461,29 +562,58 @@ This will erase your entire setup:
 
 This cannot be undone.
 
-To confirm, type: reset everything
+To confirm, type exactly: reset everything
 ```
 
-If the user types anything other than `reset everything`, cancel the
-operation: "Reset cancelled. Your setup is unchanged."
+STOP. Wait for user input.
 
----
-
-## Phase 5 Note: Development Context
-
-Phase 5 (development context) is opt-in and independent of the core setup
-flow. It covers development workflow preferences such as IDE, language,
-framework conventions, and code style preferences.
-
-At the end of Phase 4, mention its existence:
+**If user types anything OTHER than the exact phrase "reset everything"** (case-sensitive), respond:
 ```
-Optional: Run /setup-dev-context to configure development workflow
-preferences (IDE, languages, code style). This is independent of
-your analytics setup.
+Reset cancelled. Your setup is unchanged.
 ```
 
-This skill does NOT implement Phase 5. The `/setup-dev-context` skill
-handles it separately.
+And DO NOT proceed.
+
+**Only if user types "reset everything" exactly**, proceed with deletion.
+
+### Execution (only after exact phrase confirmation)
+
+**Step 1**: Use Bash tool to delete all setup files:
+```bash
+rm -f .knowledge/user/profile.md
+rm -f .knowledge/user/business-context.md
+rm -rf .knowledge/datasets/
+rm -f .knowledge/active.yaml
+```
+
+**Step 2**: Use Write tool to reset `.knowledge/setup-state.yaml` to initial state:
+```yaml
+setup_version: 1
+started_at: "{current timestamp}"
+last_updated: "{current timestamp}"
+status: "pending"
+
+phases:
+  role_and_team:
+    status: "pending"
+    completed_at: null
+  data_connection:
+    status: "pending"
+    completed_at: null
+  business_context:
+    status: "pending"
+    completed_at: null
+  preferences:
+    status: "pending"
+    completed_at: null
+```
+
+**Step 3**: Display:
+```
+✓ Complete reset finished. All setup data has been cleared.
+
+Run /setup to start fresh.
+```
 
 ---
 
@@ -491,46 +621,59 @@ handles it separately.
 
 When `/setup` is invoked and `.knowledge/setup-state.yaml` already exists:
 
-1. Read the state file.
-2. Find the first phase with status `pending`.
-3. If all phases are `complete`, display:
-   ```
-   Setup is already complete. Use /setup status to review,
-   or /setup reset to start over.
-   ```
-4. If some phases are complete, greet briefly and resume:
-   ```
-   Welcome back. Phases 1-2 are done. Picking up at Phase 3 —
-   Business Context.
-   ```
-5. If a phase is `partial`, offer to complete it or skip:
-   ```
-   Phase 2 (Data Connection) is partially complete — your warehouse
-   needs MCP configuration. Want to finish that now, or continue
-   to Phase 3?
-   ```
+**Step 1**: Use Read tool to read `.knowledge/setup-state.yaml`.
+
+**Step 2**: Check the `status` field and phase statuses. Determine state:
+- If all phases have status "complete": setup is complete
+- If any phase has status "pending": setup is incomplete, needs resuming
+- If any phase has status "partial": setup has pending work
+
+**Step 3**: Route based on state:
+
+**If all phases are complete:**
+Display:
+```
+Setup is already complete. Use /setup status to review, or /setup reset to start over.
+```
+STOP. Do not proceed to Phase 1.
+
+**If some phases are complete:**
+Find the first phase with status "pending". Display:
+```
+Welcome back. Phase{s} {completed_phase_numbers} are done. Picking up at Phase {next_phase_number} — {phase_name}.
+```
+
+Then jump directly to that phase (skip completed phases).
+
+**If a phase is "partial":**
+Check which phase is partial. If it's Phase 2 (data_connection):
+```
+Phase 2 (Data Connection) is partially complete — your warehouse needs MCP configuration.
+
+Want to finish that now (enter 'finish'), or continue to Phase 3 (enter 'continue')?
+```
+
+Wait for user response. If "finish", invoke Connect Data skill. If "continue", proceed to Phase 3.
 
 ---
 
 ## Anti-Patterns
 
-1. **Never dump all questions at once.** Always group 2-3 and wait for a
-   response.
+1. **Never dump all questions at once.** Ask 2-3, then STOP and await response.
 2. **Never block on optional fields.** If the user says "skip" or "later",
-   accept it and move on.
-3. **Never overwrite existing profile data silently.** If profile.md
-   already exists when starting Phase 1, warn: "You already have a profile.
-   Running setup will overwrite it. Continue?"
-4. **Never store credentials in setup-state.yaml.** Data connection
-   credentials go through `/connect-data` and are stored in manifest.yaml
-   or environment variables only.
-5. **Never skip the state file update.** Every phase completion must be
-   written to setup-state.yaml before proceeding to the next phase.
-6. **Never run Phase 3+ without asking Phase 1 first** (unless resuming).
-   The role context from Phase 1 shapes how questions are asked in later
-   phases.
-7. **Never combine reset tiers.** `/setup reset` is always Tier 1.
-   Tier 2 requires the explicit `reset everything` phrase.
+   record `null` and move on.
+3. **Never overwrite existing files silently.** If profile.md exists when
+   starting Phase 1, warn: "You already have a profile. Running setup will
+   overwrite it. Continue? (yes/no)" Wait for confirmation.
+4. **Never store credentials in setup-state.yaml.** Credentials go through
+   `/connect-data` and are stored in manifest.yaml or environment variables only.
+5. **Never skip file writes.** Every "File Creation" section is mandatory. Use
+   Write/Edit tools immediately after collecting the required information.
+6. **Never skip checkpoints.** After creating files, verify them with Read tool
+   before proceeding to the next phase.
+7. **Never run Phase 3+ without Phase 1 first** (unless resuming from partial state).
+8. **Never combine reset tiers.** `/setup reset` is always Tier 1. Tier 2
+   requires the exact phrase "reset everything".
 
 ---
 
@@ -538,11 +681,12 @@ When `/setup` is invoked and `.knowledge/setup-state.yaml` already exists:
 
 | Scenario | Handling |
 |----------|----------|
-| User runs `/setup` but profile.md already exists | Warn and ask to confirm overwrite before proceeding |
-| CSV path does not exist | Suggest alternatives, check `data/` and `data/examples/` |
-| User provides warehouse type but no MCP | Mark Phase 2 as partial, continue interview |
-| User skips all optional fields | That is fine. Record nulls and proceed. |
-| User wants to jump to a specific phase | Allow it: "/setup phase 3" resumes from Phase 3 |
-| Session ends mid-interview | State is saved per-phase. Next `/setup` resumes. |
-| `/setup` called inside a pipeline | Warn: "Setup changes may affect the running pipeline. Finish the pipeline first, or continue at your own risk." |
-| User gives contradictory answers | Ask once for clarification. Record what they confirm. |
+| User runs `/setup` but profile.md already exists | Warn and ask to confirm overwrite before proceeding. Use Read tool to check for existing profile before Phase 1. |
+| CSV path does not exist | Use Bash `ls` to check path. Suggest `data/` and `data/examples/` alternatives. |
+| User provides warehouse type but no MCP | Mark Phase 2 as `partial` with reason "warehouse_mcp_needed". Continue to Phase 3. |
+| User skips all optional fields | Fine. Record nulls ("not specified") and proceed. |
+| User wants to jump to specific phase | If they say "/setup phase 3", read setup-state.yaml, verify Phases 1-2 are complete, then jump to Phase 3. |
+| Session ends mid-interview | State is saved after each phase. Next `/setup` reads setup-state.yaml and resumes from first pending phase. |
+| `/setup` called during active pipeline | Warn: "Setup changes may affect the running pipeline. Finish the pipeline first, or continue at your own risk." |
+| User gives contradictory answers | Ask once for clarification: "Earlier you said X, now you're saying Y. Which should I record?" Use their final answer. |
+| Setup-state.yaml exists but profile.md doesn't | This indicates inconsistent state (likely Phase 1 was marked complete but file wasn't written). Warn user: "Setup state says Phase 1 is complete, but profile.md is missing. I'll recreate it." Then run Phase 1 questions and create the file. |

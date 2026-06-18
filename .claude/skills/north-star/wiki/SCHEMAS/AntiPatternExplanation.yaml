@@ -1,0 +1,42 @@
+# AntiPatternExplanation.yaml — return type for explain_anti_pattern(anti_pattern_id, candidate, ...).
+# Source: wiki/anti-patterns/{id}.md + optional _join_failure_example.yaml.
+
+schema_version: 1
+schema_name: AntiPatternExplanation
+extends: null
+
+required_fields:
+  - anti_pattern_id
+  - name
+  - description
+  - spot_signals           # mirror of AntiPatternAtom.spot_signals
+  - fix_recipe             # mirror of AntiPatternAtom.fix_recipe
+  - severity
+  - source                 # nested: {wiki_path, atom_paths, playbook_pages}
+  - confidence_envelope    # mandatory
+
+type_specific_optional:
+  - candidate              # echo of input candidate that triggered the lookup
+  - example                # if with_example=true: a CaseRecord-like illustration
+  - related_concepts       # array of concept wiki paths
+
+required_subfields:
+  source:
+    - wiki_path            # e.g., wiki/anti-patterns/lagging-only-nsm.md
+    - atom_paths
+    - playbook_pages
+
+enums:
+  severity: [high, medium, low]
+
+field_constraints:
+  schema_version: { type: integer, const: 1 }
+  anti_pattern_id: { type: string, pattern: "^[a-z][a-z0-9-]{1,60}$" }
+  spot_signals: { type: array, items: string, min_items: 1 }
+  fix_recipe: { type: array, items: string, min_items: 1 }
+  confidence_envelope:
+    type: object
+    extends_schema: ConfidenceEnvelope
+
+id_pattern: null
+page_size_cap_words: null

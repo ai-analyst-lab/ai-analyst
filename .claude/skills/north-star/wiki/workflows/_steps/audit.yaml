@@ -1,0 +1,139 @@
+schema_version: 1
+workflow_id: audit
+title: "Audit — Checking an Existing NSM Against the 7-Checklist"
+estimated_lookups: 7
+estimated_total_minutes: 30
+prerequisites:
+  - existing_nsm_name_and_definition
+expected_outputs:
+  - per_question_verdict
+  - remediation_list_if_failures
+  - rebuild_recommendation_if_majority_fails
+steps:
+  - step_order: 1
+    id: q1-customer-value
+    step_title: "Q1: Does the NSM express customer value?"
+    step_body: |
+      Test whether the NSM names what customers value. Counting users,
+      registrations, or sessions is not value. If fail: counts presence, not value.
+    inputs: [nsm_name_and_definition]
+    outputs: [q1_verdict, q1_diagnostic]
+    estimated_minutes: 4
+    linked_atom_id: workflow-step-p015-l0351-audit-step-1-customer-value
+    prompt: "Show user the NSM. Ask: does this name what customers value, or only that they're present?"
+    expected_output: "PASS | FAIL + one-sentence rationale."
+    calls: [evaluate_checklist, explain_anti_pattern]
+    on_failure: nsm-disconnected-from-customer-value
+
+  - step_order: 2
+    id: q2-vision-strategy
+    step_title: "Q2: Does it represent vision and strategy?"
+    step_body: |
+      Hand the NSM to someone outside the team. They should infer the company's
+      product strategy and vision from the metric alone, at least at a high level.
+    inputs: [nsm_name_and_definition, external_reader]
+    outputs: [q2_verdict, q2_diagnostic]
+    estimated_minutes: 5
+    linked_atom_id: workflow-step-p015-l0357-audit-step-2-vision-and-strategy
+    prompt: "Ask user to imagine sharing the NSM with a peer in a different company. Could they infer the strategy?"
+    expected_output: "PASS | FAIL + rationale. If FAIL: 'generic, would fit any company in category.'"
+    calls: [evaluate_checklist]
+    on_failure: null
+
+  - step_order: 3
+    id: q3-leading-indicator
+    step_title: "Q3: Is it a leading indicator?"
+    step_body: |
+      Classify as leading (predicts future business results) or lagging (reports
+      past results). MRR, ARPU, annual subscription revenue are lagging.
+    inputs: [nsm_name_and_definition]
+    outputs: [q3_verdict, q3_diagnostic]
+    estimated_minutes: 4
+    linked_atom_id: workflow-step-p016-l0371-audit-step-3-leading-indicator
+    prompt: "Ask user: does this metric predict the result, or report the result?"
+    expected_output: "LEADING (pass) | LAGGING (fail) + rationale."
+    calls: [evaluate_checklist, explain_anti_pattern]
+    on_failure: lagging-indicator-as-nsm
+
+  - step_order: 4
+    id: q4-actionable
+    step_title: "Q4: Is the NSM actionable?"
+    step_body: |
+      Test whether the team believes its work can move the NSM. If dominated
+      by market trends or real-world realities that would hold without your
+      product, it fails.
+    inputs: [nsm_name_and_definition, team_judgment]
+    outputs: [q4_verdict, q4_diagnostic]
+    estimated_minutes: 4
+    linked_atom_id: workflow-step-p016-l0381-audit-step-4-actionable
+    prompt: "Ask user: if your product disappeared, would this metric still move on market trends?"
+    expected_output: "PASS | FAIL + rationale."
+    calls: [evaluate_checklist, explain_anti_pattern]
+    on_failure: market-trend-as-nsm
+
+  - step_order: 5
+    id: q5-understandable
+    step_title: "Q5: Is it understandable to non-technical partners?"
+    step_body: |
+      Describe the NSM to a non-technical colleague. If they can't quickly
+      understand it without jargon, rewrite without compound technical terms.
+    inputs: [nsm_name_and_definition, non_technical_reader]
+    outputs: [q5_verdict, q5_diagnostic]
+    estimated_minutes: 4
+    linked_atom_id: workflow-step-p017-l0389-audit-step-5-understandable
+    prompt: "Ask user to read the NSM aloud to a non-technical business colleague. Did they get it?"
+    expected_output: "PASS | FAIL + rationale."
+    calls: [evaluate_checklist]
+    on_failure: null
+
+  - step_order: 6
+    id: q6-measurable
+    step_title: "Q6: Is it measurable (in principle, with light investment)?"
+    step_body: |
+      Confirm the NSM can be instrumented now or with reasonable investment.
+      If not, identify a proxy metric rather than killing the concept.
+    inputs: [nsm_name_and_definition, data_infra_inventory]
+    outputs: [q6_verdict, q6_diagnostic, proxy_if_needed]
+    estimated_minutes: 5
+    linked_atom_id: workflow-step-p017-l0393-audit-step-6-measurable
+    prompt: "Ask user about instrumentation feasibility. If not measurable directly, propose proxy."
+    expected_output: "PASS | NEEDS-PROXY | FAIL + proxy if needs-proxy."
+    calls: [evaluate_checklist, explain_anti_pattern]
+    on_failure: unmeasurable-or-abstract-nsm
+
+  - step_order: 7
+    id: q7-not-vanity
+    step_title: "Q7: Is it free of vanity-metric traps?"
+    step_body: |
+      Compare against named vanity list (DAU, ad impressions, downloads, page
+      views, registered users, story points, time on page). If matched or
+      near-match, apply the vanity test: would a meaningful change in this
+      metric guarantee a meaningful change in customer value?
+    inputs: [nsm_name_and_definition, named_vanity_list]
+    outputs: [q7_verdict, q7_diagnostic]
+    estimated_minutes: 4
+    linked_atom_id: workflow-step-p018-l0407-audit-step-7-vanity-test
+    prompt: "Compare against vanity list. Then apply vanity test. Verdict + rationale."
+    expected_output: "PASS | FAIL + rationale + reference to Happy Deliveries success-pattern if FAIL."
+    calls: [evaluate_checklist, explain_anti_pattern]
+    on_failure: vanity-metric-as-nsm
+
+source:
+  wiki_path: wiki/workflows/audit.md
+  steps_yaml_path: wiki/workflows/_steps/audit.yaml
+  atom_paths:
+    - raw/atoms/workflow-steps/workflow-step-p015-l0351-audit-step-1-customer-value.md
+    - raw/atoms/workflow-steps/workflow-step-p015-l0357-audit-step-2-vision-and-strategy.md
+    - raw/atoms/workflow-steps/workflow-step-p016-l0371-audit-step-3-leading-indicator.md
+    - raw/atoms/workflow-steps/workflow-step-p016-l0381-audit-step-4-actionable.md
+    - raw/atoms/workflow-steps/workflow-step-p017-l0389-audit-step-5-understandable.md
+    - raw/atoms/workflow-steps/workflow-step-p017-l0393-audit-step-6-measurable.md
+    - raw/atoms/workflow-steps/workflow-step-p018-l0407-audit-step-7-vanity-test.md
+  playbook_pages: [14, 15, 16, 17, 18]
+
+confidence_envelope:
+  tier: 1
+  confidence: high
+  confidence_derivation: "1:1 mapping to explicit p. 14 7-question checklist. All atoms Tier 1, reconciled, with cross-extractor agreement ≥4/4 on most."
+  curator_status: pending
+  verified: true

@@ -1,0 +1,46 @@
+# WorkflowDefinition.yaml — return type for get_workflow_steps(workflow_id).
+# Source: wiki/workflows/_steps/{workflow_id}.yaml — the structured step file.
+
+schema_version: 1
+schema_name: WorkflowDefinition
+extends: null
+
+required_fields:
+  - workflow_id
+  - title
+  - estimated_lookups
+  - steps                  # ordered array of step objects
+  - source                 # nested: {wiki_path, steps_yaml_path, atom_paths, playbook_pages}
+  - confidence_envelope    # mandatory
+
+type_specific_optional:
+  - prerequisites
+  - expected_outputs
+  - estimated_total_minutes
+
+required_subfields:
+  steps:
+    - step_order
+    - step_title
+    - step_body
+    - inputs               # array; may be empty
+    - outputs              # array; may be empty
+    - estimated_minutes    # integer or null
+    - linked_atom_id       # WorkflowStepAtom id, nullable
+  source:
+    - wiki_path            # e.g., wiki/workflows/nsm-statement-design.md
+    - steps_yaml_path      # e.g., wiki/workflows/_steps/nsm-statement-design.yaml
+    - atom_paths
+    - playbook_pages
+
+field_constraints:
+  schema_version: { type: integer, const: 1 }
+  workflow_id: { type: string, pattern: "^[a-z][a-z0-9-]{1,60}$" }
+  estimated_lookups: { type: integer, minimum: 1 }
+  steps: { type: array, min_items: 1 }
+  confidence_envelope:
+    type: object
+    extends_schema: ConfidenceEnvelope
+
+id_pattern: null
+page_size_cap_words: null

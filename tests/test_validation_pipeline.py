@@ -117,7 +117,7 @@ class TestCrossLayerPipeline:
         confidence = score_confidence(validation_results, metadata={"row_count": len(merged)})
         assert confidence["score"] > 0
         assert confidence["grade"] in ("A", "B", "C")
-        assert len(confidence["factors"]) == 7
+        assert len(confidence["factors"]) == 9
 
     def test_dirty_data_produces_low_confidence(self, dirty_orders):
         from helpers.structural_validator import run_structural_checks
