@@ -31,10 +31,10 @@ There's no bundled dataset, so it works on your own data from day one. Run `/con
 
 AI Analyst turns Claude Code into a product analytics system. It combines:
 
-- **Skills** (`.claude/skills/`) — standards Claude follows automatically (chart styling, data validation, question framing, stakeholder communication)
-- **Agents** (`agents/`) — multi-step analytical workflows orchestrated by a DAG engine (question framing → data exploration → analysis → storytelling → deck creation)
-- **Helpers** (`helpers/`) — Python modules for charting, SQL validation, data connectivity, statistical tests, and more
-- **Knowledge** (`.knowledge/`) — persistent memory for dataset context, corrections, proven SQL patterns, and business glossary
+- **Skills** (`.claude/skills/`), standards Claude follows automatically (chart styling, data validation, question framing, stakeholder communication)
+- **Agents** (`agents/`), multi-step analytical workflows orchestrated by a DAG engine (question framing → data exploration → analysis → storytelling → deck creation)
+- **Helpers** (`helpers/`), Python modules for charting, SQL validation, data connectivity, statistical tests, and more
+- **Knowledge** (`.knowledge/`), persistent memory for dataset context, corrections, proven SQL patterns, and business glossary
 
 You interact by talking to Claude. Ask a question, invoke a slash command, or let Claude figure out which skills and agents to apply.
 
@@ -78,7 +78,7 @@ Or run the full pipeline:
 
 ## Don't Know What to Do? Just Ask.
 
-Claude knows the entire system — every agent, skill, command, and dataset. If you're stuck:
+Claude knows the entire system, every agent, skill, command, and dataset. If you're stuck:
 
 ```
 What can I do with this data?
@@ -88,7 +88,7 @@ Which agents handle root cause analysis?
 Re-run just the chart maker and deck creator.
 ```
 
-You don't need to memorize anything in this README. Think of it as a reference — Claude is the guide.
+You don't need to memorize anything in this README. Think of it as a reference, Claude is the guide.
 
 ---
 
@@ -152,13 +152,13 @@ When you run `/run-pipeline`, Claude orchestrates 18 agents across 4 phases:
                       +-----------------------------+
 ```
 
-**Phase 1 — Frame:** Structures your business question into analytical questions with testable hypotheses.
+**Phase 1, Frame:** Structures your business question into analytical questions with testable hypotheses.
 
-**Phase 2 — Analyze:** Explores the data, verifies loading integrity, runs segmentation/funnel/drivers analysis, drills to root cause, validates findings, and sizes the opportunity.
+**Phase 2, Analyze:** Explores the data, verifies loading integrity, runs segmentation/funnel/drivers analysis, drills to root cause, validates findings, and sizes the opportunity.
 
-**Phase 3 — Story:** Designs a storyboard (Context-Tension-Resolution arc), generates charts with collision detection, and reviews visual quality.
+**Phase 3, Story:** Designs a storyboard (Context-Tension-Resolution arc), generates charts with collision detection, and reviews visual quality.
 
-**Phase 4 — Deck:** Writes a stakeholder narrative, builds a branded Marp slide deck, reviews design, and ensures every recommendation has a follow-up plan. Exports to PDF, HTML, and Google Docs.
+**Phase 4, Deck:** Writes a stakeholder narrative, builds a branded Marp slide deck, reviews design, and ensures every recommendation has a follow-up plan. Exports to PDF, HTML, and Google Docs.
 
 Five execution plans let you run just the part you need:
 
@@ -220,17 +220,17 @@ Or just ask in plain English. "Show me conversion by device" works as well as an
 
 ## Your Data
 
-This repo ships clean — no bundled datasets. Connect your own data and the system builds context around it.
+This repo ships clean, no bundled datasets. Connect your own data and the system builds context around it.
 
 ### Connect your own
 
 Run `/connect-data` for a guided wizard, or `/setup` for full onboarding. Supported sources:
 
-- **CSV files** — drop them in a directory, point Claude at it
-- **DuckDB** — local or MotherDuck
-- **Postgres** — any Postgres-compatible database
-- **BigQuery** — Google BigQuery with service account
-- **Snowflake** — Snowflake with user/password or key pair
+- **CSV files**, drop them in a directory, point Claude at it
+- **DuckDB**, local or MotherDuck
+- **Postgres**, any Postgres-compatible database
+- **BigQuery**, Google BigQuery with service account
+- **Snowflake**, Snowflake with user/password or key pair
 
 The system auto-profiles your data, creates schema documentation, and remembers context across sessions in `.knowledge/datasets/`.
 
@@ -266,17 +266,17 @@ ai-analyst/
 
 ### Skills vs Agents
 
-**Skills** are standards Claude follows automatically. When you make a chart, the Visualization Patterns skill activates. When you start an analysis, Data Quality Check runs. You never invoke them — they apply when their trigger condition matches. Multiple skills can fire at once.
+**Skills** are standards Claude follows automatically. When you make a chart, the Visualization Patterns skill activates. When you start an analysis, Data Quality Check runs. You never invoke them, they apply when their trigger condition matches. Multiple skills can fire at once.
 
 **Agents** are multi-step workflows for specific tasks. They're markdown prompt templates with `{{VARIABLES}}` that get substituted at runtime. The pipeline orchestrates them in dependency order using a DAG engine.
 
 ### Knowledge System
 
 `.knowledge/` persists across sessions:
-- **Dataset context** — schema, quirks, connection details per dataset
-- **Corrections** — logged mistakes so the same SQL error never happens twice
-- **Query archaeology** — proven SQL patterns retrieved before writing new queries
-- **Business glossary** — organization-specific terms, metrics, products, teams (importable from Notion)
+- **Dataset context**, schema, quirks, connection details per dataset
+- **Corrections**, logged mistakes so the same SQL error never happens twice
+- **Query archaeology**, proven SQL patterns retrieved before writing new queries
+- **Business glossary**, organization-specific terms, metrics, products, teams (importable from Notion)
 
 ---
 

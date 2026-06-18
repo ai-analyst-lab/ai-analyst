@@ -8,8 +8,8 @@ Major release. Roughly doubled the system (40 to 65 skills, 22 to 43 agents) and
 
 ### Added
 - Experimentation: `/experiment` (A/B design → power → SRM → analysis → decision) and `/causal` (diff-in-diff, propensity matching, pre/post) with a production `experiment_stats` library
-- `/north-star` — North Star Metric lifecycle coaching (design, audit, drivers, inputs) with a cited playbook
-- `/reliability` — stability eval that runs a question N times and reports STABLE vs DRIFT
+- `/north-star`: North Star Metric lifecycle coaching (design, audit, drivers, inputs) with a cited playbook
+- `/reliability`: stability eval that runs a question N times and reports STABLE vs DRIFT
 - Deck tooling: `/deck-critique`, `/slide-transform`, `/deck-rescue`
 - `/theme-picker` + WCAG-checked brand themes (FiveThirtyEight, Economist)
 - `/analysis-design` and `/stress-test` for plan rigor
@@ -17,7 +17,7 @@ Major release. Roughly doubled the system (40 to 65 skills, 22 to 43 agents) and
 - `/teach` (concept visuals) and `/skill-creator` (author/benchmark skills)
 
 ### Changed
-- Dataset-agnostic by default — no bundled dataset; `/connect-data` builds the knowledge brain locally for your own warehouse
+- Dataset-agnostic by default: no bundled dataset; `/connect-data` builds the knowledge brain locally for your own warehouse
 - Renamed from the internal "AI Analyst Plus" line to **AI Analyst**
 
 ### Removed
@@ -45,7 +45,7 @@ Major release. Roughly doubled the system (40 to 65 skills, 22 to 43 agents) and
 
 ### Changed
 - Fully dataset-agnostic: agents resolve tables/columns from active manifest, not hardcoded names
-- Removed bundled NovaMart dataset — bring your own data with `/connect-data`
+- Removed bundled NovaMart dataset; bring your own data with `/connect-data`
 - Removed legacy setup scripts (`download-data.sh`, `build-duckdb.sh`) and setup docs
 - Updated CLAUDE.md with V2 workflow, agent index, and skill table
 - Python requirement bumped to 3.10+
