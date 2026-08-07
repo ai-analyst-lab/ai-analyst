@@ -18,6 +18,7 @@ dependencies = [
     "matplotlib>=3.6",
     "duckdb>=0.9",
     "pyyaml>=6.0",
+    "scipy>=1.10",
 ]
 
 [project.optional-dependencies]

@@ -87,7 +87,7 @@ class TestAtomicWriteYaml:
         target = tmp_path / "unicode.yaml"
         data = {"emoji": "hello world", "japanese": "テスト"}
         atomic_write_yaml(target, data)
-        loaded = yaml.safe_load(target.read_text())
+        loaded = yaml.safe_load(target.read_text(encoding="utf-8"))
         assert loaded["japanese"] == "テスト"
 
 
