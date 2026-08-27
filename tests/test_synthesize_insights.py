@@ -2,7 +2,7 @@
 
 import pytest
 
-from helpers.analytics_helpers import synthesize_insights
+from helpers.stats.analytics_helpers import synthesize_insights
 
 
 class TestEmptyFindings:

@@ -1,4 +1,4 @@
-"""Tests for helpers/lineage_tracker.py — LineageTracker, get_tracker, track."""
+"""Tests for helpers/provenance/lineage_tracker.py — LineageTracker, get_tracker, track."""
 
 import json
 import os
@@ -6,8 +6,8 @@ import tempfile
 
 import pytest
 
-from helpers.lineage_tracker import LineageTracker, get_tracker, track
-from helpers import lineage_tracker as lineage_module
+from helpers.provenance.lineage_tracker import LineageTracker, get_tracker, track
+from helpers.provenance import lineage_tracker as lineage_module
 
 
 class TestRecordAndChain:

@@ -1,0 +1,87 @@
+dataset: sp500 (bundled, data/sp500/)
+generated: '2026-08-27'
+note: 'Public gold suite for the /eval skill. Every answer was computed deterministically from the bundled
+  CSVs by the generator script (data/eval/make_gold.py). Splits: train cases may be inspected freely;
+  test cases are for honest held-out runs.'
+grading:
+  method: relative tolerance
+  rule: correct when |answer - gold| <= tolerance_pct% of |gold| (absolute match when tolerance_pct is
+    0)
+cases:
+- id: G01
+  split: train
+  question: What was the S&P 500 closing value on 2024-12-31 (sp500_daily.csv)?
+  answer: 5881.6299
+  unit: index points
+  tolerance_pct: 0.1
+  verified_method: exact lookup of Close where Date == 2024-12-31
+- id: G02
+  split: train
+  question: What was the S&P 500 total price return for calendar year 2023, in percent (last close of
+    2022 to last close of 2023)?
+  answer: 24.2305
+  unit: percent
+  tolerance_pct: 1.0
+  verified_method: last Close of 2022 vs last Close of 2023
+- id: G03
+  split: train
+  question: Among the 20 tickers in top20_daily.csv, which had the highest 2024 calendar-year price return,
+    and what was that return in percent? (Answer value = the return; state the ticker in text.)
+  answer: 171.2493
+  unit: percent
+  tolerance_pct: 2.0
+  verified_method: per-ticker last-close 2023 vs 2024; winner NVDA
+- id: G04
+  split: train
+  question: Which sector ETF in sector_etfs_daily.csv had the lowest 2022 calendar-year price return,
+    and what was it in percent? (Answer value = the return.)
+  answer: -37.6295
+  unit: percent
+  tolerance_pct: 2.0
+  verified_method: per-sector last-close 2021 vs 2022; loser Communication Services
+- id: G05
+  split: train
+  question: What was the maximum drawdown of the S&P 500 Close over the whole sp500_daily.csv file, in
+    percent (peak-to-trough, negative number)?
+  answer: -25.4251
+  unit: percent
+  tolerance_pct: 2.0
+  verified_method: min of Close/cummax(Close) - 1
+- id: G06
+  split: train
+  question: What was the average daily S&P 500 volume in 2024, in billions of shares?
+  answer: 3.9211
+  unit: billions of shares
+  tolerance_pct: 1.0
+  verified_method: mean of Volume for 2024 rows / 1e9
+- id: G07
+  split: test
+  question: How many trading days does sp500_daily.csv contain in calendar year 2023?
+  answer: 250.0
+  unit: days
+  tolerance_pct: 0.0
+  verified_method: row count for 2023
+- id: G08
+  split: test
+  question: By how many percentage points did AAPL's 2023 calendar-year price return exceed MSFT's (negative
+    if it trailed), using top20_daily.csv?
+  answer: -9.1832
+  unit: percentage points
+  tolerance_pct: 2.0
+  verified_method: AAPL 49.01% minus MSFT 58.19%
+- id: G09
+  split: test
+  question: What was the S&P 500's largest single-day percent gain in the file, and on what date? (Answer
+    value = the percent gain.)
+  answer: 9.5154
+  unit: percent
+  tolerance_pct: 2.0
+  verified_method: max daily pct_change of Close; date 2025-04-09
+- id: G10
+  split: test
+  question: What is the Pearson correlation between daily percent returns of the S&P 500 (sp500_daily.csv
+    Close) and the XLK technology ETF (sector_etfs_daily.csv Close), over all overlapping days?
+  answer: 0.929
+  unit: correlation
+  tolerance_pct: 3.0
+  verified_method: corr of daily pct_change series on merged dates

@@ -1,0 +1,23 @@
+dataset_id: sp500
+name: "S&P 500 Market Data"
+description: "5 years of daily price data for the S&P 500 index, top 20 constituents, and 11 sector ETFs"
+source_type: csv
+created: "2026-02-23"
+
+local_data:
+  path: data/sp500
+  format: csv
+
+tables:
+  - name: sp500_daily
+    description: "S&P 500 index daily OHLCV prices"
+    row_count: 1255
+    date_range: "2021-02-24 to 2026-02-23"
+  - name: top20_daily
+    description: "Top 20 S&P 500 stocks daily OHLCV prices (long format)"
+    row_count: 25100
+    date_range: "2021-02-24 to 2026-02-23"
+  - name: sector_etfs_daily
+    description: "11 SPDR sector ETFs daily OHLCV prices (long format)"
+    row_count: 13805
+    date_range: "2021-02-24 to 2026-02-23"

@@ -42,7 +42,7 @@ CONTRACT_END -->
 
 ### Minimal contract (no dependencies)
 
-From `agents/question-framing.md`:
+From `agents/pipeline/question-framing.md`:
 
 ```yaml
 <!-- CONTRACT_START
@@ -72,7 +72,7 @@ CONTRACT_END -->
 
 ### Contract with upstream dependency and knowledge context
 
-From `agents/data-explorer.md`:
+From `agents/pipeline/data-explorer.md`:
 
 ```yaml
 <!-- CONTRACT_START
@@ -102,7 +102,7 @@ CONTRACT_END -->
 
 ### Contract with agent-sourced inputs
 
-From `agents/story-architect.md`:
+From `agents/pipeline/story-architect.md`:
 
 ```yaml
 <!-- CONTRACT_START
@@ -197,7 +197,7 @@ Output from agent X. The orchestrator reads agent X's `outputs` to locate the fi
 
 5. **Every `agent:X` source must be satisfiable.** The agent named in `agent:X` must exist as a file in `agents/` and must declare the referenced output in its own CONTRACT block.
 
-6. **`name` must match filename.** The `name` field in the CONTRACT must exactly match the agent's filename minus the `.md` extension. `name: data-explorer` lives in `agents/data-explorer.md`.
+6. **`name` must match filename.** The `name` field in the CONTRACT must exactly match the agent's filename minus the `.md` extension. `name: data-explorer` lives in `agents/pipeline/data-explorer.md`.
 
 7. **Use `{active}` in knowledge_context paths.** Do not hardcode dataset names. The orchestrator replaces `{active}` with the current dataset name from `.knowledge/active.yaml`.
 

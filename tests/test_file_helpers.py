@@ -1,10 +1,10 @@
-"""Tests for helpers/file_helpers.py -- atomic writes, content hashing, directory management."""
+"""Tests for helpers/pipeline/file_helpers.py -- atomic writes, content hashing, directory management."""
 
 import pytest
 import yaml
 from pathlib import Path
 
-from helpers.file_helpers import (
+from helpers.pipeline.file_helpers import (
     atomic_write,
     atomic_write_yaml,
     content_hash,

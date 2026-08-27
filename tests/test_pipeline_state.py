@@ -1,11 +1,11 @@
-"""Tests for helpers/pipeline_state.py -- V1-to-V2 migration and version detection."""
+"""Tests for helpers/pipeline/pipeline_state.py -- V1-to-V2 migration and version detection."""
 
 from __future__ import annotations
 
 import pytest
 from datetime import datetime, timezone
 
-from helpers.pipeline_state import (
+from helpers.pipeline.pipeline_state import (
     detect_schema_version,
     is_v1_state,
     migrate_v1_to_v2,

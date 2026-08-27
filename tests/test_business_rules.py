@@ -1,5 +1,5 @@
 """
-Unit tests for helpers/business_rules.py -- Business Rules Validator.
+Unit tests for helpers/validation/business_rules.py -- Business Rules Validator.
 
 Covers the 4-layer validation framework's business plausibility layer:
 range checks, metric relationships, temporal consistency, segment coverage,
@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from helpers.business_rules import (
+from helpers.validation.business_rules import (
     validate_ranges,
     validate_metric_relationships,
     validate_temporal_consistency,

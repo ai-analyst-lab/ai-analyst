@@ -1,4 +1,4 @@
-"""Tests for helpers/schema_migration.py."""
+"""Tests for helpers/pipeline/schema_migration.py."""
 from __future__ import annotations
 
 import json
@@ -6,7 +6,7 @@ import os
 
 import pytest
 
-from helpers.schema_migration import (
+from helpers.pipeline.schema_migration import (
     CURRENT_VERSIONS,
     SUPPORTED_TYPES,
     clear_registry,

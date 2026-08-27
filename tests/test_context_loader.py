@@ -1,4 +1,4 @@
-"""Tests for helpers/context_loader.py."""
+"""Tests for helpers/knowledge/context_loader.py."""
 from __future__ import annotations
 
 import json
@@ -7,7 +7,7 @@ import os
 import pytest
 import yaml
 
-from helpers.context_loader import (
+from helpers.knowledge.context_loader import (
     LoadTier,
     estimate_tokens,
     load_multiple_tiered,

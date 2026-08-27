@@ -1,0 +1,23 @@
+dataset_id: luxury-hotels
+name: "Luxury Hotel Demand Signals"
+description: "Google Trends search interest for 5 luxury hotel brands + generic luxury terms (weekly, 5yr), paired with FRED hotel/macro indicators (monthly). Built to analyze luxury hotel demand patterns and their macro drivers."
+source_type: csv
+source_apis:
+  - "Google Trends (pytrends) — US, weekly, 2021-02 to 2026-02"
+  - "FRED (Federal Reserve Economic Data) — monthly, 2020-01 to 2026-01"
+created: "2026-02-23"
+pull_script: "scripts/pull_luxury_hotel_trends.py"
+
+local_data:
+  path: data/luxury-hotels
+  format: csv
+
+tables:
+  - name: google_trends_luxury_hotels
+    description: "Weekly Google Trends search interest (0-100 scale, normalized) for 5 luxury hotel brands and 2 generic luxury terms. US geo. Batch-normalized using 'luxury hotel' as anchor."
+    row_count: 262
+    date_range: "2021-02-21 to 2026-02-22"
+  - name: fred_hotel_macro
+    description: "Monthly FRED series: hotel/lodging CPI, airline fare CPI, consumer sentiment, PCE, savings rate, retail sales. Mixed end dates due to release lag."
+    row_count: 73
+    date_range: "2020-01-01 to 2026-01-01"

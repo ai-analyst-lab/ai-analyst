@@ -1,11 +1,11 @@
-"""Tests for helpers/entity_resolver.py -- entity resolution and disambiguation."""
+"""Tests for helpers/knowledge/entity_resolver.py -- entity resolution and disambiguation."""
 from __future__ import annotations
 
 import yaml
 import pytest
 from pathlib import Path
 
-from helpers.entity_resolver import (
+from helpers.knowledge.entity_resolver import (
     load_entity_index,
     resolve_entity,
     build_entity_index,

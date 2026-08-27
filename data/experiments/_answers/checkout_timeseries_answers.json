@@ -1,0 +1,31 @@
+{
+  "true_effect": "+1.2pp adjusted conversion lift (14.9% → 16.3% raw)",
+  "pre_period": "2026-02-01 to 2026-02-28",
+  "post_period": "2026-03-01 to 2026-03-28",
+  "intervention": "2026-03-01 (checkout redesign launch)",
+  "seasonality": "Day-of-week: higher on Thu/Fri, lower on weekends",
+  "organic_drift": "+0.01pp/day upward trend",
+  "expected_analysis": "Pre-post with day-of-week controls",
+  "notes": "56 days of daily checkout conversion (28 pre, 28 post) with a redesign launch on 2026-03-01, day-of-week seasonality and a slow organic upward drift. A naive pre/post comparison overstates the effect; controlling for trend and day-of-week recovers ~+1.2pp.",
+  "generator_params": {
+    "seed": 20260827,
+    "script": "data/experiments/make_experiments.py",
+    "days": 56,
+    "start": "2026-02-01",
+    "intervention": "2026-03-01",
+    "sessions_per_day": "~8000 (normal, sd 400)",
+    "base_rate": 0.14765,
+    "organic_drift_per_day": 0.0001,
+    "treatment_effect": 0.012,
+    "dow_effect_pp": {
+      "Mon": 0.0,
+      "Tue": 0.1,
+      "Wed": 0.1,
+      "Thu": 0.6,
+      "Fri": 0.8,
+      "Sat": -0.7,
+      "Sun": -0.9
+    },
+    "daily_noise_sd": 0.002
+  }
+}

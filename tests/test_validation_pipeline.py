@@ -14,7 +14,7 @@ class TestOrchestrators:
     """Orchestrator functions dispatch correctly with config dicts."""
 
     def test_structural_orchestrator_full_config(self, synthetic_orders):
-        from helpers.structural_validator import run_structural_checks
+        from helpers.validation.structural_validator import run_structural_checks
         config = {
             "expected_columns": ["order_id", "user_id", "amount"],
             "primary_key": ["order_id"],
@@ -31,7 +31,7 @@ class TestOrchestrators:
             assert key in result["details"]
 
     def test_logical_orchestrator_full_config(self, synthetic_orders):
-        from helpers.logical_validator import run_logical_checks
+        from helpers.validation.logical_validator import run_logical_checks
         summary = (synthetic_orders[["status", "amount"]]
                    .groupby("status")["amount"].sum().reset_index())
         config = {
@@ -47,7 +47,7 @@ class TestOrchestrators:
         assert "aggregation_consistency" in result["results"]
 
     def test_business_rules_orchestrator_full_config(self, synthetic_orders):
-        from helpers.business_rules import validate_business_rules
+        from helpers.validation.business_rules import validate_business_rules
         rules_config = {
             "ranges": [{"column": "amount", "min": 0, "max": 100000, "label": "Amount"}],
             "no_negative": ["amount"],
@@ -71,11 +71,11 @@ class TestCrossLayerPipeline:
     """All 4 layers sequentially on same dataset -> confidence score."""
 
     def test_clean_data_produces_high_confidence(self, synthetic_orders, synthetic_users):
-        from helpers.structural_validator import run_structural_checks
-        from helpers.logical_validator import run_logical_checks
-        from helpers.business_rules import validate_business_rules
-        from helpers.simpsons_paradox import check_simpsons_multi_segment
-        from helpers.confidence_scoring import score_confidence
+        from helpers.validation.structural_validator import run_structural_checks
+        from helpers.validation.logical_validator import run_logical_checks
+        from helpers.validation.business_rules import validate_business_rules
+        from helpers.validation.simpsons_paradox import check_simpsons_multi_segment
+        from helpers.validation.confidence_scoring import score_confidence
 
         merged = synthetic_orders.merge(
             synthetic_users[["user_id", "device", "country"]], on="user_id", how="left",
@@ -117,12 +117,12 @@ class TestCrossLayerPipeline:
         confidence = score_confidence(validation_results, metadata={"row_count": len(merged)})
         assert confidence["score"] > 0
         assert confidence["grade"] in ("A", "B", "C")
-        assert len(confidence["factors"]) == 7
+        assert len(confidence["factors"]) == 9
 
     def test_dirty_data_produces_low_confidence(self, dirty_orders):
-        from helpers.structural_validator import run_structural_checks
-        from helpers.business_rules import validate_business_rules
-        from helpers.confidence_scoring import score_confidence
+        from helpers.validation.structural_validator import run_structural_checks
+        from helpers.validation.business_rules import validate_business_rules
+        from helpers.validation.confidence_scoring import score_confidence
 
         struct = run_structural_checks(dirty_orders, {
             "primary_key": ["order_id"],
@@ -150,8 +150,8 @@ class TestDegradation:
     """Confidence scoring works when layers are missing or empty."""
 
     def test_only_structural_layer(self, synthetic_orders):
-        from helpers.structural_validator import validate_completeness, validate_primary_key
-        from helpers.confidence_scoring import score_confidence
+        from helpers.validation.structural_validator import validate_completeness, validate_primary_key
+        from helpers.validation.confidence_scoring import score_confidence
 
         pk = validate_primary_key(synthetic_orders, ["order_id"])
         comp = validate_completeness(synthetic_orders, ["order_id", "amount"])
@@ -165,8 +165,8 @@ class TestDegradation:
         assert len(missing) >= 3
 
     def test_only_simpsons_layer(self, no_paradox_data):
-        from helpers.simpsons_paradox import check_simpsons_paradox
-        from helpers.confidence_scoring import score_confidence
+        from helpers.validation.simpsons_paradox import check_simpsons_paradox
+        from helpers.validation.confidence_scoring import score_confidence
 
         sp = check_simpsons_paradox(
             no_paradox_data, metric_column="admitted",
@@ -177,15 +177,15 @@ class TestDegradation:
         assert result["grade"] in ("C", "D", "F")
 
     def test_empty_validation_results(self):
-        from helpers.confidence_scoring import score_confidence
+        from helpers.validation.confidence_scoring import score_confidence
         result = score_confidence({})
         assert result["score"] == 0
         assert result["grade"] == "F"
         assert len(result["blockers"]) > 0
 
     def test_none_metadata(self, synthetic_orders):
-        from helpers.structural_validator import validate_primary_key
-        from helpers.confidence_scoring import score_confidence
+        from helpers.validation.structural_validator import validate_primary_key
+        from helpers.validation.confidence_scoring import score_confidence
 
         pk = validate_primary_key(synthetic_orders, ["order_id"])
         result = score_confidence({"primary_key": pk}, metadata=None)
@@ -200,27 +200,27 @@ class TestConfigDriven:
     """Config dicts control which checks execute in orchestrators."""
 
     def test_structural_empty_config_uses_defaults(self, synthetic_orders):
-        from helpers.structural_validator import run_structural_checks
+        from helpers.validation.structural_validator import run_structural_checks
         result = run_structural_checks(synthetic_orders, config={})
         assert result["checks_run"] == 3
         for key in ("schema", "completeness", "row_count"):
             assert key in result["details"]
 
     def test_structural_only_pk(self, synthetic_orders):
-        from helpers.structural_validator import run_structural_checks
+        from helpers.validation.structural_validator import run_structural_checks
         result = run_structural_checks(synthetic_orders, config={"primary_key": ["order_id"]})
         assert result["checks_run"] == 1
         assert "primary_key" in result["details"]
         assert "schema" not in result["details"]
 
     def test_logical_no_checks_when_empty_config(self):
-        from helpers.logical_validator import run_logical_checks
+        from helpers.validation.logical_validator import run_logical_checks
         result = run_logical_checks(detail_df=pd.DataFrame({"a": [1, 2, 3]}), config={})
         assert result["checks_run"] == 0
         assert result["ok"] is False
 
     def test_logical_only_trend(self):
-        from helpers.logical_validator import run_logical_checks
+        from helpers.validation.logical_validator import run_logical_checks
         result = run_logical_checks(
             detail_df=None, config={"trend_values": [10, 11, 12, 13, 14, 15, 16]},
         )
@@ -229,7 +229,7 @@ class TestConfigDriven:
         assert result["results"]["trend_consistency"]["ok"] is True
 
     def test_business_rules_only_ranges(self, synthetic_orders):
-        from helpers.business_rules import validate_business_rules
+        from helpers.validation.business_rules import validate_business_rules
         result = validate_business_rules(synthetic_orders, {
             "ranges": [{"column": "amount", "min": 0, "max": 999999, "label": "amt"}],
         })

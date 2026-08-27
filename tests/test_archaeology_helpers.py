@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from helpers.archaeology_helpers import (
+from helpers.knowledge.archaeology_helpers import (
     capture_cookbook_entry,
     capture_join_pattern,
     capture_table_cheatsheet,
@@ -10,7 +10,7 @@ from helpers.archaeology_helpers import (
     search_cookbook,
     search_table_cheatsheet,
 )
-from helpers.file_helpers import atomic_write_yaml, safe_read_yaml
+from helpers.pipeline.file_helpers import atomic_write_yaml, safe_read_yaml
 
 
 @pytest.fixture()

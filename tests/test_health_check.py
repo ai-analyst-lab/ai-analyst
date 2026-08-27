@@ -1,9 +1,9 @@
-"""Tests for helpers/health_check.py."""
+"""Tests for helpers/pipeline/health_check.py."""
 
 import pytest
 from pathlib import Path
 
-from helpers.health_check import (
+from helpers.pipeline.health_check import (
     check_setup_state,
     check_knowledge_integrity,
     check_data_connectivity,
@@ -14,7 +14,7 @@ from helpers.health_check import (
 
 class TestCheckSetupState:
     def test_no_setup_file(self, tmp_path):
-        import helpers.health_check as hc
+        import helpers.pipeline.health_check as hc
         original = hc._KNOWLEDGE_DIR
         hc._KNOWLEDGE_DIR = tmp_path / ".knowledge"
         (tmp_path / ".knowledge").mkdir()
@@ -26,7 +26,7 @@ class TestCheckSetupState:
             hc._KNOWLEDGE_DIR = original
 
     def test_complete_setup(self, tmp_path):
-        import helpers.health_check as hc
+        import helpers.pipeline.health_check as hc
         original = hc._KNOWLEDGE_DIR
         knowledge_dir = tmp_path / ".knowledge"
         knowledge_dir.mkdir()
@@ -48,7 +48,7 @@ class TestCheckSetupState:
             hc._KNOWLEDGE_DIR = original
 
     def test_partial_setup(self, tmp_path):
-        import helpers.health_check as hc
+        import helpers.pipeline.health_check as hc
         original = hc._KNOWLEDGE_DIR
         knowledge_dir = tmp_path / ".knowledge"
         knowledge_dir.mkdir()

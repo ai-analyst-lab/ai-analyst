@@ -11,7 +11,7 @@ theme:
 colors:
   # Primary palette (SWD-inspired)
   primary: "#4878CF"        # Blue — key data, call-to-action
-  secondary: "#6ACC65"      # Green — positive, growth
+  secondary: "#5ABF55"      # Green — positive, growth
   accent: "#D65F5F"         # Red — alerts, negative, emphasis
   neutral: "#B0B0B0"        # Gray — supporting, context
   background: "#F7F6F2"     # Warm off-white (matches analytics_chart_style.mplstyle)
@@ -20,11 +20,11 @@ colors:
   # Categorical palette (8 colors, colorblind-safe — no red-green adjacent)
   categorical:
     - "#4878CF"   # blue
-    - "#6ACC65"   # green
+    - "#5ABF55"   # green
     - "#B47CC7"   # purple
     - "#D65F5F"   # red
     - "#C4AD66"   # gold
-    - "#77BEDB"   # light blue
+    - "#5FAECC"   # light blue
     - "#D68E5C"   # orange
     - "#8C8C8C"   # gray
   # Sequential palette (for heatmaps, density)
@@ -36,7 +36,7 @@ colors:
   diverging:
     negative: "#D65F5F"     # Red — decline, loss
     neutral: "#F7F6F2"      # Background — midpoint
-    positive: "#6ACC65"     # Green — growth, improvement
+    positive: "#5ABF55"     # Green — growth, improvement
   # Highlight colors (for SWD highlight_bar/highlight_line)
   highlight:
     focus: "#4878CF"        # Draw attention to key data

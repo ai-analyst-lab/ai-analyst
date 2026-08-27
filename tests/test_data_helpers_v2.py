@@ -1,4 +1,4 @@
-"""Tests for helpers/data_helpers.py — V2 (no NovaMart dependencies)."""
+"""Tests for helpers/data/data_helpers.py — V2 (no NovaMart dependencies)."""
 
 import tempfile
 from pathlib import Path
@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from helpers.data_helpers import (
+from helpers.data.data_helpers import (
     list_tables,
     read_table,
     get_data_source_info,

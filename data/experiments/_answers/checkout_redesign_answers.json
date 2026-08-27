@@ -1,0 +1,26 @@
+{
+  "true_effect": "10.5% relative lift in checkout completion (15.2% → 16.8%)",
+  "baseline_rate": 0.152,
+  "treatment_rate": 0.168,
+  "relative_lift": 0.105,
+  "aov_control": 47.2,
+  "aov_treatment": 45.8,
+  "srm": "PASS",
+  "guardrails": "AOV slightly lower in treatment — investigate trade-off",
+  "expected_verdict": "SHIP with AOV monitoring",
+  "notes": "A/B test of a checkout redesign. Conversion up (15.2% -> 16.8%), average order value slightly down (47.2 -> 45.8). Ship decision should weigh the AOV trade-off, not just the primary metric.",
+  "generator_params": {
+    "seed": 20260827,
+    "script": "data/experiments/make_experiments.py",
+    "n_per_group": 10000,
+    "baseline_rate": 0.152,
+    "treatment_rate": 0.168,
+    "aov_control": 47.2,
+    "aov_treatment": 45.8,
+    "aov_distribution": "gamma, shape 6, rescaled to exact mean",
+    "assignment_window": [
+      "2026-03-01",
+      "2026-03-14"
+    ]
+  }
+}

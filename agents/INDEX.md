@@ -23,21 +23,40 @@
 ## Agents
 | Agent | Path | Invoke When |
 |-------|------|-------------|
-| Question Framing | `agents/question-framing.md` | User provides a business problem to analyze |
-| Hypothesis | `agents/hypothesis.md` | Questions are framed, need testable hypotheses |
-| Data Explorer | `agents/data-explorer.md` | Need to understand what data exists in a source |
-| Descriptive Analytics | `agents/descriptive-analytics.md` | Need to analyze a dataset (segmentation, funnels, drivers) |
-| Overtime / Trend | `agents/overtime-trend.md` | Need time-series analysis or trend identification |
-| Cohort Analysis | `agents/cohort-analysis.md` | Need cohort retention curves, LTV analysis, or vintage comparison |
-| Root Cause Investigator | `agents/root-cause-investigator.md` | Initial analysis found an anomaly — need to drill down iteratively to find the specific root cause |
-| Opportunity Sizer | `agents/opportunity-sizer.md` | Root cause identified or opportunity found — quantify the business impact with sensitivity analysis |
-| Experiment Designer | `agents/experiment-designer.md` | Need to test a causal hypothesis — designs A/B tests or quasi-experimental analyses with power estimation and decision rules |
-| Story Architect | `agents/story-architect.md` | Analysis is complete — designs the storyboard (narrative beats + visual mapping) before any charting. Pass `{{CONTEXT}}` for workshop/talk closing sequences. |
-| Chart Maker | `agents/chart-maker.md` | Need to generate a specific chart. |
-| Visual Design Critic | `agents/visual-design-critic.md` | After Chart Maker generates charts — reviews against SWD checklist. After Deck Creator — reviews slide-level design with `{{DECK_FILE}}` and `{{THEME}}`. |
-| Narrative Coherence Reviewer | `agents/narrative-coherence-reviewer.md` | After Story Architect produces the storyboard, before charting — reviews story flow, beat structure, and Closing beats if present |
-| Storytelling | `agents/storytelling.md` | Analysis and charts are complete, need a narrative |
-| Source Tie-Out | `agents/source-tieout.md` | After Data Explorer, before analysis — verify data loading integrity by comparing pandas direct-read vs DuckDB SQL on foundational metrics. HALT on mismatch. |
-| Validation | `agents/validation.md` | Need to verify findings before presenting |
-| Deck Creator | `agents/deck-creator.md` | Need to create a presentation from analysis. Supports `{{THEME}}` (analytics-dark) and `{{CONTEXT}}` (workshop/talk closing sequence). |
-| Comms Drafter | `agents/comms-drafter.md` | Need stakeholder communications (Slack summary, email brief, exec summary). Non-critical — pipeline continues if this fails. |
+| Question Framing | `agents/pipeline/question-framing.md` | User provides a business problem to analyze |
+| Hypothesis | `agents/pipeline/hypothesis.md` | Questions are framed, need testable hypotheses |
+| Data Explorer | `agents/pipeline/data-explorer.md` | Need to understand what data exists in a source |
+| Descriptive Analytics | `agents/pipeline/descriptive-analytics.md` | Need to analyze a dataset (segmentation, funnels, drivers) |
+| Overtime / Trend | `agents/pipeline/overtime-trend.md` | Need time-series analysis or trend identification |
+| Cohort Analysis | `agents/pipeline/cohort-analysis.md` | Need cohort retention curves, LTV analysis, or vintage comparison |
+| Root Cause Investigator | `agents/pipeline/root-cause-investigator.md` | Initial analysis found an anomaly — need to drill down iteratively to find the specific root cause |
+| Opportunity Sizer | `agents/pipeline/opportunity-sizer.md` | Root cause identified or opportunity found — quantify the business impact with sensitivity analysis |
+| Experiment Designer | `agents/experiments/experiment-designer.md` | Need to test a causal hypothesis — designs A/B tests or quasi-experimental analyses with power estimation and decision rules |
+| Story Architect | `agents/pipeline/story-architect.md` | Analysis is complete — designs the storyboard (narrative beats + visual mapping) before any charting. Pass `{{CONTEXT}}` for workshop/talk closing sequences. |
+| Chart Maker | `agents/pipeline/chart-maker.md` | Need to generate a specific chart. |
+| Visual Design Critic | `agents/review/visual-design-critic.md` | After Chart Maker generates charts — reviews against SWD checklist. After Deck Creator — reviews slide-level design with `{{DECK_FILE}}` and `{{THEME}}`. |
+| Narrative Coherence Reviewer | `agents/review/narrative-coherence-reviewer.md` | After Story Architect produces the storyboard, before charting — reviews story flow, beat structure, and Closing beats if present |
+| Storytelling | `agents/pipeline/storytelling.md` | Analysis and charts are complete, need a narrative |
+| Cross-Verification | `agents/pipeline/cross-verification.md` | After analysis (step 6.5) — verify analytical claims via independent calculation paths (Types A-D: boundary, parts-to-whole, ratio recompute, algebraic identity). Includes reproducibility checks. |
+| Receipt Generator | `agents/pipeline/receipt-generator.md` | After close-the-loop (step 18.5, conditional) — full audit trail for Reproduce audience. Query log, validation, cross-verification, reproducibility. Tier 3 or `/export receipt`. |
+| Notion Export | `agents/export/notion-export.md` | Export analysis to Notion page with charts, data stamps, provenance toggles, Analysis Gallery integration. Standalone, invoked via `/export notion`. |
+| Validation | `agents/pipeline/validation.md` | Need to verify findings before presenting |
+| Deck Creator | `agents/pipeline/deck-creator.md` | Need to create a presentation from analysis. Supports `{{THEME}}` (analytics-dark) and `{{CONTEXT}}` (workshop/talk closing sequence). |
+| Comms Drafter | `agents/pipeline/comms-drafter.md` | Need stakeholder communications (Slack summary, email brief, exec summary). Non-critical — pipeline continues if this fails. |
+| Google Slides Creator | `agents/export/google-slides-creator.md` | Need a live, editable Google Slides deck (alternative to Deck Creator). Uses `{{NARRATIVE}}`, `{{STORYBOARD}}`, optional `{{THEME}}` (light/dark) and `{{DECK_TITLE}}`. Requires Google Workspace MCP. |
+| Google Slides Reviewer | `agents/review/google-slides-reviewer.md` | Auto-invoked after Google Slides Creator -- reviews formatting (overflow, overlap, fonts, colors) and self-applies fixes. Max 2 iterations. |
+| Google Doc Creator | `agents/export/google-doc-creator.md` | Need a live, editable Google Doc from analysis narrative + charts. Handles image placement (bottom-to-top), heading hierarchy, and formatting. Requires Google Workspace MCP. |
+| Google Doc Reviewer | `agents/review/google-doc-reviewer.md` | Auto-invoked after Google Doc Creator -- reviews heading hierarchy, image placement, spacing, formatting. Self-applies fixes. Max 2 iterations. |
+| Experiment Analyzer | `agents/experiments/experiment-analyzer.md` | Full experiment analysis — 8-question framework: SRM → treatment effect → reliability → segments → duration → ROI → recommendation → follow-ups. Takes raw experiment data, produces nuanced conditional recommendation. |
+| Experiment Readout | `agents/experiments/experiment-readout.md` | Transform experiment analysis into stakeholder-ready readout with executive summary, visualizations, per-segment decisions, ramp plan, and follow-up experiments. Adapts to audience (executive/technical/cross-functional). |
+| Hypothesis Sharpener | `agents/experiments/hypothesis-sharpener.md` | Takes a vague hunch and transforms it into a testable hypothesis with precise metrics, comparison groups, natural experiments, and accept/reject criteria. Called by `/analysis-design` skill. |
+| Confound Scanner | `agents/experiments/confound-scanner.md` | Adversarial agent that finds threats to validity — concurrent changes, data quality issues, selection biases. Argues AGAINST the hypothesis to make the investigation airtight. Called by `/analysis-design` skill. |
+| Feedback Synthesizer | `agents/experiments/feedback-synthesizer.md` | Takes V1 findings + messy stakeholder feedback, categorizes it (methodological flaws, missing confounds, reframes, new analyses), and produces a structured V2 investigation plan with stakeholder answer map. Called by `/analysis-design` skill. |
+| Experiment Interpreter | `agents/experiments/experiment-interpreter.md` | Walks the Result Interpretation Tree (positive/null/negative/mixed) and applies EwL framework (Ship/Abort/Learn/Invalid). Called by `/experiment interpret`. |
+| Experiment Monitor | `agents/experiments/experiment-monitor.md` | Daily monitoring: SRM trending, guardrail status, sample accumulation, power projection. Called by `/experiment monitor`. |
+| Causal Method Selector | `agents/causal/causal-method-selector.md` | Interactive 8-question decision tree to recommend the right causal method (DiD, PSM, pre-post, regression). Called by `/causal select`. |
+| Causal Analyzer | `agents/causal/causal-analyzer.md` | Executes the selected causal method using `helpers/stats/experiment_stats/causal/`. Called by `/causal analyze`. |
+| Causal Assumption Checker | `agents/causal/causal-assumption-checker.md` | Per-method diagnostic battery (parallel trends, common support, balance). Called by `/causal check`. |
+| Causal Sensitivity | `agents/causal/causal-sensitivity.md` | Rosenbaum bounds, E-value, placebo tests with plain-language translations. Called by `/causal sensitivity`. |
+| Causal Interpreter | `agents/causal/causal-interpreter.md` | Places estimate on the confidence ladder and synthesizes verdicts. Called by `/causal report`. |
+| Causal Report Generator | `agents/causal/causal-report-generator.md` | Full report with mandatory caveats per method (non-negotiable). Called by `/causal report`. |

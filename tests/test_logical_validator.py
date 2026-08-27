@@ -1,5 +1,5 @@
 """
-Unit tests for helpers/logical_validator.py — new ok-based API.
+Unit tests for helpers/validation/logical_validator.py — new ok-based API.
 
 Tests cover all 8 public functions:
     validate_aggregation_consistency (new API path)
@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from helpers.logical_validator import (
+from helpers.validation.logical_validator import (
     validate_aggregation_consistency,
     validate_percentages_sum,
     validate_monotonic,

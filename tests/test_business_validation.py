@@ -1,10 +1,10 @@
-"""Tests for helpers/business_validation.py."""
+"""Tests for helpers/validation/business_validation.py."""
 
 import pytest
 import pandas as pd
 from pathlib import Path
 
-from helpers.business_validation import (
+from helpers.validation.business_validation import (
     load_metric_rules,
     load_guardrail_pairs,
     validate_against_knowledge,
@@ -36,7 +36,7 @@ class TestLoadMetricRules:
         )
 
         # Monkey-patch the knowledge dir
-        import helpers.business_validation as bv
+        import helpers.validation.business_validation as bv
         original = bv._KNOWLEDGE_DIR
         bv._KNOWLEDGE_DIR = tmp_path / ".knowledge"
         try:
@@ -74,7 +74,7 @@ class TestValidateAgainstKnowledge:
             "name: rate\nmin_value: 0\nmax_value: 1\n"
         )
 
-        import helpers.business_validation as bv
+        import helpers.validation.business_validation as bv
         original = bv._KNOWLEDGE_DIR
         bv._KNOWLEDGE_DIR = tmp_path / ".knowledge"
         try:
@@ -92,7 +92,7 @@ class TestValidateAgainstKnowledge:
             "name: rate\nmin_value: 0\nmax_value: 1\n"
         )
 
-        import helpers.business_validation as bv
+        import helpers.validation.business_validation as bv
         original = bv._KNOWLEDGE_DIR
         bv._KNOWLEDGE_DIR = tmp_path / ".knowledge"
         try:

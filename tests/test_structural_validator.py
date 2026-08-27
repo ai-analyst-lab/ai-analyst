@@ -1,5 +1,5 @@
 """
-Unit tests for helpers/structural_validator.py.
+Unit tests for helpers/validation/structural_validator.py.
 
 20 test cases across 6 test classes covering all public functions:
 validate_schema, validate_primary_key, validate_completeness,
@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from helpers.structural_validator import (
+from helpers.validation.structural_validator import (
     validate_schema,
     validate_primary_key,
     validate_completeness,

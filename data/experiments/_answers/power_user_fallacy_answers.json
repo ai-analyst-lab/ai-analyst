@@ -1,0 +1,32 @@
+{
+  "true_causal_effect": "+10pp retention from heavy usage",
+  "naive_estimate": "~+30pp (confounded by job_role)",
+  "confounders": [
+    "job_role (affects both heavy_usage and retention)"
+  ],
+  "expected_analysis": "Segment by job_role to reveal Simpson's paradox; PSM or regression with job_role as covariate",
+  "notes": "Observational usage vs retention data. Engineers are both more likely to be heavy users and more likely to retain, so the naive heavy-vs-light retention gap (~+30pp) overstates the true within-role effect (+10pp) about 3x. Segmenting by job_role or adjusting for it reveals the confounding.",
+  "generator_params": {
+    "seed": 20260827,
+    "script": "data/experiments/make_experiments.py",
+    "n_users": 6000,
+    "design": "observational (no randomization)",
+    "job_role_mix": {
+      "engineer": 0.5,
+      "pm": 0.3,
+      "designer": 0.2
+    },
+    "p_heavy_usage": {
+      "engineer": 0.7,
+      "pm": 0.2,
+      "designer": 0.2
+    },
+    "base_retention": {
+      "engineer": 0.7,
+      "pm": 0.3,
+      "designer": 0.3
+    },
+    "heavy_usage_effect_pp": 10.0,
+    "note": "within-role effect is exactly +10pp; naive pooled gap ~+30pp"
+  }
+}
