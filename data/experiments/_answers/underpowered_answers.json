@@ -1,0 +1,19 @@
+{
+  "true_effect": "2% relative lift (real but small)",
+  "sample_size_per_group": 500,
+  "power_to_detect": "<20%",
+  "srm": "PASS",
+  "expected_verdict": "LEARN (underpowered null)",
+  "notes": "A real but small 2% relative lift exists, but with 500/group the experiment has <20% power, so the observed difference is not statistically significant. The correct read is LEARN (underpowered), not a confirmed null.",
+  "generator_params": {
+    "seed": 20260827,
+    "script": "data/experiments/make_experiments.py",
+    "n_per_group": 500,
+    "baseline_rate": 0.35,
+    "relative_lift": 0.02,
+    "assignment_window": [
+      "2026-03-02",
+      "2026-03-15"
+    ]
+  }
+}

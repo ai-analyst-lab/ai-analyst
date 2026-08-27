@@ -9,12 +9,12 @@ import json
 import pytest
 import yaml
 
-from helpers.entity_resolver import load_entity_index, resolve_entity
-from helpers.business_context import load_business_context, get_glossary
-from helpers.archaeology_helpers import capture_cookbook_entry, search_cookbook
-from helpers.pipeline_state import migrate_v1_to_v2, detect_schema_version
-from helpers.context_loader import load_tiered, LoadTier
-from helpers.schema_migration import (
+from helpers.knowledge.entity_resolver import load_entity_index, resolve_entity
+from helpers.knowledge.business_context import load_business_context, get_glossary
+from helpers.knowledge.archaeology_helpers import capture_cookbook_entry, search_cookbook
+from helpers.pipeline.pipeline_state import migrate_v1_to_v2, detect_schema_version
+from helpers.knowledge.context_loader import load_tiered, LoadTier
+from helpers.pipeline.schema_migration import (
     CURRENT_VERSIONS,
     migrate_if_needed,
     register_migration,

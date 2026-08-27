@@ -194,7 +194,7 @@ Load with `load_theme("mycompany")`
 
 ### Loading a theme
 ```python
-from helpers.theme_loader import load_theme, get_color
+from helpers.viz.theme_loader import load_theme, get_color
 
 # Load base theme (analytics)
 theme = load_theme()
@@ -209,8 +209,8 @@ bg = get_color(theme, "colors.background")
 
 ### Applying to charts
 ```python
-from helpers.chart_helpers import swd_style, highlight_bar
-from helpers.chart_palette import apply_theme_colors
+from helpers.viz.chart_helpers import swd_style, highlight_bar
+from helpers.viz.chart_palette import apply_theme_colors
 
 # Apply theme to matplotlib
 theme = load_theme("mycompany")
@@ -225,7 +225,7 @@ fig, ax = highlight_bar(
 
 ### Using the palette
 ```python
-from helpers.chart_palette import (
+from helpers.viz.chart_palette import (
     highlight_palette, categorical_colors, palette_for_n
 )
 
@@ -242,7 +242,7 @@ colors = palette_for_n(theme, n=12)
 
 ### Chart-level theme application
 ```python
-from helpers.chart_helpers import swd_style, highlight_bar
+from helpers.viz.chart_helpers import swd_style, highlight_bar
 
 # Apply theme at start of charting
 swd_style(theme="mycompany")
@@ -255,7 +255,7 @@ fig2, ax2 = highlight_line(data2, x="date", y="metric", highlight="2024-Q4")
 ### Creating decks with themes
 ```python
 # In deck-creator.md agent or Deck Creator workflow
-from helpers.theme_loader import load_theme
+from helpers.viz.theme_loader import load_theme
 
 theme = load_theme("mycompany")
 
@@ -283,7 +283,7 @@ All theme colors should meet WCAG 2.1 AA contrast requirements:
 The `chart_palette` module provides automatic contrast checking:
 
 ```python
-from helpers.chart_palette import ensure_contrast
+from helpers.viz.chart_palette import ensure_contrast
 
 # Ensure text color has sufficient contrast with background
 text_color = ensure_contrast(
@@ -304,9 +304,9 @@ Use online tools to verify theme colors:
 |------|---------|
 | `themes/_base.yaml` | Default theme definition |
 | `themes/brands/{brand}/theme.yaml` | Brand-specific overrides |
-| `helpers/theme_loader.py` | Theme loading, caching, and merging |
-| `helpers/chart_palette.py` | Palette generation and contrast checking |
-| `helpers/chart_helpers.py` | Chart creation with theme integration |
+| `helpers/viz/theme_loader.py` | Theme loading, caching, and merging |
+| `helpers/viz/chart_palette.py` | Palette generation and contrast checking |
+| `helpers/viz/chart_helpers.py` | Chart creation with theme integration |
 | `themes/analytics.css` | Marp presentation theme (light mode) |
 | `themes/analytics-dark.css` | Marp presentation theme (dark mode) |
 
@@ -315,7 +315,7 @@ Use online tools to verify theme colors:
 For heatmaps and density plots, use sequential or diverging colormaps:
 
 ```python
-from helpers.theme_loader import get_sequential_colormap, get_diverging_colormap
+from helpers.viz.theme_loader import get_sequential_colormap, get_diverging_colormap
 import matplotlib.pyplot as plt
 
 theme = load_theme("mycompany")
@@ -366,8 +366,8 @@ Always test brand themes with real charts and decks:
 ```bash
 # Generate sample charts with new theme
 python3 -c "
-from helpers.theme_loader import load_theme
-from helpers.chart_helpers import swd_style, highlight_bar
+from helpers.viz.theme_loader import load_theme
+from helpers.viz.chart_helpers import swd_style, highlight_bar
 import pandas as pd
 
 theme = load_theme('mycompany')
@@ -397,7 +397,7 @@ fig.savefig('test_mycompany_theme.png')
 - Use `swd_style(theme="mycompany", dark_mode=True)` for dark mode charts
 
 **Theme changes not appearing:**
-- Clear the theme cache: `from helpers.theme_loader import clear_cache; clear_cache()`
+- Clear the theme cache: `from helpers.viz.theme_loader import clear_cache; clear_cache()`
 - Restart the Python session (theme cache is in-memory)
 
 **Categorical palette runs out of colors:**
@@ -483,6 +483,6 @@ export:
 ## See Also
 
 - `themes/README.md` — Theme directory overview
-- `helpers/chart_style_guide.md` — Storytelling with Data chart methodology
-- `.claude/skills/visualization-patterns/skill.md` — Visualization best practices
-- `.claude/skills/presentation-themes/skill.md` — Deck theming guide
+- `helpers/viz/chart_style_guide.md` — Storytelling with Data chart methodology
+- `.claude/skills/visualization-patterns/SKILL.md` — Visualization best practices
+- `templates/presentation-standards.md` — Deck theming guide

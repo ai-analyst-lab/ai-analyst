@@ -1,11 +1,11 @@
-"""Tests for helpers/business_context.py -- org discovery, context loading, getters, summary."""
+"""Tests for helpers/knowledge/business_context.py -- org discovery, context loading, getters, summary."""
 
 from __future__ import annotations
 
 import yaml
 import pytest
 
-from helpers.business_context import (
+from helpers.knowledge.business_context import (
     _find_org_id,
     get_business_summary,
     get_glossary,

@@ -9,9 +9,12 @@ Brand themes inherit from `themes/_base.yaml` via deep merge. The `theme.yaml` f
 ## Creating Your Own Brand Theme
 
 1. Copy this directory: `cp -r themes/brands/example themes/brands/your-org`
+   (or copy `themes/brands/fivethirtyeight/` to start from the worked example).
 2. Edit `theme.yaml` -- change the colors, fonts, and metadata to match your brand.
 3. Only include fields you want to override. Delete everything else.
-4. Set the active theme in your dataset manifest or pass it at runtime.
+4. Run the autograder until all gates pass: `python scripts/check_theme.py your-org`
+5. Your theme now appears in the theme picker automatically. Set it as the
+   session default, name it per-chart, or set it in your dataset manifest.
 
 ## Colorblind Safety
 

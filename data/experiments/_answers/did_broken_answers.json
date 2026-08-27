@@ -1,0 +1,35 @@
+{
+  "true_effect": "+3.0 but DiD estimate will be BIASED",
+  "treatment_group": "ios",
+  "control_group": "android",
+  "intervention_week": 5,
+  "parallel_trends": "FAIL (iOS pre-trend 1.2/week vs Android 0.5/week)",
+  "expected_verdict": "Parallel trends test should FAIL. Honest caveat required.",
+  "generator_params": {
+    "seed": 20260827,
+    "script": "data/experiments/make_experiments.py",
+    "users_per_platform": 500,
+    "weeks": 8,
+    "pre_weeks": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "post_weeks": [
+      5,
+      6,
+      7,
+      8
+    ],
+    "outcome": "orders per user per week",
+    "ios_intercept": 4.0,
+    "android_intercept": 3.0,
+    "ios_slope": 1.2,
+    "android_slope": 0.5,
+    "treatment_effect": 3.0,
+    "noise_sd": 1.0,
+    "expected_naive_did": "~5.8 (3.0 true + 2.8 from divergent trends)"
+  },
+  "notes": "Difference-in-differences panel with a parallel-trends violation: iOS trends at +1.2/week pre-intervention vs Android +0.5/week. The naive 2x2 DiD (~5.8) is biased well above the true +3.0. A pre-trend test should fail and the estimate must carry an honest caveat."
+}

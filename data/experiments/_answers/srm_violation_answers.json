@@ -1,0 +1,23 @@
+{
+  "true_effect": "None (SRM invalidates results)",
+  "observed_split": "52/48",
+  "expected_split": "50/50",
+  "srm": "BLOCK",
+  "expected_verdict": "INVALID",
+  "notes": "An assignment bug produced a 52/48 control/treatment split at n=10000. A chi-square SRM test rejects 50/50 (p<0.001), which invalidates the experiment regardless of the outcome metric.",
+  "generator_params": {
+    "seed": 20260827,
+    "script": "data/experiments/make_experiments.py",
+    "n_total": 10000,
+    "control_share": 0.52,
+    "treatment_share": 0.48,
+    "baseline_rate": 0.35,
+    "relative_lift": 0.0,
+    "assignment_window": [
+      "2026-03-02",
+      "2026-03-15"
+    ],
+    "expected_chi2": 16.0,
+    "expected_p": "6.3e-05"
+  }
+}

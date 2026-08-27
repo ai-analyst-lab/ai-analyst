@@ -1,7 +1,7 @@
-"""Dedicated unit tests for helpers/confidence_scoring.py."""
+"""Dedicated unit tests for helpers/validation/confidence_scoring.py."""
 from __future__ import annotations
 import pytest
-from helpers.confidence_scoring import (
+from helpers.validation.confidence_scoring import (
     score_confidence, format_confidence_badge, merge_confidence_scores,
     _grade_from_score, _recommendation_from_grade, _validators_present,
     _score_data_completeness, _score_structural_integrity,
@@ -100,7 +100,10 @@ class TestFactorScoring:
 class TestValidatorsPresent:
     def test_empty_and_full(self):
         assert not any(_validators_present({}).values())
-        assert all(_validators_present({"completeness": {}, "aggregation": {}, "ranges": {}, "simpsons": {}}).values())
+        assert all(_validators_present({
+            "completeness": {}, "aggregation": {}, "ranges": {}, "simpsons": {},
+            "cross_verification": {}, "reproducibility": {},
+        }).values())
 
 _ALL_PASS_VR = {
     "completeness": {"columns": [{"null_rate": 0.0}]},
@@ -109,6 +112,8 @@ _ALL_PASS_VR = {
     "temporal": {"missing_dates": [], "duplicate_dates": [], "zero_dates": []},
     "ranges": {"violations": [{"severity": "PASS"}]},
     "simpsons": {"paradox_detected": False, "paradoxes_found": 0},
+    "cross_verification": {"overall_score": 1.0, "checks": [{"status": "PASS"}]},
+    "reproducibility": {"deterministic": True, "variance": 0.0},
 }
 
 class TestScoreConfidence:

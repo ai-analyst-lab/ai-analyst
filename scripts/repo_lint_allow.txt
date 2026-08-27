@@ -1,0 +1,12 @@
+# path-suffix : term — reviewed 2026-08-27, each an accepted legitimate use
+.claude/skills/auth-preflight/SKILL.md:@gmail.com          # generic credential-filename example (user@gmail.com.json)
+.github/SECURITY.md:aianalystlab                            # real security contact for this org
+pyproject.toml:aianalystlab                                 # project homepage URL
+themes/sample-decks/sample-analytics-dark-deck.marp.md:aianalystlab   # footer branding on sample deck
+themes/sample-decks/sample-analytics-deck.marp.md:aianalystlab        # footer branding on sample deck
+POSTGRES_SETUP_GUIDE.md:assigned secret                     # 'your_password_here' placeholder
+docs/postgres-integration-guide.md:assigned secret          # 'your_password_here' placeholder
+scripts/setup_postgres.sh:assigned secret                   # 'your_password_here' placeholder
+scripts/test_postgres_connection.py:assigned secret         # getpass prompt string, not a secret
+.claude/skills/setup-snowflake/SKILL.md:absolute /Users/ path   # /Users/<name>/ placeholder example
+README.md:aianalystlab                                     # author link to our own site

@@ -1,0 +1,62 @@
+# Analytics Chart Style — Storytelling with Data principles
+# Usage: plt.style.use("helpers/viz/analytics_chart_style.mplstyle")
+
+# Figure
+figure.figsize:     8, 5
+figure.dpi:         150
+figure.facecolor:   "#F7F6F2"
+figure.edgecolor:   "#F7F6F2"
+
+# Font
+font.family:        sans-serif
+font.sans-serif:    Helvetica Neue, Helvetica, Arial, DejaVu Sans, sans-serif
+font.size:          10
+
+# Axes
+axes.facecolor:     "#F7F6F2"
+axes.edgecolor:     "E5E7EB"
+axes.linewidth:     0.5
+axes.titlesize:     14
+axes.titleweight:   bold
+axes.titlepad:      16
+axes.labelsize:     10
+axes.labelcolor:    "4B5563"
+axes.labelpad:      8
+axes.spines.top:    False
+axes.spines.right:  False
+axes.prop_cycle:    cycler('color', ['D97706', 'DC2626', 'E5E7EB', '9CA3AF', '6B7280'])
+
+# Grid
+axes.grid:          False
+grid.color:         "E5E7EB"
+grid.linewidth:     0.5
+grid.alpha:         1.0
+
+# Ticks
+xtick.color:        "4B5563"
+xtick.labelsize:    9
+xtick.major.size:   0
+xtick.minor.size:   0
+ytick.color:        "4B5563"
+ytick.labelsize:    9
+ytick.major.size:   0
+ytick.minor.size:   0
+
+# Lines
+lines.linewidth:    2.0
+lines.markersize:   0
+
+# Patches (bars, etc)
+patch.edgecolor:    "#F7F6F2"
+patch.linewidth:    0.5
+
+# Legend (prefer direct labels, but if needed)
+legend.frameon:     False
+legend.fontsize:    9
+
+# Savefig
+savefig.dpi:        150
+savefig.bbox:       tight
+savefig.facecolor:  "#F7F6F2"
+savefig.edgecolor:  "#F7F6F2"
+savefig.pad_inches: 0.2

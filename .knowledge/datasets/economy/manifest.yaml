@@ -1,0 +1,20 @@
+dataset_id: economy
+name: "US Economic Indicators"
+description: "29 macroeconomic time series from FRED covering GDP, labor, consumer, housing, manufacturing, credit stress, and leading indicators (2019-2026)"
+source_type: csv
+source_api: "FRED (Federal Reserve Economic Data)"
+api_key_env: "FRED_API_KEY"
+created: "2026-02-23"
+
+local_data:
+  path: data/economy
+  format: csv
+
+tables:
+  - name: fred_all_series
+    description: "All 29 FRED series in wide format (Date × series). Mixed frequencies: daily (spreads), weekly (claims, Fed balance sheet), monthly (most), quarterly (GDP)."
+    row_count: 2248
+    date_range: "2019-01-01 to 2026-02-23"
+  - name: fred_metadata
+    description: "Metadata for each series: FRED ID, observation count, date range, latest value"
+    row_count: 29

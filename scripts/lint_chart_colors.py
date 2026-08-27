@@ -9,7 +9,7 @@ from pathlib import Path
 # Allow imports from repo root
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from helpers.theme_loader import list_themes, load_theme
+from helpers.viz.theme_loader import list_themes, load_theme
 
 
 def lint_theme(theme_name: str, themes_dir: str) -> list[tuple[str, bool]]:

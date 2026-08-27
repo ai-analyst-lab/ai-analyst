@@ -1,0 +1,23 @@
+{
+  "skill_name": "distribution-profiler",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I want to run an A/B test on revenue per user. Before I do, can you profile total_amount from the orders table so I know what I'm dealing with?",
+      "expected_output": "Should identify as log-normal (or possibly gamma). Should flag high skewness, recommend median/geometric mean over arithmetic mean, warn about whale users, suggest winsorization + CUPED for A/B testing, and produce a 4-panel diagnostic chart.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "We're looking at support ticket volume per user. Can you check the distribution of tickets per user to help me figure out the right way to analyze it?",
+      "expected_output": "Should identify as zero-inflated negative binomial (or negative binomial with excess zeros). Should flag that most users have 0 tickets, VMR >> 1 indicating overdispersion, recommend two-part analysis (incidence + intensity), warn against Poisson assumption, and produce diagnostic chart.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "profile page_views per session from the sessions table — I want to know if I can just use a t-test to compare mobile vs desktop",
+      "expected_output": "Should identify as Poisson or negative binomial (count data). Should compute VMR to distinguish. Should give a clear yes/no on whether t-test is appropriate given the sample size and skewness, recommend Poisson or NB regression as alternative, and produce diagnostic chart.",
+      "files": []
+    }
+  ]
+}

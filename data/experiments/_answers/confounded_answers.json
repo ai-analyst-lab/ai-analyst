@@ -1,0 +1,20 @@
+{
+  "true_causal_effect": "+5.0 orders from feature adoption",
+  "confounders": [
+    "tenure_months (confounds both adoption and orders)"
+  ],
+  "naive_estimate": "~7-8 (biased upward due to tenure confounding)",
+  "psm_estimate": "~5.0 (should recover true effect if tenure controlled)",
+  "expected_analysis": "PSM or regression with tenure as covariate",
+  "notes": "Observational feature-adoption data. Tenure drives both adoption and orders, so the naive adopter vs non-adopter gap overstates the true +5.0 effect by ~50%. Controlling for tenure (regression or PSM) recovers ~5.0.",
+  "generator_params": {
+    "seed": 20260827,
+    "script": "data/experiments/make_experiments.py",
+    "n_users": 6000,
+    "design": "observational (no randomization)",
+    "tenure_months": "uniform integer 1..36",
+    "adoption_logit": "-2.6 + 0.10 * tenure_months",
+    "orders_model": "3 + 0.30 * tenure_months + 5.0 * adopted_feature + N(0, 2.5)",
+    "true_effect_orders": 5.0
+  }
+}

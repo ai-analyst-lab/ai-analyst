@@ -1,0 +1,34 @@
+{
+  "true_effect": "+3.0 orders per user per week",
+  "treatment_group": "ios",
+  "control_group": "android",
+  "intervention_week": 5,
+  "parallel_trends": "PASS (both groups trend at +0.5/week pre-treatment)",
+  "expected_verdict": "Significant DiD estimate ~3.0",
+  "generator_params": {
+    "seed": 20260827,
+    "script": "data/experiments/make_experiments.py",
+    "users_per_platform": 500,
+    "weeks": 8,
+    "pre_weeks": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "post_weeks": [
+      5,
+      6,
+      7,
+      8
+    ],
+    "outcome": "orders per user per week",
+    "ios_intercept": 4.0,
+    "android_intercept": 3.0,
+    "ios_pre_slope": 0.5,
+    "android_slope": 0.5,
+    "treatment_effect": 3.0,
+    "noise_sd": 1.0
+  },
+  "notes": "Difference-in-differences panel: iOS (treated) and Android (control) users, 8 weeks, intervention at week 5. Both groups trend at +0.5/week pre-intervention, so parallel trends hold and the DiD estimate recovers the true +3.0 effect."
+}

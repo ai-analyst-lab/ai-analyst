@@ -9,8 +9,8 @@ from pathlib import Path
 # Allow imports from repo root
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from helpers.file_helpers import safe_read_yaml
-from helpers.theme_loader import list_themes
+from helpers.pipeline.file_helpers import safe_read_yaml
+from helpers.viz.theme_loader import list_themes
 
 # Top-level sections allowed to differ freely between brand and base
 EXEMPT_SECTIONS = {"theme"}

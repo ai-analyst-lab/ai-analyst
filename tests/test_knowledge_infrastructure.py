@@ -11,7 +11,7 @@ import yaml
 import pytest
 from pathlib import Path
 
-from helpers.file_helpers import (
+from helpers.pipeline.file_helpers import (
     atomic_write_yaml,
     safe_read_yaml,
     list_yaml_files,

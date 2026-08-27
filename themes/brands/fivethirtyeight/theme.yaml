@@ -1,0 +1,77 @@
+# FiveThirtyEight brand theme — the shipped worked example for the
+# build-your-own-theme module.
+# Inherits from themes/_base.yaml — only overrides are listed here.
+# The theme_loader deep-merges this on top of the base at runtime.
+#
+# Data-journalism look inspired by FiveThirtyEight: bold primaries on the
+# signature light-gray canvas, thick lines, no chart box.
+#
+# Every categorical color clears WCAG 3:1 against the background — run
+# `python scripts/check_theme.py fivethirtyeight` to verify. Copy this file
+# as your starting point and keep it green.
+
+theme:
+  name: "fivethirtyeight"
+  display_name: "FiveThirtyEight"
+  description: "FiveThirtyEight-inspired: bold blue/red/green on the signature light-gray canvas."
+
+colors:
+  primary: "#008FD5"          # 538 blue — the focal series
+  secondary: "#6D904F"        # Deep green — secondary series
+  accent: "#FF2700"           # 538 red — emphasis, alerts
+  neutral: "#C7C7C7"          # Light gray — de-emphasized context
+  background: "#F0F0F0"       # The 538 light-gray canvas
+  text: "#3C3C3C"             # Charcoal — body text (9.7:1)
+  text_light: "#5C5C5C"       # Medium gray — captions (5.9:1)
+  # Categorical palette — all colors >= 3:1 on the gray canvas,
+  # red and green kept non-adjacent for colorblind safety
+  categorical:
+    - "#008FD5"   # 538 blue          (3.1:1)
+    - "#6D904F"   # deep green        (3.2:1)
+    - "#A05195"   # magenta           (4.5:1)
+    - "#FF2700"   # 538 red           (3.3:1)
+    - "#B96F1A"   # amber             (3.4:1)
+    - "#810F7C"   # deep purple       (8.0:1)
+    - "#535353"   # dark gray         (6.8:1)
+    - "#947F0E"   # olive             (3.5:1)
+  sequential:
+    low: "#D2E8F5"            # Lightest blue
+    mid: "#008FD5"            # 538 blue
+    high: "#0A4A6E"           # Darkest blue
+  diverging:
+    negative: "#FF2700"       # 538 red — decline
+    neutral: "#F0F0F0"        # Canvas — midpoint
+    positive: "#008FD5"       # 538 blue — growth
+  highlight:
+    focus: "#008FD5"          # 538 blue — the story bar/line
+    comparison: "#C7C7C7"     # Light gray — everything else recedes
+    alert: "#FF2700"          # 538 red — outliers, problems
+
+typography:
+  font_family: "Atlas Grotesk, Helvetica Neue, Helvetica, Arial, sans-serif"
+  heading_font: "Atlas Grotesk, Helvetica Neue, Helvetica, Arial, sans-serif"
+
+charts:
+  figure:
+    facecolor: "#F0F0F0"      # Canvas
+  axes:
+    facecolor: "#F0F0F0"      # Canvas
+    grid: true                # 538: visible horizontal gridlines
+    spine_color: "#CBCBCB"
+  bar:
+    default_color: "#C7C7C7"  # Gray — context bars
+    highlight_color: "#008FD5" # 538 blue — the story bar
+    edge_width: 0             # Borderless bars
+  line:
+    default_color: "#C7C7C7"  # Gray — context lines
+    highlight_color: "#008FD5" # 538 blue — the story line
+    width: 2.4                # 538's signature thick lines
+    highlight_width: 3.0
+  annotations:
+    color: "#3C3C3C"
+    arrow_color: "#5C5C5C"
+
+presentations:
+  slide_background: "#F0F0F0"
+  slide_text: "#3C3C3C"
+  slide_accent: "#008FD5"

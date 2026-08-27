@@ -1,4 +1,4 @@
-"""Comprehensive tests for helpers/theme_loader.py.
+"""Comprehensive tests for helpers/viz/theme_loader.py.
 
 Covers: _deep_merge, load_theme, get_color, get_categorical_palette,
 get_sequential_colormap, get_diverging_colormap, clear_cache, list_themes.
@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from helpers.theme_loader import (
+from helpers.viz.theme_loader import (
     ThemeNotFoundError,
     _deep_merge,
     clear_cache,

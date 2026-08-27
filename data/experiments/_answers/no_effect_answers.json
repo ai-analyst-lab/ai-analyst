@@ -1,0 +1,19 @@
+{
+  "true_effect": "None (both groups have identical rates)",
+  "baseline_rate": 0.35,
+  "srm": "PASS",
+  "expected_verdict": "ABORT (powered null)",
+  "notes": "True null: both groups have identical conversion rates. n=20000/group gives >95% power to detect a 5% relative lift, so the null result is a powered null (ABORT), not an underpowered one.",
+  "generator_params": {
+    "seed": 20260827,
+    "script": "data/experiments/make_experiments.py",
+    "n_per_group": 20000,
+    "baseline_rate": 0.35,
+    "relative_lift": 0.0,
+    "assignment_window": [
+      "2026-03-02",
+      "2026-03-15"
+    ],
+    "n_rationale": "original key said 5000/group with >95% power for a 5% relative lift; that is false (power ~45%). 20000/group gives ~96% power, so the null is genuinely powered."
+  }
+}

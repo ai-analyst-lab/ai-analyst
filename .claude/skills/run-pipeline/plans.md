@@ -11,7 +11,7 @@ agents:
   - question-framing
   - hypothesis
   - data-explorer
-  - source-tieout
+  - cross-verification
   - descriptive-analytics   # or overtime-trend or cohort-analysis
   - root-cause-investigator
   - validation
@@ -24,6 +24,7 @@ agents:
   - deck-creator
   - visual-design-critic-slides
   - close-the-loop
+  - comms-drafter        # non-critical — pipeline continues if this fails
 checkpoints: [1, 2, 2.5, 3, 4]
 ```
 
@@ -36,7 +37,7 @@ agents:
   - question-framing
   - hypothesis
   - data-explorer
-  - source-tieout
+  - cross-verification
   - descriptive-analytics
   - root-cause-investigator
   - validation
@@ -98,7 +99,7 @@ requires_context:
 
 Users can specify an inline agent list:
 ```
-/run-pipeline agents=question-framing,hypothesis,data-explorer,source-tieout
+/run-pipeline agents=question-framing,hypothesis,data-explorer,cross-verification
 ```
 
 This creates an ad-hoc plan with only the listed agents. Dependency warnings still apply.

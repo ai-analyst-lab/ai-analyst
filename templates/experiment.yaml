@@ -1,0 +1,85 @@
+# Experiment Configuration Template
+# Fill this out during /experiment design. Pre-registers the hypothesis,
+# metrics, decision rules, and analysis plan BEFORE seeing any results.
+#
+# Usage: Copy this template to experiments/{slug}/experiment.yaml
+
+experiment:
+  id: ""                        # kebab-case slug (e.g., checkout-redesign-2026q1)
+  name: ""                      # Human-readable experiment name
+  status: DESIGNING             # DESIGNING | POWERED | COLLECTING | ANALYZING | INTERPRETED | REPORTED
+
+  hypothesis:
+    action: ""                  # What change are we making?
+    metric: ""                  # Primary metric we expect to move
+    direction: ""               # "increase" or "decrease"
+    magnitude: ""               # Expected effect size (e.g., "5% relative lift")
+    mechanism: ""               # Why we believe this will work
+
+  metrics:
+    primary:
+      name: ""
+      type: ""                  # "proportion" | "continuous" | "ratio"
+      definition: ""            # Precise definition (numerator / denominator / time window)
+      mde: null                 # Minimum detectable effect (relative, e.g., 0.05 = 5%)
+      baseline: null            # Current baseline value
+      sql: ""                   # Optional: SQL to compute this metric
+    secondary:
+      - name: ""
+        type: ""
+        definition: ""
+    guardrail:
+      - name: ""
+        type: ""
+        threshold: null         # Absolute threshold not to exceed
+        direction: ""           # "do_not_increase" or "do_not_decrease"
+        definition: ""
+
+  variants:
+    - name: control
+      allocation: 0.50
+      is_control: true
+    - name: treatment
+      allocation: 0.50
+      is_control: false
+
+  power:
+    alpha: 0.05
+    power: 0.80
+    test_type: "two-sided"
+    baseline_rate: null         # Computed during /experiment power
+    baseline_std: null          # Computed during /experiment power
+    sample_size_per_group: null # Computed during /experiment power
+    total_sample_size: null     # Computed during /experiment power
+    duration_days: null         # Computed during /experiment power
+    viable: null                # VIABLE | MARGINAL | NOT_VIABLE
+
+  decision_rules:
+    ship_if: "Primary metric significant positive, no guardrail violations"
+    do_not_ship_if: "Any guardrail violation OR negative primary metric"
+    inconclusive_if: "Underpowered null — extend or increase allocation"
+    mixed_results: "Primary up but guardrail degraded — quantify trade-off"
+    emergency_stop: "Guardrail degrades by >15% relative — halt immediately"
+
+  data:
+    assignment_table: ""        # Table/file containing variant assignments
+    outcome_table: ""           # Table/file containing outcome metrics
+    date_column: ""             # Column for temporal analysis
+    unit_column: ""             # User/session ID column
+
+  timeline:
+    created: null               # Date experiment was designed
+    powered: null               # Date power analysis completed
+    started: null               # Date data collection began
+    analyzed: null              # Date analysis was run
+    decided: null               # Date ship/no-ship decision was made
+
+  results:
+    # Populated by /experiment analyze
+    srm_verdict: null           # PASS | WARNING | BLOCK
+    primary_significant: null   # true | false
+    primary_lift: null          # Relative lift percentage
+    primary_p_value: null       # p-value
+    guardrail_violations: []    # List of violated guardrail metric names
+    ewl_classification: null    # SHIP | ABORT | LEARN | INVALID
+    analysis_file: ""           # Path to full analysis report

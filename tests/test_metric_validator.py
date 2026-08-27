@@ -1,9 +1,9 @@
-"""Tests for helpers/metric_validator.py."""
+"""Tests for helpers/validation/metric_validator.py."""
 
 import pytest
 from pathlib import Path
 
-from helpers.metric_validator import (
+from helpers.validation.metric_validator import (
     validate_metric_definition,
     validate_metric_file,
     validate_all_metrics,

@@ -1,5 +1,5 @@
 """
-Unit tests for helpers/miss_rate_logger.py -- Miss Rate Logger.
+Unit tests for helpers/knowledge/miss_rate_logger.py -- Miss Rate Logger.
 
 Covers miss logging, summary aggregation, rolling-window rate
 calculation, and log clearing.
@@ -12,7 +12,7 @@ from datetime import datetime, timezone, timedelta
 
 import pytest
 
-from helpers.miss_rate_logger import (
+from helpers.knowledge.miss_rate_logger import (
     log_miss,
     get_miss_summary,
     get_miss_rate,

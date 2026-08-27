@@ -1,5 +1,5 @@
 """
-Unit tests for helpers/simpsons_paradox.py.
+Unit tests for helpers/validation/simpsons_paradox.py.
 
 Tests all five public functions plus edge cases:
 1. check_simpsons_paradox -- single-dimension detection
@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from helpers.simpsons_paradox import (
+from helpers.validation.simpsons_paradox import (
     check_simpsons_paradox,
     check_simpsons_multi_segment,
     weighted_vs_unweighted,
@@ -429,7 +429,7 @@ class TestLegacyAPI:
 
     def test_scan_dimensions_backward_compat(self, no_paradox_data):
         """Legacy callers using scan_dimensions should still work."""
-        from helpers.simpsons_paradox import scan_dimensions
+        from helpers.validation.simpsons_paradox import scan_dimensions
 
         result = scan_dimensions(
             no_paradox_data,

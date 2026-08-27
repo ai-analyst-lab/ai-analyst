@@ -9,7 +9,7 @@ from pathlib import Path
 # Allow imports from repo root
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from helpers.theme_loader import load_theme
+from helpers.viz.theme_loader import load_theme
 
 
 def main() -> None:

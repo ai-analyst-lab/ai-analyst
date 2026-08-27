@@ -1,0 +1,20 @@
+{
+  "true_effects": {
+    "sessions_14d": "+10% (primary, positive)",
+    "retained_30d": "-5% (secondary, negative)"
+  },
+  "srm": "PASS",
+  "expected_verdict": "LEARN or INVESTIGATE",
+  "notes": "Engagement (sessions_14d) up 10% but 30-day retention down 5%, both statistically significant. The decision requires weighing the trade-off rather than reading the primary metric alone.",
+  "generator_params": {
+    "seed": 20260827,
+    "script": "data/experiments/make_experiments.py",
+    "n_per_group": 8000,
+    "sessions_14d": "Poisson, mean 8.0 control vs 8.8 treatment (+10%)",
+    "retained_30d": "0.40 control vs 0.38 treatment (-5% relative)",
+    "assignment_window": [
+      "2026-03-02",
+      "2026-03-15"
+    ]
+  }
+}

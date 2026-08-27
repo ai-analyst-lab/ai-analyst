@@ -11,9 +11,9 @@ import tempfile
 import pytest
 import pandas as pd
 
-from helpers.sql_dialect import get_dialect, list_dialects
-from helpers.connection_manager import ConnectionManager, SUPPORTED_TYPES
-from helpers.schema_profiler import (
+from helpers.data.sql_dialect import get_dialect, list_dialects
+from helpers.data.connection_manager import ConnectionManager, SUPPORTED_TYPES
+from helpers.data.schema_profiler import (
     profile_source,
     compare_snapshots,
     discover_relationships,
@@ -21,14 +21,14 @@ from helpers.schema_profiler import (
     get_table_reference,
     profile_external_warehouse,
 )
-from helpers.dialects import (
+from helpers.data.dialects import (
     SQLDialect,
     DuckDBDialect,
     PostgresDialect,
     BigQueryDialect,
     SnowflakeDialect,
 )
-from helpers.dialects.base import SQLDialect as BaseSQLDialect
+from helpers.data.dialects.base import SQLDialect as BaseSQLDialect
 
 
 # =====================================================================
@@ -331,7 +331,7 @@ class TestCrossModuleImports:
         assert type(get_dialect("snowflake")) is SnowflakeDialect
 
     def test_no_circular_imports(self):
-        mod1 = importlib.import_module("helpers.sql_dialect")
-        mod2 = importlib.import_module("helpers.connection_manager")
-        mod3 = importlib.import_module("helpers.schema_profiler")
+        mod1 = importlib.import_module("helpers.data.sql_dialect")
+        mod2 = importlib.import_module("helpers.data.connection_manager")
+        mod3 = importlib.import_module("helpers.data.schema_profiler")
         assert mod1 is not None and mod2 is not None and mod3 is not None
