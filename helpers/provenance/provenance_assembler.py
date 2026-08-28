@@ -557,8 +557,8 @@ def load_tier_metadata(entities: Any) -> Dict[str, str]:
     upper-cased for case-insensitive match); an entity without the field
     contributes nothing, so it falls through to raw.
 
-    Today NovaMart's entities.yaml carries no ``source_tier`` on any entity, so
-    this returns an empty map and every NovaMart query reads as raw — the honest
+    When a dataset's entities.yaml carries no ``source_tier`` on any entity, this
+    returns an empty map and every query reads as raw — the honest
     tier. Adding ``source_tier: governed`` to one entity is the one-line change
     that upgrades that table's footer, and this loader is what reads it.
 
@@ -601,7 +601,7 @@ def derive_source_tier(
     A result is only as governed as its least-governed input, so the tier is the
     FLOOR across the touched tables: any table without governance metadata counts
     as raw and drags the whole query to raw. When NO touched table carries
-    governance metadata — the NovaMart case, where entities.yaml pins meaning and
+    governance metadata — the ungoverned case, where entities.yaml pins meaning and
     structure but assigns no tier — the honest answer is "raw - direct query".
     This never returns "not available".
 
@@ -670,7 +670,7 @@ def build_full_footer(
     Source tier is wired: it is derived from the tables the backing query touched
     (block reproducibility tables, falling back to the data-stamp primary table)
     against any governance metadata in ``tier_metadata`` (see derive_source_tier
-    and load_tier_metadata). With no governance metadata — the NovaMart case — it
+    and load_tier_metadata). With no governance metadata — the ungoverned case — it
     reads "raw - direct query", never "not available".
 
     Freshness is wired: when the caller supplies the definition's last_verified

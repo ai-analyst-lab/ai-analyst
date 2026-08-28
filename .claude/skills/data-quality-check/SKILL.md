@@ -62,7 +62,7 @@ INFO rules below. For one targeted check, call the validator directly, e.g.
 `validate_primary_key(df, ["ORDER_ID"])`. For referential integrity, pass `parent_df` + `child_key` +
 `parent_key` in the config.
 
-Verified live on NovaMart: `run_structural_checks(products_df, {"primary_key": ["PRODUCT_ID"], "min_rows": 1})`
+Example: `run_structural_checks(products_df, {"primary_key": ["product_id"], "min_rows": 1})`
 passes (PRODUCT_ID is a real PK); `validate_primary_key(products_df, ["CATEGORY"])` flags it (6 duplicates).
 The check actually runs — it is not a description.
 

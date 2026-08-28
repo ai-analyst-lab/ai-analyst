@@ -10,3 +10,5 @@ scripts/setup_postgres.sh:assigned secret                   # 'your_password_her
 scripts/test_postgres_connection.py:assigned secret         # getpass prompt string, not a secret
 .claude/skills/setup-snowflake/SKILL.md:absolute /Users/ path   # /Users/<name>/ placeholder example
 README.md:aianalystlab                                     # author link to our own site
+tests/test_data_helpers_v2.py:novamart          # guardrail test that asserts novamart is ABSENT
+CHANGELOG.md:novamart          # historical entry documenting removal of the bundled dataset

@@ -29,7 +29,7 @@ FORBIDDEN = [
     ("assigned secret", re.compile(r"(password|api[_-]?key|account_identifier|private[_-]?key)\s*[:=]\s*['\"][^'\"<>{}$]{6,}['\"]", re.I)),
 ]
 RESIDUE = ["@gmail.com", "bit.ly", "aianalystlab", "lightning lesson", "webinar", "registrant",
-           "office hours", "capstone", "maven.com", "bootcamp"]
+           "office hours", "capstone", "maven.com", "bootcamp", "novamart"]
 # Maintainers keep personal-name terms in a gitignored local file, one term per line.
 _private = ROOT / 'scripts' / 'repo_lint_private_terms.txt'
 if _private.exists():

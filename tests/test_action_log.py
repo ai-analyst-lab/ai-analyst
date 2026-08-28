@@ -38,7 +38,7 @@ FAKE_HOOKS = [
     {
         "session_id": "sess-1",
         "tool_name": "mcp__snowflake__run_snowflake_query",
-        "tool_input": {"statement": "SELECT COUNT(*) FROM novamart.orders"},
+        "tool_input": {"statement": "SELECT COUNT(*) FROM analytics.orders"},
         "tool_response": [{"COUNT": 3150000}],
     },
 ]
@@ -144,7 +144,7 @@ def test_markdown_contains_entries(log_file):
     assert "Print a greeting" in md      # Bash summary
     assert "echo hello world" in md      # Bash inputs
     assert "query_log.py" in md          # Read summary
-    assert "SELECT COUNT(*) FROM novamart.orders" in md  # SQL inputs
+    assert "SELECT COUNT(*) FROM analytics.orders" in md  # SQL inputs
     assert "3 actions recorded" in md
 
 

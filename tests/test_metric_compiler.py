@@ -15,9 +15,32 @@ from helpers.data import metric_compiler as mc
 
 ROOT = Path(__file__).resolve().parents[1]
 
+# Fixture metrics for the tests. The repo ships NO baked-in metrics (a user defines their own),
+# so the compiler is tested against these fixtures pointed at the bundled, tracked sp500 CSVs.
+_FIXTURES = {
+    "avg-daily-volume": {"compile": {
+        "measure": "AVG(Volume)", "table": "sp500_daily", "grain_key": ["Date"],
+        "dimensions": {"year": "extract(year from Date)"},
+        "filters": {"year": "extract(year from Date) = :year"}}},
+    "total-volume": {"compile": {
+        "measure": "SUM(Volume)", "table": "sp500_daily", "grain_key": ["Date"],
+        "dimensions": {"year": "extract(year from Date)"},
+        "filters": {"year": "extract(year from Date) = :year"}}},
+    "avg-close": {"compile": {
+        "measure": "AVG(Close)", "table": "sp500_daily", "grain_key": ["Date"],
+        "dimensions": {"year": "extract(year from Date)"},
+        "filters": {"year": "extract(year from Date) = :year"}}},
+    "sector-share-of-volume": {"compile": {
+        "measure": "SUM(Volume)", "denominator": "SUM(SUM(Volume)) OVER ()",
+        "table": "sector_etfs_daily", "grain_key": ["Date", "Sector"],
+        "dimensions": {"sector": "Sector"},
+        "filters": {"year": "extract(year from Date) = :year"}}},
+}
+
 
 def _load(metric_id):
-    return mc.load_metric("sp500", metric_id, project_root=ROOT)
+    import copy
+    return copy.deepcopy(_FIXTURES[metric_id])
 
 
 # ---- compile-level (no database) ----

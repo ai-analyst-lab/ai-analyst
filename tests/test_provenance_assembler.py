@@ -422,7 +422,7 @@ class TestBuildFullFooter:
         assert "**Methodology:** segmented comparison" in md
         assert "Confidence: B (82/100)" in md
 
-    def test_source_tier_reads_raw_for_novamart(self):
+    def test_source_tier_reads_raw_without_governance(self):
         # No governance metadata -> the honest tier is raw, never "not available".
         md = build_full_footer(self._block())
         assert "**Source tier:** raw - direct query" in md
@@ -506,7 +506,7 @@ class TestBuildFullFooter:
 
 class TestDeriveSourceTier:
     def test_raw_when_no_metadata(self):
-        # The NovaMart case: tables touched, but no governance metadata at all.
+        # The ungoverned case: tables touched, but no governance metadata at all.
         assert derive_source_tier(["ORDERS"]) == "raw - direct query"
         assert derive_source_tier(["ORDERS", "ORDER_ITEMS"], {}) == "raw - direct query"
 
@@ -555,7 +555,7 @@ class TestDeriveSourceTier:
 
 class TestLoadTierMetadata:
     def test_empty_when_no_source_tier_field(self):
-        # NovaMart's real shape: entities pin meaning/structure, no source_tier.
+        # A common shape: entities pin meaning/structure, no source_tier.
         entities = {"entities": [
             {"entity": "order", "logical_table": "orders",
              "base_table": "ANALYTICS_DB.SALES.ORDERS", "primary_key": "order_id"},
