@@ -20,6 +20,9 @@ from helpers.data.dialects.postgres import PostgresDialect
 from helpers.data.dialects.bigquery import BigQueryDialect
 from helpers.data.dialects.snowflake import SnowflakeDialect
 from helpers.data.dialects.databricks import DatabricksDialect
+from helpers.data.dialects.redshift import RedshiftDialect
+from helpers.data.dialects.mysql import MySQLDialect
+from helpers.data.dialects.mssql import MSSQLDialect
 
 
 # Registry mapping connection_type strings to dialect classes.
@@ -31,6 +34,9 @@ _DIALECT_MAP: dict[str, type[SQLDialect]] = {
     "bigquery": BigQueryDialect,
     "snowflake": SnowflakeDialect,
     "databricks": DatabricksDialect,
+    "redshift": RedshiftDialect,
+    "mysql": MySQLDialect,
+    "mssql": MSSQLDialect,
 }
 
 

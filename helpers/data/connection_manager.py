@@ -50,7 +50,14 @@ SUPPORTED_TYPES = {
     "bigquery": {"package": "google-cloud-bigquery", "installed": False},
     "snowflake": {"package": "snowflake-connector-python", "installed": False},
     "databricks": {"package": "databricks-sql-connector", "installed": False},
+    "redshift": {"package": "psycopg2", "installed": False},
+    "mssql": {"package": "pymssql", "installed": False},
+    "mysql": {"package": "pymysql", "installed": False},
 }
+
+# Postgres-family backends: DBAPI drivers that all speak information_schema and %s params, so they
+# share the same query / test / list_tables / read_table code paths.
+_PG_FAMILY = frozenset({"postgres", "redshift", "mssql", "mysql"})
 
 
 class ConnectionManager:
@@ -150,6 +157,12 @@ class ConnectionManager:
             self._connect_snowflake()
         elif conn_type == "databricks":
             self._connect_databricks()
+        elif conn_type == "redshift":
+            self._connect_redshift()
+        elif conn_type == "mssql":
+            self._connect_mssql()
+        elif conn_type == "mysql":
+            self._connect_mysql()
         elif conn_type == "csv":
             self._connect_csv()
         else:
@@ -184,14 +197,14 @@ class ConnectionManager:
                 self._connection.sql("SELECT 1").fetchone()
                 return {"ok": True, "type": self._conn_type, "message": "Connected"}
 
-            elif self._conn_type == "postgres":
+            elif self._conn_type in _PG_FAMILY:
                 if self._connection is None:
                     self.connect()
                 cur = self._connection.cursor()
                 cur.execute("SELECT 1")
                 cur.fetchone()
                 cur.close()
-                return {"ok": True, "type": "postgres", "message": "Connected"}
+                return {"ok": True, "type": self._conn_type, "message": "Connected"}
 
             elif self._conn_type == "csv":
                 csv_dir = self._csv_dir or self._config.get("csv_path", "")
@@ -261,7 +274,7 @@ class ConnectionManager:
         except Exception as exc:
             return {"error": str(exc)}
 
-    _REMOTE_TYPES = ("snowflake", "postgres", "bigquery", "databricks")
+    _REMOTE_TYPES = ("snowflake", "postgres", "bigquery", "databricks", "redshift", "mssql", "mysql")
 
     def verify_remote(self, expect_account: str | None = None) -> dict:
         """Prove this connection is on a live remote warehouse, not the local DuckDB fallback.
@@ -315,7 +328,7 @@ class ConnectionManager:
             except Exception:
                 return []
 
-        elif self._conn_type == "postgres" and self._connection:
+        elif self._conn_type in _PG_FAMILY and self._connection:
             try:
                 cur = self._connection.cursor()
                 schema = self._schema_prefix or "public"
@@ -443,7 +456,7 @@ class ConnectionManager:
         start = time.perf_counter()
         if self._conn_type in ("duckdb", "csv") and self._connection:
             df = self._connection.sql(sql).df()
-        elif self._conn_type == "postgres" and self._connection:
+        elif self._conn_type in _PG_FAMILY and self._connection:
             df = pd.read_sql(sql, self._connection)
         elif self._conn_type == "snowflake" and self._connection:
             cur = self._connection.cursor()
@@ -545,7 +558,7 @@ class ConnectionManager:
                 return pd.read_csv(csv_path, low_memory=False)
             raise FileNotFoundError(f"CSV file not found: {csv_path}")
 
-        elif self._conn_type == "postgres" and self._connection:
+        elif self._conn_type in _PG_FAMILY and self._connection:
             schema = self._schema_prefix or "public"
             return pd.read_sql(f"SELECT * FROM {schema}.{table_name}", self._connection)
 
@@ -715,6 +728,49 @@ class ConnectionManager:
             password=conn_config.get("password", ""),
         )
         self._schema_prefix = conn_config.get("schema", "public")
+
+    def _connect_redshift(self):
+        """Connect to Amazon Redshift (Postgres wire protocol). Requires psycopg2."""
+        try:
+            import psycopg2
+        except ImportError:
+            raise ConnectionError("psycopg2 not installed. Install with: pip install psycopg2-binary")
+        c = self._config.get("connection", {})
+        self._connection = psycopg2.connect(
+            host=c.get("host", ""), port=c.get("port", 5439),
+            dbname=c.get("database", ""), user=c.get("user", ""),
+            password=c.get("password", ""))
+        self._schema_prefix = c.get("schema", "public")
+        self._conn_type = "redshift"
+
+    def _connect_mssql(self):
+        """Connect to Microsoft SQL Server / Azure SQL. Requires pymssql."""
+        try:
+            import pymssql
+        except ImportError:
+            raise ConnectionError("pymssql not installed. Install with: pip install pymssql")
+        c = self._config.get("connection", {})
+        self._connection = pymssql.connect(
+            server=c.get("host") or c.get("server", ""), port=str(c.get("port", 1433)),
+            database=c.get("database", ""), user=c.get("user", ""),
+            password=c.get("password", ""))
+        self._schema_prefix = c.get("schema", "dbo")
+        self._conn_type = "mssql"
+
+    def _connect_mysql(self):
+        """Connect to MySQL / MariaDB. Requires pymysql."""
+        try:
+            import pymysql
+        except ImportError:
+            raise ConnectionError("pymysql not installed. Install with: pip install pymysql")
+        c = self._config.get("connection", {})
+        self._connection = pymysql.connect(
+            host=c.get("host", "localhost"), port=int(c.get("port", 3306)),
+            database=c.get("database", ""), user=c.get("user", ""),
+            password=c.get("password", ""))
+        # MySQL information_schema keys tables by database name.
+        self._schema_prefix = c.get("schema") or c.get("database", "")
+        self._conn_type = "mysql"
 
     def _connect_bigquery(self):
         """Connect to BigQuery. Requires google-cloud-bigquery."""

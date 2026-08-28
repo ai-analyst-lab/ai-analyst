@@ -1,0 +1,22 @@
+# Connection Template: Amazon Redshift
+# Copy to .knowledge/datasets/{name}/manifest.yaml and fill in values.
+# Requires: pip install psycopg2-binary  (Redshift speaks the Postgres wire protocol)
+# Auth: user/password. Store the password in .env as $REDSHIFT_PASSWORD.
+
+dataset_id: "{dataset_id}"
+display_name: "{Display Name}"
+description: "{Brief description}"
+created_at: "{YYYY-MM-DD}"
+is_seed: false
+
+connection:
+  type: redshift
+  host: "{cluster}.{region}.redshift.amazonaws.com"
+  port: 5439
+  database: "{database}"
+  schema: "public"
+  user: "{username}"
+  password: "$REDSHIFT_PASSWORD"
+
+local_data: {path: null, duckdb: null}
+status: active

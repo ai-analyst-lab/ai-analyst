@@ -364,8 +364,8 @@ def detect_active_source():
     }
 
     # --- Determine best available connection type ---
-    # Opted-in remote (snowflake/postgres/bigquery/databricks) > local duckdb > csv
-    if declared_type in ("snowflake", "postgres", "bigquery", "databricks") and use_remote:
+    # Opted-in remote (snowflake/postgres/bigquery/databricks/redshift/mssql/mysql) > local duckdb > csv
+    if declared_type in ("snowflake", "postgres", "bigquery", "databricks", "redshift", "mssql", "mysql") and use_remote:
         source_info["type"] = declared_type
         source_info["schema_prefix"] = conn.get("schema", "") or manifest.get("schema_prefix", "")
     elif source_info["duckdb_path"] and Path(source_info["duckdb_path"]).exists():

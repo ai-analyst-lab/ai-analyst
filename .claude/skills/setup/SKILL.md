@@ -238,7 +238,7 @@ The user's answer to Group 1 determines what happens next.
 **If Cloud warehouse:**
 - Explain: "Cloud warehouses connect via MCP (Model Context Protocol). This
   requires configuring `.claude/mcp.json` with your credentials."
-- Invoke Connect Data: `skill: "connect-data"`, `args: "type={warehouse_type}"` (warehouse_type = snowflake, bigquery, postgres, or databricks).
+- Invoke Connect Data: `skill: "connect-data"`, `args: "type={warehouse_type}"` (warehouse_type = snowflake, bigquery, postgres, databricks, redshift, mssql, or mysql).
 - Connect Data will guide the MCP setup.
 - After Connect Data returns, check its status. If it says "MCP configuration needed", mark Phase 2 as `partial`.
 - **Do not block Phase 3.** Continue the interview even if warehouse setup is incomplete.

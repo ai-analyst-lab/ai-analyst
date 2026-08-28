@@ -1,0 +1,22 @@
+# Connection Template: Microsoft SQL Server / Azure SQL
+# Copy to .knowledge/datasets/{name}/manifest.yaml and fill in values.
+# Requires: pip install pymssql
+# Auth: user/password. Store the password in .env as $MSSQL_PASSWORD.
+
+dataset_id: "{dataset_id}"
+display_name: "{Display Name}"
+description: "{Brief description}"
+created_at: "{YYYY-MM-DD}"
+is_seed: false
+
+connection:
+  type: mssql
+  host: "{server}.database.windows.net"   # or a host/IP for on-prem SQL Server
+  port: 1433
+  database: "{database}"
+  schema: "dbo"
+  user: "{username}"
+  password: "$MSSQL_PASSWORD"
+
+local_data: {path: null, duckdb: null}
+status: active

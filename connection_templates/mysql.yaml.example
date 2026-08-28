@@ -1,0 +1,22 @@
+# Connection Template: MySQL / MariaDB
+# Copy to .knowledge/datasets/{name}/manifest.yaml and fill in values.
+# Requires: pip install pymysql
+# Auth: user/password. Store the password in .env as $MYSQL_PASSWORD.
+
+dataset_id: "{dataset_id}"
+display_name: "{Display Name}"
+description: "{Brief description}"
+created_at: "{YYYY-MM-DD}"
+is_seed: false
+
+connection:
+  type: mysql
+  host: "{host}"
+  port: 3306
+  database: "{database}"     # MySQL keys information_schema by database name
+  schema: "{database}"       # same as database for MySQL
+  user: "{username}"
+  password: "$MYSQL_PASSWORD"
+
+local_data: {path: null, duckdb: null}
+status: active

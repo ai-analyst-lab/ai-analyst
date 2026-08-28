@@ -36,6 +36,9 @@ Present options:
 4. **Snowflake** — "I have a Snowflake warehouse"
 5. **BigQuery** — "I have a Google BigQuery dataset"
 6. **Databricks** — "I have a Databricks SQL warehouse"
+7. **Redshift** — "I have an Amazon Redshift cluster"
+8. **SQL Server** — "I have a Microsoft SQL Server / Azure SQL database"
+9. **MySQL** — "I have a MySQL or MariaDB database"
 
 ### Step 2: Collect Connection Details
 
@@ -55,11 +58,17 @@ Present options:
   details" panel), catalog, schema
 - Store the personal access token in `.env` as `$DATABRICKS_TOKEN` (never inline)
 
-**For PostgreSQL / BigQuery:**
-- Copy the appropriate template from `connection_templates/`
-- Ask user to fill in required fields
-- **IMPORTANT:** Never ask for or store passwords directly. Guide the user
-  to use environment variables (e.g., `$PG_PASSWORD`).
+**For PostgreSQL / Redshift / SQL Server / MySQL / BigQuery:**
+- Copy the matching template from `connection_templates/` (`postgres`, `redshift`,
+  `mssql`, `mysql`, `bigquery`)
+- Ask the user to fill in host/database/schema (Redshift/SQL Server/MySQL are DBAPI
+  connections that share the Postgres query path; MySQL keys `information_schema` by
+  database, SQL Server defaults to the `dbo` schema)
+- **IMPORTANT:** Never ask for or store passwords directly. Put the password in `.env`
+  as an env var (e.g., `$REDSHIFT_PASSWORD`, `$MSSQL_PASSWORD`, `$MYSQL_PASSWORD`) and
+  reference it from the manifest.
+- After writing the manifest, verify with `ConnectionManager(dataset_id=...).verify_remote()`
+  before declaring success (remote opt-in: `AAP_USE_REMOTE=1` / `use_remote: true`).
 
 **For Snowflake:**
 - Route to the dedicated setup wizard: "Run `/setup-snowflake` for guided

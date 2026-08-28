@@ -41,6 +41,8 @@ warehouses = [
     "snowflake-connector-python>=3.0",
     "google-cloud-bigquery>=3.0",
     "databricks-sql-connector>=3.0",
+    "pymssql>=2.2",
+    "pymysql>=1.1",
 ]
 
 [tool.pytest.ini_options]
