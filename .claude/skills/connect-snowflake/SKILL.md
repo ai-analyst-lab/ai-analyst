@@ -36,9 +36,12 @@ DuckDB** copy even though the active dataset declares
 - **Env flag (per-shell):** `AAP_USE_REMOTE=1` (also accepts `true` / `yes`), OR
 - **Persisted flag:** `use_remote: true` in `.knowledge/active.yaml`
 
-`.knowledge/active.yaml` currently has `use_remote: true`, so the persistent
-opt-in is already set. Still set `AAP_USE_REMOTE=1` in the same shell command as
-a belt-and-suspenders guard — and to make remote intent explicit/visible.
+Set `use_remote: true` in `.knowledge/active.yaml` for a persistent opt-in, and set
+`AAP_USE_REMOTE=1` in the same shell command as `python3` as a belt-and-suspenders guard.
+To confirm you actually landed on the warehouse (not the local fallback), call
+`ConnectionManager.verify_remote()`: it returns `{"remote": bool, "identity": {account, warehouse,
+database, schema, version}, "reason": ...}` from Snowflake's own session context functions. Treat
+`remote: False` as "you are NOT on Snowflake" and fix the reason before querying.
 
 ## Instructions
 

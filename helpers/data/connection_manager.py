@@ -205,11 +205,65 @@ class ConnectionManager:
                     return {"ok": count > 0, "type": "csv", "message": f"{count} CSV files"}
                 return {"ok": False, "type": "csv", "message": f"Directory not found: {csv_dir}"}
 
+            elif self._conn_type == "snowflake":
+                if self._connection is None:
+                    self.connect()
+                ident = self._snowflake_identity()
+                acct, wh = ident.get("account"), ident.get("warehouse")
+                ok = bool(acct)
+                return {"ok": ok, "type": "snowflake",
+                        "message": (f"Live on account {acct}, warehouse {wh}, "
+                                    f"database {ident.get('database')}.{ident.get('schema')}"
+                                    if ok else "Connected but CURRENT_ACCOUNT() is empty"),
+                        **ident}
+
             else:
                 return {"ok": False, "type": self._conn_type, "message": "Not yet implemented"}
 
         except Exception as exc:
             return {"ok": False, "type": self._conn_type, "message": str(exc)}
+
+    def _snowflake_identity(self) -> dict:
+        """Return the live session identity (account, warehouse, database, schema, version).
+
+        Uses Snowflake's context functions, so it reports what the SESSION is really bound to,
+        which is how the wizard proves a connection landed on the warehouse rather than a local copy.
+        """
+        try:
+            cur = self._connection.cursor()
+            cur.execute("SELECT CURRENT_ACCOUNT(), CURRENT_WAREHOUSE(), CURRENT_DATABASE(), "
+                        "CURRENT_SCHEMA(), CURRENT_VERSION()")
+            row = cur.fetchone() or []
+            cur.close()
+            keys = ["account", "warehouse", "database", "schema", "version"]
+            return {k: (row[i] if i < len(row) else None) for i, k in enumerate(keys)}
+        except Exception as exc:
+            return {"error": str(exc)}
+
+    def verify_remote(self, expect_account: str | None = None) -> dict:
+        """Prove this connection is on live Snowflake, not the local DuckDB fallback.
+
+        Returns {"remote": bool, "connection_type": str, "identity": {...}, "reason": str}.
+        The guided setup flow calls this after connecting and refuses to declare success unless
+        ``remote`` is True (and, when given, the account matches ``expect_account``).
+        """
+        if self._conn_type != "snowflake":
+            return {"remote": False, "connection_type": self._conn_type, "identity": {},
+                    "reason": (f"Connection resolved to {self._conn_type!r}, not snowflake. "
+                               "Set AAP_USE_REMOTE=1 (same shell) or use_remote: true in "
+                               ".knowledge/active.yaml, then reconnect.")}
+        if self._connection is None:
+            self.connect()
+        ident = self._snowflake_identity()
+        acct = ident.get("account")
+        if not acct:
+            return {"remote": False, "connection_type": "snowflake", "identity": ident,
+                    "reason": ident.get("error", "CURRENT_ACCOUNT() returned empty")}
+        if expect_account and acct.upper() != expect_account.upper():
+            return {"remote": False, "connection_type": "snowflake", "identity": ident,
+                    "reason": f"On account {acct}, expected {expect_account}"}
+        return {"remote": True, "connection_type": "snowflake", "identity": ident,
+                "reason": f"Live on {acct} / {ident.get('warehouse')}"}
 
     # ------------------------------------------------------------------
     # Table operations
@@ -237,6 +291,19 @@ class ConnectionManager:
                     "WHERE table_schema = %s ORDER BY table_name",
                     (schema,),
                 )
+                tables = [row[0] for row in cur.fetchall()]
+                cur.close()
+                return tables
+            except Exception:
+                return []
+
+        elif self._conn_type == "snowflake" and self._connection:
+            try:
+                schema = self._schema_prefix or "PUBLIC"
+                cur = self._connection.cursor()
+                cur.execute(
+                    "SELECT table_name FROM information_schema.tables "
+                    "WHERE table_schema = %s ORDER BY table_name", (schema.upper(),))
                 tables = [row[0] for row in cur.fetchall()]
                 cur.close()
                 return tables
@@ -420,6 +487,10 @@ class ConnectionManager:
         elif self._conn_type == "postgres" and self._connection:
             schema = self._schema_prefix or "public"
             return pd.read_sql(f"SELECT * FROM {schema}.{table_name}", self._connection)
+
+        elif self._conn_type == "snowflake" and self._connection:
+            schema = self._schema_prefix or "PUBLIC"
+            return self.query(f"SELECT * FROM {schema}.{table_name}", log=False)
 
         raise RuntimeError(f"Cannot read table for connection type: {self._conn_type}")
 
