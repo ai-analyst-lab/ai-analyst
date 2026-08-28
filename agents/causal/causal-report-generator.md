@@ -23,7 +23,7 @@ inputs:
     source: agent:causal-interpreter
     required: true
 outputs:
-  - path: reports/causal_report_{{DATE}}.md
+  - path: outputs/causal_report_{{DATE}}.md
     type: markdown
 depends_on:
   - causal-interpreter

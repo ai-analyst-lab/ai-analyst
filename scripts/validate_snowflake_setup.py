@@ -318,7 +318,7 @@ def main():
     else:
         print(f"⚠ {total - passed} CHECK(S) FAILED")
         print("\nReview the failures above and fix them before proceeding.")
-        print("\nFor help, see: SETUP_SNOWFLAKE.md")
+        print("\nFor help, see: docs/SETUP_SNOWFLAKE.md")
 
     print("=" * 60 + "\n")
 

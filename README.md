@@ -127,7 +127,7 @@ The repo includes public practice data so it works before you connect anything. 
 - **DuckDB**, local or MotherDuck
 - **Postgres**, any Postgres-compatible database
 - **BigQuery**, with a Google service account
-- **Snowflake**, with user/password or key pair (see `SETUP_SNOWFLAKE.md`)
+- **Snowflake**, with user/password or key pair (see `docs/SETUP_SNOWFLAKE.md`)
 
 It profiles the data, writes schema documentation, and remembers context across sessions in `.knowledge/`: corrections, proven query patterns, metric definitions, your business glossary. Nothing in `.knowledge/`, `data/`, or `outputs/` that you generate is committed unless you choose to.
 

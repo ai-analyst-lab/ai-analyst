@@ -637,5 +637,5 @@ agents:
   - SENSITIVITY_REPORT
   - INTERPRETATION
   outputs:
-  - reports/causal_report_{{DATE}}.md
+  - outputs/causal_report_{{DATE}}.md
   knowledge_context: []

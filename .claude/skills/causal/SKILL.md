@@ -95,7 +95,7 @@ Invoke as `/causal [mode]` or trigger on causal inference intents:
 1. Compile: estimate + CI + assumption verdicts + sensitivity results
 2. Place on confidence ladder (RCT > DiD+reg > PSM > DiD > regression > pre-post)
 3. Include mandatory caveat block (method-specific, non-negotiable)
-4. Output: `reports/causal_report_{{DATE}}.md`
+4. Output: `outputs/causal_report_{{DATE}}.md`
 
 ### `/causal full`
 **Purpose:** End-to-end: select → analyze → check → sensitivity → report.
@@ -158,6 +158,6 @@ analyses/{slug}/
 │   ├── causal_analysis_results.json
 │   ├── assumption_report.md
 │   └── sensitivity_report.md
-└── reports/                  # Final reports (tracked)
+└── outputs/                  # Final reports (per-analysis run folder)
     └── causal_report_{{DATE}}.md
 ```

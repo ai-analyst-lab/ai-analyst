@@ -127,10 +127,28 @@ All `.knowledge/` paths in these skills are relative to the working folder.
 
 ## Deliverables
 
-Deliverables are real files saved to the working folder: a written brief
-(markdown), charts as PNG files, data extracts as CSV. An answer that lives
-only in the chat is not a deliverable. Name files so a stranger could tell
-what they contain.
+Deliverables are real files, not chat text: a written brief (markdown),
+charts as PNG files, data extracts as CSV. An answer that lives only in the
+chat is not a deliverable.
+
+**One analysis, one folder** (full convention in docs/OUTPUTS.md). Every
+analysis that produces files writes them into a single run folder:
+
+```
+outputs/{YYYY-MM-DD}_{dataset}_{slug}/
+  brief.md   charts/   data/   deck.pdf (optional)   query_log.jsonl
+```
+
+Never dump loose files into the root of `outputs/`. Name files so a stranger
+could tell what they contain (`charts/retention_by_cohort.png`, not
+`chart1.png`). `working/` is for throwaway intermediates; `outputs/` is for
+deliverables.
+
+**The naming interview.** After framing the question and before writing any
+files, propose the run-folder name from the decision it serves
+(`outputs/2026-08-28_{dataset}_q3-churn-drivers/`), ask the user to confirm or
+rename the `{slug}`, and tell them where the outputs will land. Skip this only
+for a quick factual lookup that produces no files.
 
 ### Structure the written brief as a story (SWD)
 

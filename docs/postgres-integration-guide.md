@@ -173,17 +173,13 @@ last_updated: 2026-04-03T22:31:00Z
 
 ## Step 6: Configure Output Directory
 
-If you want analysis outputs to go to `reports/` instead of `outputs/`, the configuration is already set in `.knowledge/config.yaml`:
+Analysis outputs go to per-analysis run folders under `outputs/` (see docs/OUTPUTS.md):
 
 ```yaml
 output_dir: reports
 ```
 
 All analyses, charts, and decks will now save to:
-- `reports/analyses/`
-- `reports/charts/`
-- `reports/decks/`
-- `reports/data/`
 
 ## Step 7: Run Your First Analysis
 
@@ -201,7 +197,7 @@ AI Analyst will:
 1. Connect to your Postgres database
 2. Query the data using camelCase column names
 3. Generate visualizations
-4. Save outputs to `reports/`
+4. Save outputs to `outputs/{date}_{dataset}_{slug}/`
 
 ## Handling camelCase Column Names
 

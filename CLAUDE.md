@@ -64,7 +64,7 @@ The full skill map with one line each: `docs/SKILLS.md`. Agents and their contra
   expands `$SNOWFLAKE_*`, lazy-connects, and logs every query. Remote warehouses are opt-in
   (`AAP_USE_REMOTE=1` or `use_remote: true`); verify `connection_type` before trusting a source,
   and check `CURRENT_ACCOUNT()` against your own config. Runbooks: `connect-snowflake`,
-  `setup-snowflake`, `SETUP_SNOWFLAKE.md`, `POSTGRES_SETUP_GUIDE.md`.
+  `setup-snowflake`, `docs/SETUP_SNOWFLAKE.md`, `docs/postgres-integration-guide.md`.
 - **Outputs**: final deliverables in `outputs/` (charts in `outputs/charts/`), intermediates in
   `working/`, pipeline runs in their run directory. Neither is committed.
 
