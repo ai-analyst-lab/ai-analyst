@@ -835,3 +835,53 @@ def safe_check_monotonic(series, direction="increasing", strict=False):
             "message": f"Monotonic check failed: {e}",
             "details": None,
         }
+
+
+def check_ratio_bounds(series, kind="share", lower=0.0, upper=1.0, tolerance=1e-9):
+    """Flag any single ratio/share/rate value outside its valid bounds.
+
+    Distinct from check_percentages_sum (which checks a set adds to 100). This catches the lone
+    impossible value, for example a quota attainment of 900% or a conversion rate of 140%, which a
+    fan-out or a wrong denominator produces and which every frontier model has been shown to report
+    without objection. Use it on any column the analysis labels a share, rate, percent-of-total, or
+    attainment.
+
+    Args:
+        series: the values (a pandas Series or any iterable of numbers).
+        kind: what the values represent, for the message ("share", "rate", "attainment", ...).
+        lower/upper: valid bounds. Defaults to [0, 1] for a fraction; pass 0/100 for a percent.
+        tolerance: slack for floating point.
+
+    Returns:
+        dict with status ("PASS"/"FAIL"), message, and details listing the offending values.
+    """
+    import pandas as pd
+
+    s = pd.Series(list(series)).dropna()
+    if len(s) == 0:
+        return {"status": "PASS", "message": f"no {kind} values to check", "details": {"n": 0}}
+    below = s[s < lower - tolerance]
+    above = s[s > upper + tolerance]
+    n_bad = len(below) + len(above)
+    details = {
+        "n": int(len(s)),
+        "lower": lower,
+        "upper": upper,
+        "n_below": int(len(below)),
+        "n_above": int(len(above)),
+        "min": float(s.min()),
+        "max": float(s.max()),
+    }
+    if n_bad == 0:
+        return {"status": "PASS",
+                "message": f"all {len(s)} {kind} values within [{lower}, {upper}]",
+                "details": details}
+    worst = float(s.max()) if len(above) >= len(below) else float(s.min())
+    return {
+        "status": "FAIL",
+        "message": (
+            f"{n_bad} {kind} value(s) outside [{lower}, {upper}] (worst {worst:.4g}); "
+            "a fan-out or wrong denominator is the usual cause. Do not report this number."
+        ),
+        "details": details,
+    }

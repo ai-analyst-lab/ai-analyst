@@ -137,6 +137,32 @@ or [parent metric] = [driver 1] + [driver 2] + [driver 3] (for additive)
    ```
    (`direction` and `validation_status` are in the index because the metrics skill's list view displays them.)
 
+7. **Add a `compile:` block when the metric is a single aggregate (recommended).**
+   If the metric is one measure over one table with named dimensions and filters
+   (not a join, a window function, or multi-metric arithmetic), add a `compile:`
+   block so the metric compiler can compute it deterministically (Tier A). This
+   is what turns a defined metric from "the model writes SQL from the definition"
+   into "the same number every run." Shape:
+
+   ```yaml
+   compile:
+     measure: "AVG(Volume)"          # aggregate expression over columns of `table`
+     table: sp500_daily
+     time_column: Date               # optional; enables date filters
+     grain: day                      # the fan-out guard checks input rows against this
+     dimensions:                     # public name -> column/expression; whitelisted group-bys
+       year: "extract(year from Date)"
+     filters:                        # public name -> WHERE fragment with :params (bound, not interpolated)
+       year: "extract(year from Date) = :year"
+     denominator: "SUM(SUM(Volume)) OVER ()"   # set only for a ratio; result is bound to [0, 1]
+     requires_columns: [Volume, Date]
+   ```
+
+   Set the index entry's `compilable: true`. If the metric needs a join, a window
+   over rows, or more than one measure, do NOT add a `compile:` block; it stays on
+   the generate-and-validate path, which is correct. Full spec and guards:
+   `helpers/data/metric_compiler.py`.
+
 **Why this matters:** Registering metrics to the knowledge system enables:
 - Future analyses can reference the canonical definition
 - Other analysts can discover what metrics already exist

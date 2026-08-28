@@ -77,6 +77,29 @@ for f in skill_files:
     if not isinstance(d, dict) or not str(d.get('description', '')).strip():
         fails.append(f"missing description: {f}")
 
+# 2b: skill-description token budget (a rough char/4 token estimate). Long descriptions cost
+# context on every turn and, per the research, more context can hurt accuracy. Cap total and per-skill.
+_PER_SKILL_TOKEN_CAP = 220
+_TOTAL_TOKEN_CAP = 8000
+import yaml as _yaml
+_desc_tokens = 0
+_budget_warnings = []
+for f in skill_files:
+    if not f.endswith('/SKILL.md'):
+        continue
+    tt = (ROOT / f).read_text()
+    try:
+        fm = _yaml.safe_load(tt[3:tt.index(chr(10) + '---', 3)])
+    except Exception:
+        continue
+    desc = str((fm or {}).get('description', ''))
+    tok = len(desc) // 4
+    _desc_tokens += tok
+    if tok > _PER_SKILL_TOKEN_CAP and not allowed(f, 'token-budget'):
+        _budget_warnings.append(f"skill description ~{tok} tokens (cap {_PER_SKILL_TOKEN_CAP}): {f}")
+if _desc_tokens > _TOTAL_TOKEN_CAP:
+    _budget_warnings.append(f"total skill-description tokens ~{_desc_tokens} (cap {_TOTAL_TOKEN_CAP})")
+
 # 3+4: content
 for f in tracked:
     p = ROOT / f
@@ -101,6 +124,13 @@ for f in tracked:
             line = low.index(term)
             ln = t[:line].count('\n') + 1
             fails.append(f"residue '{term}': {f}:{ln}")
+
+if _budget_warnings:
+    print(f"WARN: {len(_budget_warnings)} skill-description token-budget items (non-blocking; trim descriptions into skill bodies over time):")
+    for w in _budget_warnings[:8]:
+        print("  " + w)
+    if len(_budget_warnings) > 8:
+        print(f"  ... and {len(_budget_warnings)-8} more")
 
 if fails:
     print(f"FAIL ({len(fails)} violations)")

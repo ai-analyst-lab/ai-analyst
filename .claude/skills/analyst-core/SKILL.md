@@ -35,25 +35,46 @@ before presenting.
    keys, obvious anomalies. Use the data-profiling and data-quality-check
    skills. Never assume a column means what its name suggests.
 
-3. **Every number gets a comparison.** A metric alone is trivia. Pair every
+3. **Route defined metrics through the compiler.** When a question asks for a
+   metric, check whether it is defined in `.knowledge/datasets/{active}/metrics/`.
+   If a single defined metric matches unambiguously and has a `compile:` block,
+   compute it with the compiler instead of writing SQL by hand:
+
+   ```python
+   from helpers.data.metric_router import route
+   from helpers.data.metric_compiler import load_metric, run_metric
+   r = route(active_dataset, resolved_metric_id)   # {"tier", "mode", ...}
+   if r["tier"] == "A":
+       df = run_metric(conn, load_metric(active_dataset, r["metric_id"]),
+                       group_by=[...], filters={...})   # deterministic; auto-traced
+   ```
+
+   The compiler is deterministic (same inputs, same number, every run) and its
+   guards halt on an impossible ratio or a fan-out. Only route this way for a
+   clean single-metric match; a fuzzy, multi-metric, or undefined ask stays on
+   the normal generate-and-validate path (Tier C). Never refuse an undefined
+   metric; answer it the normal way and label it (see Provenance below). If the
+   metric binds to an external layer (Tier B), delegate to that source.
+
+4. **Every number gets a comparison.** A metric alone is trivia. Pair every
    number with a prior period, a benchmark, or a segment comparison, or say
    explicitly that no comparison is available. The always-compare skill defines
    the standard.
 
-4. **Trace numbers to source.** Every finding cites which file or table, which
+5. **Trace numbers to source.** Every finding cites which file or table, which
    columns, which filter, and which time range it came from. If you cannot
    trace a headline number back to specific rows, do not present it.
 
-5. **Parts must sum to totals.** When you break a total into segments, add the
+6. **Parts must sum to totals.** When you break a total into segments, add the
    segments back up. A mismatch means double counting, dropped rows, or a bad
    join, and it must be resolved before the breakdown ships.
 
-6. **State what was not checked.** Findings are hypotheses until validated.
+7. **State what was not checked.** Findings are hypotheses until validated.
    End every analysis with a short Checks section: what was verified, what was
    not, and what could change the conclusion. Say "the data suggests", not
    "the data proves", unless validation backs it.
 
-7. **Log corrections so mistakes never repeat.** When the user corrects your
+8. **Log corrections so mistakes never repeat.** When the user corrects your
    work, or you catch your own error, record it in `.knowledge/corrections/`
    (see the log-correction skill; the full memory tree is defined in
    docs/KNOWLEDGE.md). Before writing any query or calculation against a known
@@ -110,3 +131,21 @@ Skip steps that clearly do not apply. A simple factual lookup needs a profile
 check and a cited source, not the full method. But never skip framing when the
 decision is unstated, and never skip the comparison, the trace, or the Checks
 section.
+
+## Provenance: label how every number was produced
+
+Every reported number carries a provenance mode, shown once per number in the
+Checks section, on chart footnotes, and next to the `/trace` badge. This is a
+trust surface: the reader always knows which of three regimes produced a number.
+
+- `contract`: computed by the metric compiler from a defined metric
+  (deterministic). Cite the metric id.
+- `external:<source>`: computed by a connected semantic layer (dbt, Cube,
+  Snowflake, Looker).
+- `generated`: SQL you wrote, which passed validation (grade C or better).
+- `generated-unverified`: SQL you wrote that could not be validated; show it
+  with the warning and offer to define the metric (`/metric-spec`), which
+  promotes it to `contract` next time.
+
+The values live in `helpers/data/metric_router.py`. A defined-metric answer is
+`contract`; everything else is `generated` unless validation fails.

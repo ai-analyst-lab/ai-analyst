@@ -1,0 +1,107 @@
+"""Tests for the Tier A metric compiler (helpers/data/metric_compiler.py).
+
+Covers: compile correctness, the whitelist guards (reject unknown dim/filter), parameter binding
+(values are bound, never interpolated), the ratio bound guard, and end-to-end execution against
+the bundled sp500 data with the exact expected numbers.
+"""
+from __future__ import annotations
+
+import math
+from pathlib import Path
+
+import pytest
+
+from helpers.data import metric_compiler as mc
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def _load(metric_id):
+    return mc.load_metric("sp500", metric_id, project_root=ROOT)
+
+
+# ---- compile-level (no database) ----
+
+def test_compile_simple_measure_with_filter():
+    metric = _load("avg-daily-volume")
+    sql, params = mc.compile_metric(metric, group_by=[], filters={"year": 2024})
+    assert "AVG(Volume)" in sql and "AS value" in sql
+    assert "FROM sp500_daily" in sql
+    assert "?" in sql and "extract(year from Date)" in sql
+    assert params == [2024]
+    assert "GROUP BY" not in sql  # no dimension requested
+
+
+def test_compile_group_by_dimension():
+    metric = _load("total-volume")
+    sql, params = mc.compile_metric(metric, group_by=["year"], filters={})
+    assert "GROUP BY" in sql and "ORDER BY" in sql
+    assert "AS year" in sql
+
+
+def test_ratio_metric_uses_safe_divide():
+    metric = _load("sector-share-of-volume")
+    sql, params = mc.compile_metric(metric, group_by=["sector"], filters={"year": 2024})
+    assert "OVER ()" in sql  # the denominator window
+    assert params == [2024]
+
+
+def test_unknown_dimension_rejected():
+    metric = _load("avg-daily-volume")
+    with pytest.raises(mc.MetricCompileError):
+        mc.compile_metric(metric, group_by=["not_a_dim"], filters={})
+
+
+def test_unknown_filter_rejected():
+    metric = _load("avg-daily-volume")
+    with pytest.raises(mc.MetricCompileError):
+        mc.compile_metric(metric, group_by=[], filters={"ticker": "AAPL"})
+
+
+def test_values_are_bound_not_interpolated():
+    metric = _load("avg-daily-volume")
+    # An injection attempt as a filter value must land in params, never in the SQL string.
+    sql, params = mc.compile_metric(metric, filters={"year": "2024; DROP TABLE sp500_daily"})
+    assert "DROP TABLE" not in sql
+    assert params == ["2024; DROP TABLE sp500_daily"]
+
+
+def test_is_compilable():
+    assert mc.is_compilable(_load("avg-daily-volume")) is True
+    assert mc.is_compilable({"name": "x"}) is False
+    assert mc.is_compilable({"compile": {"table": "t"}}) is False  # missing measure
+
+
+# ---- execution against the bundled sp500 data ----
+
+@pytest.fixture(scope="module")
+def conn():
+    from helpers.data.connection_manager import ConnectionManager
+    cm = ConnectionManager(config={"type": "csv", "csv_path": str(ROOT / "data" / "sp500")})
+    cm.connect()
+    return cm
+
+
+def test_avg_daily_volume_2024_exact(conn):
+    df = mc.run_metric(conn, _load("avg-daily-volume"), filters={"year": 2024})
+    assert math.isclose(float(df["value"].iloc[0]), 3921145476.1905, rel_tol=1e-6)
+
+
+def test_avg_close_2023_exact(conn):
+    df = mc.run_metric(conn, _load("avg-close"), filters={"year": 2023})
+    assert math.isclose(float(df["value"].iloc[0]), 4283.7294, rel_tol=1e-5)
+
+
+def test_sector_share_sums_to_one_and_bounded(conn):
+    df = mc.run_metric(conn, _load("sector-share-of-volume"), group_by=["sector"], filters={"year": 2024})
+    assert math.isclose(float(df["value"].sum()), 1.0, abs_tol=1e-6)
+    assert df["value"].max() <= 1.0 and df["value"].min() >= 0.0
+
+
+def test_ratio_guard_halts_on_impossible_share(conn, monkeypatch):
+    # Force a denominator that under-counts so the share exceeds 1, and confirm the guard halts
+    # rather than returning an impossible number.
+    bad = _load("sector-share-of-volume")
+    bad["compile"]["denominator"] = "SUM(Volume) / 10.0"  # ten times too small -> shares ~10x
+    with pytest.raises(mc.MetricCompileError):
+        mc.run_metric(conn, bad, group_by=["sector"], filters={"year": 2024})
