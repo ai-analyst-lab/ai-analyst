@@ -6,7 +6,7 @@ dataset directory. knowledge-bootstrap calls this BEFORE loading the semantic la
 works whether context lives in the tool (the C0-C2 individual setup) or in the team's repo (the C3 team
 setup). The team curates the context repo via PRs; each analyst points at it and pulls.
 
-Only context is synced here (semantic layer + metric defs). The gold/answer-key is never in the context
+Only context is synced here (semantic layer + metric defs). The ground-truth/answer-key is never in the context
 repo; it stays hidden with the eval harness.
 """
 from __future__ import annotations

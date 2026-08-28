@@ -12,7 +12,7 @@ will not use it, never deleted, until a human re-verifies it. It fails loud inst
 confident wrong number.
 
 schema_checksum uses the same DESCRIBE TABLE hash convention as the external eval harness (optional),
-the gold cases bind to, so the checksum convention is consistent across the eval harness and the
+the ground-truth cases bind to, so the checksum convention is consistent across the eval harness and the
 context guard. The connection is always supplied by the caller and works against either a DuckDB
 connection (conn.execute) or a standard DBAPI connection such as Snowflake (conn.cursor().execute).
 """
@@ -46,7 +46,7 @@ def schema_checksum(conn: Any, tables) -> str:
     per table; deterministic across runs.
 
     Same convention as the external eval harness (optional) so the checksum the context guard
-    compares against is the same fingerprint the gold cases use.
+    compares against is the same fingerprint the ground-truth cases use.
     """
     parts = []
     for t in sorted(tables):

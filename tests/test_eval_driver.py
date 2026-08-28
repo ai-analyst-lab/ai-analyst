@@ -50,10 +50,10 @@ class FakeConn:
 
 
 def test_grade_wires_harness_and_writes_meta(tmp_path, monkeypatch):
-    """grade() imports the sibling harness, scores the blind gold, and stamps the run record with
+    """grade() imports the sibling harness, scores the blind ground truth, and stamps the run record with
     git_sha + model + context_state + split (D4). context_state/git_sha stubbed for hermeticity."""
-    gold = tmp_path / "gold.yaml"
-    gold.write_text(yaml.safe_dump({"cases": [
+    truth = tmp_path / "ground_truth.yaml"
+    truth.write_text(yaml.safe_dump({"cases": [
         {"question": "What is total revenue?", "sql": "select 1",
          "approved_query": "select 1", "tables": ["orders"], "split": "train"},
     ]}))
@@ -70,7 +70,7 @@ def test_grade_wires_harness_and_writes_meta(tmp_path, monkeypatch):
     pcr = [{"question": "What is total revenue?", "analyst_value": 42,
             "analyst_query": "select 1", "latency_ms": 500}]
     rec = eval_driver.grade(pcr, split="train", out_dir=tmp_path / "runs",
-                            conn=conn, gold_path=gold, model="opus-4.8")
+                            conn=conn, truth_path=truth, model="opus-4.8")
 
     assert rec["split"] == "train"
     assert rec["git_sha"] == "deadbee"
@@ -81,11 +81,11 @@ def test_grade_wires_harness_and_writes_meta(tmp_path, monkeypatch):
 
 
 def test_grade_local_uses_bundled_gold_and_tolerance(tmp_path):
-    """Local mode: bundled gold, relative-tolerance grading, self-describing run record."""
+    """Local mode: bundled ground truth, relative-tolerance grading, self-describing run record."""
     qs = eval_driver.load_questions("train")
     assert qs and "answer" not in qs[0]  # blind view
-    gold = eval_driver.load_gold()
-    cases = gold["cases"][:3]
+    truth = eval_driver.load_ground_truth()
+    cases = truth["cases"][:3]
     results = [{"id": cases[0]["id"], "answer": cases[0]["answer"]},          # exact
                {"id": cases[1]["id"], "answer": cases[1]["answer"] * 1.001},  # inside tolerance
                {"id": cases[2]["id"], "answer": cases[2]["answer"] * 2}]      # wrong

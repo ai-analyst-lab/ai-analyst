@@ -41,7 +41,7 @@ intent.
   18-step pipeline to a validated deck; `/resume-pipeline` and `/runs` manage runs.
 - **Experiments and causal**: `/experiment`, `/experiment-brief`, `/srm-check` (the gate before any
   lift read), `/causal` when randomization is not possible.
-- **Trust checks**: `/reliability` (is the answer stable), `/eval` (score against gold),
+- **Trust checks**: `/reliability` (is the answer stable), `/eval` (score against a ground-truth set),
   `/context-compare`, `/trace`, `/codex-review`.
 - **Deliverables**: brief + chart into `outputs/`; `/export` to Docs, Slides, Notion, PDF, Word.
 - **Pace**: `/pace guided | narrated | autopilot`. Never run an L3+ analysis silently in guided

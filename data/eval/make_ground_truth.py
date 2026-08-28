@@ -1,4 +1,4 @@
-"""Generate data/eval/gold.yaml: 10 verified gold cases against the bundled sp500 data.
+"""Generate data/eval/ground_truth.yaml: 10 verified ground-truth cases against the bundled sp500 data.
 Every answer computed here, deterministically, from the shipped CSVs."""
 import pandas as pd, yaml, os
 
@@ -86,13 +86,13 @@ os.makedirs(f'{R}/data/eval', exist_ok=True)
 doc = {
   'dataset': 'sp500 (bundled, data/sp500/)',
   'generated': '2026-08-27',
-  'note': ('Public gold suite for the /eval skill. Every answer was computed deterministically '
-           'from the bundled CSVs by the generator script (data/eval/make_gold.py). '
+  'note': ('Public ground-truth set for the /eval skill. Every answer was computed deterministically '
+           'from the bundled CSVs by the generator script (data/eval/make_ground_truth.py). '
            'Splits: train cases may be inspected freely; test cases are for honest held-out runs.'),
-  'grading': {'method': 'relative tolerance', 'rule': 'correct when |answer - gold| <= tolerance_pct% of |gold| (absolute match when tolerance_pct is 0)'},
+  'grading': {'method': 'relative tolerance', 'rule': 'correct when |answer - truth| <= tolerance_pct% of |truth| (absolute match when tolerance_pct is 0)'},
   'cases': cases,
 }
-with open(f'{R}/data/eval/gold.yaml', 'w') as f:
+with open(f'{R}/data/eval/ground_truth.yaml', 'w') as f:
     yaml.safe_dump(doc, f, sort_keys=False, width=100)
 print('wrote', len(cases), 'cases')
 for c in cases:

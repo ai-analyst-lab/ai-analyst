@@ -2,7 +2,7 @@
 
 Context goes stale slowly. A definition that was right six months ago and nobody re-checked is still
 loaded, still cited, still trusted. The fix is a last-verified date on each definition (the same
-proposed-then-verified sign-off the gold-case format already uses), plus a read that turns that date
+proposed-then-verified sign-off the ground-truth-case format already uses), plus a read that turns that date
 into green, yellow, or red so the analyst can see what to trust less.
 
   green   verified recently (under 30 days)

@@ -100,7 +100,7 @@ You can always just ask in plain English. Slash commands are shortcuts.
 `/experiment` A/B design, power, analysis, decision · `/experiment-brief` structured test brief · `/srm-check` sample-ratio gate · `/causal` diff-in-diff, matching, before/after
 
 **Trust**
-`/reliability` is an answer stable across runs · `/eval` score the analyst against gold cases · `/context-compare` does a piece of context change the answer · `/trace` where a number came from · `/codex-review` a second model re-derives the analysis blind
+`/reliability` is an answer stable across runs · `/eval` score the analyst against ground-truth cases · `/context-compare` does a piece of context change the answer · `/trace` where a number came from · `/codex-review` a second model re-derives the analysis blind
 
 **Decks and sharing**
 `/export` to Docs, Slides, Notion, PDF, Word, Slack, or email. Fixing an existing deck lives in [deck-doctor](https://github.com/ai-analyst-lab/deck-doctor)
@@ -129,7 +129,7 @@ It profiles the data, writes schema documentation, and remembers context across 
 
 Most AI-analysis tools ask you to trust them. This one includes an eval harness.
 
-`data/eval/gold.yaml` holds 10 verified questions over the bundled S&P 500 data, each with a computed answer, a tolerance, and the method used to derive it (`data/eval/make_gold.py` regenerates the whole file, so the key is auditable). Run `/eval train` and the analyst is driven on each question blind, then graded; the run record carries the git sha, the model, and which metrics were defined at the time, so you can watch accuracy move as you change skills or add context. Add your own gold cases in the same shape.
+`data/eval/ground_truth.yaml` holds 10 verified questions over the bundled S&P 500 data, each with a computed answer, a tolerance, and the method used to derive it (`data/eval/make_ground_truth.py` regenerates the whole file, so the answer key is auditable). Run `/eval train` and the analyst is driven on each question blind, then graded; the run record carries the git sha, the model, and which metrics were defined at the time, so you can watch accuracy move as you change skills or add context. Add your own ground-truth cases in the same shape.
 
 Two companion checks: `/reliability` asks the same question N times and reports whether the answer is stable, and `/context-compare` runs a question with and without a piece of context to measure whether that context is worth keeping.
 
@@ -162,7 +162,7 @@ v3 replaces the v2 tree. The v2 release is preserved as the `v2` branch and the 
 - **Architecture.** v2 had 23 agents and no skills; v3 is skills-first (63) with the agents (39) behind the pipeline. Your v2 `CLAUDE.md` customizations need to be re-applied on the v3 file.
 - **Knowledge store.** `.knowledge/` layout is the same idea with a richer tree (corrections, archaeology, organizations, reliability). Run `/connect-data` again on your datasets to rebuild the brain.
 - **Removed.** The north-star skill (its reference corpus is not ours to redistribute), community skills tied to a course, and duplicate skills merged into their stronger sibling (see CHANGELOG).
-- **Data.** v2 bundled one demo dataset. v3 bundles several public ones plus the eval gold set.
+- **Data.** v2 bundled one demo dataset. v3 bundles several public ones plus the eval ground-truth set.
 
 ## Cowork plugin
 

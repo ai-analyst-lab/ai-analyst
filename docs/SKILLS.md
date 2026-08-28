@@ -59,7 +59,7 @@
 | `triangulation` | Cross-reference and validate findings before presenting them: mandatory segment-first Simpson's Paradox check, denominator changes, survivorship bias, plausibility vs benchmarks. |
 | `trace` | Show the provenance trace — every reported number linked to the SQL that produced it, with a confidence badge. |
 | `reliability` | Check whether an AI analysis answer is STABLE by running the same question several independent times and measuring what holds versus what drifts. |
-| `eval` | Run the held-out gold suite live against the analyst and score it. |
+| `eval` | Run the held-out ground-truth set live against the analyst and score it. |
 | `context-compare` | Advanced: runs the same question under two configurations and diffs the results. |
 | `codex-review` | Independently validate the current analysis with a second model (OpenAI Codex). |
 | `tracking-gaps` | Assess whether the data needed for an analysis actually exists, identify what's missing, and produce prioritized instrumentation requests for engineering when gaps are found. |
