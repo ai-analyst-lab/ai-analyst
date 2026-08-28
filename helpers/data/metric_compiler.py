@@ -208,7 +208,7 @@ def _fanout_guard(conn, block: dict[str, Any], filters: dict[str, Any] | None, c
     key_expr = keys[0] if len(keys) == 1 else "(" + ", ".join(keys) + ")"
     count_metric = {
         "compile": {
-            "measure": f"COUNT(*)",
+            "measure": "COUNT(*)",
             "table": block["table"],
             "dimensions": {},
             "filters": block.get("filters", {}),
