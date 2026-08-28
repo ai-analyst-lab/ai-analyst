@@ -26,6 +26,9 @@ MODE_CONTRACT = "contract"        # Tier A
 MODE_EXTERNAL = "external"        # Tier B (suffix with the source, e.g. "external:dbt")
 MODE_GENERATED = "generated"      # Tier C, validated
 MODE_GENERATED_UNVERIFIED = "generated-unverified"  # Tier C, validation failed or skipped
+# The router cannot know whether a Tier C answer passed validation, so it always returns
+# MODE_GENERATED; the analyst-core skill downgrades it to MODE_GENERATED_UNVERIFIED after the
+# validation step when a check fails. The constant lives here so the vocabulary has one home.
 
 
 def list_metrics(dataset: str, project_root: str | Path = ".") -> list[dict[str, Any]]:

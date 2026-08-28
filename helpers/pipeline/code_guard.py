@@ -28,6 +28,12 @@ _BLOCKED_CALLS = {
 }
 # Directories a write is allowed under (relative to the working dir).
 _ALLOWED_WRITE_ROOTS = ("outputs", "working")
+# Method calls that write a file to their first positional path argument (besides builtin open).
+_PATH_WRITE_METHODS = {
+    "write_text", "write_bytes",                     # pathlib.Path
+    "to_csv", "to_parquet", "to_json", "to_excel", "to_feather", "to_pickle", "to_hdf",  # pandas
+    "savefig",                                       # matplotlib
+}
 
 
 class CodeGuardError(ValueError):
@@ -54,10 +60,27 @@ def _write_mode(call: ast.Call) -> bool:
     return False
 
 
-def _path_allowed(call: ast.Call) -> bool:
-    if not call.args or not isinstance(call.args[0], ast.Constant):
+def _write_target(call: ast.Call, method: str) -> str | None:
+    """The literal path a write call targets, or None when it is not a literal we can judge.
+
+    For ``open``/``to_csv``/``savefig`` the path is the first positional argument. For
+    ``Path(...).write_text``/``write_bytes`` the path is the RECEIVER, so we read the literal out
+    of a ``Path('...')`` constructor; a variable receiver (``p.write_text``) is not judged.
+    """
+    if method in ("write_text", "write_bytes"):
+        recv = call.func.value if isinstance(call.func, ast.Attribute) else None
+        if (isinstance(recv, ast.Call) and _dotted(recv.func).split(".")[-1] == "Path"
+                and recv.args and isinstance(recv.args[0], ast.Constant)):
+            return str(recv.args[0].value)
+        return None
+    if call.args and isinstance(call.args[0], ast.Constant):
+        return str(call.args[0].value)
+    return None
+
+
+def _path_allowed(target: str | None) -> bool:
+    if target is None:
         return True  # a non-literal path is not judged here; the runtime cwd policy still applies
-    target = str(call.args[0].value)
     if target.startswith(("/", "~")) or ".." in Path(target).parts:
         return False  # absolute, home, or parent-escaping paths are never allowed
     parts = Path(target).parts
@@ -84,9 +107,15 @@ def check_code(source: str) -> list[str]:
             name = _dotted(node.func)
             if name in _BLOCKED_CALLS or name.split(".")[-1] in {"system", "popen", "rmtree"}:
                 violations.append(f"blocked call: {name}")
-            if name == "open" and _write_mode(node) and not _path_allowed(node):
-                target = node.args[0].value if node.args and isinstance(node.args[0], ast.Constant) else "?"
-                violations.append(f"write outside {_ALLOWED_WRITE_ROOTS}: open({target!r}, write mode)")
+            if name == "open" and _write_mode(node):
+                target = _write_target(node, "open")
+                if not _path_allowed(target):
+                    violations.append(f"write outside {_ALLOWED_WRITE_ROOTS}: open({target!r}, write mode)")
+            method = name.split(".")[-1]
+            if method in _PATH_WRITE_METHODS:
+                target = _write_target(node, method)
+                if not _path_allowed(target):
+                    violations.append(f"write outside {_ALLOWED_WRITE_ROOTS}: {method}({target!r})")
     return violations
 
 

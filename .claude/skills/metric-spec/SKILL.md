@@ -149,12 +149,15 @@ or [parent metric] = [driver 1] + [driver 2] + [driver 3] (for additive)
      measure: "AVG(Volume)"          # aggregate expression over columns of `table`
      table: sp500_daily
      time_column: Date               # optional; enables date filters
-     grain: day                      # the fan-out guard checks input rows against this
+     grain: day                      # documentation of what one input row represents
+     grain_key: [Date]               # columns that uniquely identify a row; the fan-out guard
+                                     # halts if the table has more rows than distinct grain keys
      dimensions:                     # public name -> column/expression; whitelisted group-bys
        year: "extract(year from Date)"
      filters:                        # public name -> WHERE fragment with :params (bound, not interpolated)
        year: "extract(year from Date) = :year"
-     denominator: "SUM(SUM(Volume)) OVER ()"   # set only for a ratio; result is bound to [0, 1]
+     denominator: "SUM(SUM(Volume)) OVER ()"   # set only for a ratio
+     value_bounds: [0, 1]            # valid range for a ratio; the guard halts outside it (default [0,1])
      requires_columns: [Volume, Date]
    ```
 

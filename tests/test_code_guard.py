@@ -37,3 +37,13 @@ def test_assert_safe_raises():
     with pytest.raises(cg.CodeGuardError):
         cg.assert_safe("import requests")
     cg.assert_safe("import pandas")  # no raise
+
+
+def test_pathlib_and_pandas_writes_outside_root_blocked():
+    from helpers.pipeline import code_guard as cg
+    assert any("write_text" in v for v in cg.check_code("from pathlib import Path\nPath('/etc/x').write_text('h')"))
+    assert any("to_csv" in v for v in cg.check_code("df.to_csv('/tmp/leak.csv')"))
+    assert any("savefig" in v for v in cg.check_code("fig.savefig('../out.png')"))
+    # writes into an allowed root pass
+    assert cg.check_code("df.to_csv('outputs/x.csv')") == []
+    assert cg.check_code("df.to_parquet('working/x.parquet')") == []

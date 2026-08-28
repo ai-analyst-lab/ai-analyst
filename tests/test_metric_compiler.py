@@ -105,3 +105,48 @@ def test_ratio_guard_halts_on_impossible_share(conn, monkeypatch):
     bad["compile"]["denominator"] = "SUM(Volume) / 10.0"  # ten times too small -> shares ~10x
     with pytest.raises(mc.MetricCompileError):
         mc.run_metric(conn, bad, group_by=["sector"], filters={"year": 2024})
+
+
+def test_filter_param_count_mismatch_raises():
+    metric = _load("avg-daily-volume")
+    # A list value with the wrong number of markers must raise a clear error, not StopIteration.
+    metric["compile"]["filters"]["between"] = "Date between :a and :b"
+    with pytest.raises(mc.MetricCompileError):
+        mc.compile_metric(metric, filters={"between": [1, 2, 3]})
+
+
+def test_list_value_filter_binds_in_order():
+    metric = _load("avg-daily-volume")
+    metric["compile"]["filters"]["between"] = "Date between :a and :b"
+    sql, params = mc.compile_metric(metric, filters={"between": ["2024-01-01", "2024-12-31"]})
+    assert params == ["2024-01-01", "2024-12-31"]
+    assert sql.count("?") == 2
+
+
+def test_fanout_guard_halts_on_wrong_grain(conn):
+    # avg-daily-volume declares grain_key [Date] and its table is 1 row/day, so it passes.
+    mc.run_metric(conn, _load("avg-daily-volume"), filters={"year": 2024})
+    # Point the same metric at the long-format sector table (many rows per Date) with grain_key
+    # [Date]: rows != distinct Date, so the fan-out guard must halt.
+    bad = _load("avg-daily-volume")
+    bad["compile"]["table"] = "sector_etfs_daily"
+    bad["compile"]["grain_key"] = ["Date"]
+    with pytest.raises(mc.MetricCompileError):
+        mc.run_metric(conn, bad, filters={"year": 2024})
+
+
+def test_ratio_bounds_from_metric(conn):
+    # A legitimate ratio that exceeds 1 (this year vs a smaller base) must NOT halt when the metric
+    # declares wider bounds.
+    metric = {
+        "compile": {
+            "measure": "SUM(Volume)",
+            "denominator": "SUM(Volume) / 2.0",   # ratio ~= 2.0 everywhere
+            "table": "sp500_daily",
+            "dimensions": {},
+            "filters": {"year": "extract(year from Date) = :year"},
+            "value_bounds": [0, 10],
+        }
+    }
+    df = mc.run_metric(conn, metric, filters={"year": 2024})
+    assert float(df["value"].iloc[0]) > 1.0  # allowed by the wider bound

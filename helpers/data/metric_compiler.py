@@ -130,11 +130,18 @@ def compile_metric(
         # A scalar value binds every marker in the fragment to that value; a list/tuple binds
         # the markers in order (e.g. a date_between with :start and :end). Values are appended as
         # positional params and the markers replaced with "?"; nothing is interpolated.
+        fragment = filt[fname]
+        n_markers = len(_PARAM_RE.findall(fragment))
         if isinstance(fvalue, (list, tuple)):
+            if len(fvalue) != n_markers:
+                raise MetricCompileError(
+                    f"filter {fname!r} has {n_markers} parameter marker(s) but {len(fvalue)} "
+                    "value(s) were supplied"
+                )
             values = iter(fvalue)
-            fragment_bound = _PARAM_RE.sub(lambda m: _bind(params, next(values)), filt[fname])
+            fragment_bound = _PARAM_RE.sub(lambda m: _bind(params, next(values)), fragment)
         else:
-            fragment_bound = _PARAM_RE.sub(lambda m: _bind(params, fvalue), filt[fname])
+            fragment_bound = _PARAM_RE.sub(lambda m: _bind(params, fvalue), fragment)
         where_parts.append(fragment_bound)
 
     sql = f"SELECT {', '.join(select_parts)}\nFROM {block['table']}"
@@ -160,45 +167,91 @@ def run_metric(
     """Compile, execute through the connection, and apply the runtime guards.
 
     ``conn`` is a ConnectionManager. Returns the result DataFrame. Guards:
-      - ratio metrics: every ``value`` must be within [0, 1] or this raises (the impossible
-        "900% of quota" class of number cannot pass).
-      - fan-out: the input table's row count must equal its distinct-grain count when the metric
-        declares a per-row grain and no group-by collapses it, or this raises.
+      - fan-out: when the metric declares ``compile.grain_key`` (the columns that uniquely
+        identify one input row), the input table's row count must equal its distinct-grain-key
+        count over the same filters, or this raises. This catches a metric authored against a
+        table at the wrong grain (for example averaging a per-day measure over a long-format
+        table that has many rows per day). No grain_key means the check is skipped.
+      - ratio metrics: every ``value`` must be within the metric's bounds (``compile.value_bounds``,
+        default [0, 1]) or this raises. This is the "900% of quota" class of impossible share.
     """
     block = _validate_block(metric.get("compile"))
     connection_type = getattr(conn, "connection_type", "duckdb") or "duckdb"
+
+    _fanout_guard(conn, block, filters, connection_type)
+
     sql, params = compile_metric(metric, group_by, filters, connection_type)
     df = _execute(conn, sql, params)
 
     if block.get("denominator") and "value" in df.columns and len(df):
-        vals = df["value"].dropna()
-        if len(vals) and (vals.min() < -1e-9 or vals.max() > 1 + 1e-9):
+        from helpers.data.sql_helpers import check_ratio_bounds
+
+        lo, hi = block.get("value_bounds", [0.0, 1.0])
+        result = check_ratio_bounds(df["value"], kind="metric ratio", lower=lo, upper=hi)
+        if result["status"] == "FAIL":
             raise MetricCompileError(
-                f"ratio metric produced a value outside [0, 1] (min {vals.min():.4g}, "
-                f"max {vals.max():.4g}); the definition or a join is wrong. Halting rather than "
-                "reporting an impossible share."
+                f"{result['message']} (metric bounds [{lo}, {hi}]). Halting rather than "
+                "reporting an out-of-range value."
             )
     return df
 
 
+def _fanout_guard(conn, block: dict[str, Any], filters: dict[str, Any] | None, connection_type: str) -> None:
+    """Raise if the input table has more rows than distinct grain keys under the same filters."""
+    grain_key = block.get("grain_key")
+    if not grain_key:
+        return
+    # Build the same WHERE as the metric so the check covers the same rows, reusing compile()'s
+    # parameter binding by compiling a trivial count metric with the same filters.
+    keys = list(grain_key) if isinstance(grain_key, (list, tuple)) else [str(grain_key)]
+    # COUNT(DISTINCT a, b) is not valid SQL; the tuple form COUNT(DISTINCT (a, b)) is.
+    key_expr = keys[0] if len(keys) == 1 else "(" + ", ".join(keys) + ")"
+    count_metric = {
+        "compile": {
+            "measure": f"COUNT(*)",
+            "table": block["table"],
+            "dimensions": {},
+            "filters": block.get("filters", {}),
+        }
+    }
+    sql, params = compile_metric(count_metric, filters=filters or {}, connection_type=connection_type)
+    # Swap the measure for the row/distinct pair; the FROM/WHERE are already correct.
+    from_where = sql[sql.index("\nFROM"):]
+    probe = f"SELECT COUNT(*) AS n_rows, COUNT(DISTINCT {key_expr}) AS n_keys{from_where}"
+    row = _execute(conn, probe, params)
+    n_rows = int(row["n_rows"].iloc[0])
+    n_keys = int(row["n_keys"].iloc[0])
+    if n_rows != n_keys:
+        raise MetricCompileError(
+            f"grain mismatch on {block['table']}: {n_rows} rows but {n_keys} distinct "
+            f"{key_expr}. The metric is defined at a finer grain than the data; a per-row "
+            "aggregate would double count. Fix the metric's table or grain_key."
+        )
+
+
+# Backends whose driver binds DuckDB-style "?" positional parameters, which is what the compiler
+# emits. Postgres (psycopg2) and Snowflake use "%s"/pyformat, so they are not run here yet; a
+# defined metric on those backends raises a clear error rather than a silently mis-bound query.
+_PARAM_BACKENDS = {"duckdb", "motherduck", "csv"}
+
+
 def _execute(conn, sql: str, params: list[Any]):
-    """Run parameterized SQL through a ConnectionManager, preferring its native bound execution."""
+    """Run compiled metric SQL through a ConnectionManager.
+
+    Unparameterized SQL runs through ``conn.query`` (traced like any other query). Parameterized
+    SQL uses the underlying DuckDB connection's bound execution. Postgres and Snowflake use a
+    different parameter style, so a parameterized metric on those backends raises rather than
+    binding "?" markers their drivers will not accept; that support is deferred until it can be
+    tested against a live connection.
+    """
     if not params:
         return conn.query(sql)
-    # ConnectionManager.query takes no params; bind through the underlying connection where possible,
-    # then fall back to a safe literalization for engines without a param API on this path.
     ct = getattr(conn, "connection_type", "duckdb")
     raw = getattr(conn, "_connection", None)
-    if ct in ("duckdb", "motherduck", "csv") and raw is not None:
+    if ct in _PARAM_BACKENDS and raw is not None:
         return raw.execute(sql, params).df()
-    # Postgres/Snowflake: use the DB-API cursor with the engine's paramstyle handled by the driver.
-    if raw is not None and hasattr(raw, "cursor"):
-        cur = raw.cursor()
-        try:
-            cur.execute(sql, params)
-            import pandas as pd
-            cols = [c[0] for c in cur.description] if cur.description else []
-            return pd.DataFrame(cur.fetchall(), columns=cols)
-        finally:
-            cur.close()
-    raise MetricCompileError(f"cannot execute parameterized metric SQL on connection type {ct!r}")
+    raise MetricCompileError(
+        f"parameterized metric compilation is currently supported on DuckDB-family backends "
+        f"(CSV, DuckDB, MotherDuck), not {ct!r}. Define the metric without a compile block on "
+        "this backend, or run it against the local copy, until Postgres/Snowflake binding lands."
+    )
