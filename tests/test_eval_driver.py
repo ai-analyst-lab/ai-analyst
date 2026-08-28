@@ -80,16 +80,23 @@ def test_grade_wires_harness_and_writes_meta(tmp_path, monkeypatch):
     assert rec["cases"][0]["latency_ms"] == 500
 
 
-def test_grade_local_uses_bundled_gold_and_tolerance(tmp_path):
-    """Local mode: bundled ground truth, relative-tolerance grading, self-describing run record."""
-    qs = eval_driver.load_questions("train")
+def test_grade_local_synthesizes_truth_and_grades_with_tolerance(tmp_path):
+    """Local mode: ground truth supplied explicitly (repo ships none), relative-tolerance grading."""
+    import yaml
+    truth_file = tmp_path / "ground_truth.yaml"
+    truth_file.write_text(yaml.safe_dump({"grading": {"method": "relative tolerance"}, "cases": [
+        {"id": "G01", "split": "train", "question": "q1", "unit": "x", "answer": 100.0, "tolerance_pct": 1.0},
+        {"id": "G02", "split": "train", "question": "q2", "unit": "x", "answer": 200.0, "tolerance_pct": 1.0},
+        {"id": "G03", "split": "train", "question": "q3", "unit": "x", "answer": 300.0, "tolerance_pct": 1.0},
+    ]}))
+    qs = eval_driver.load_questions("train", truth_path=truth_file)
     assert qs and "answer" not in qs[0]  # blind view
-    truth = eval_driver.load_ground_truth()
+    truth = eval_driver.load_ground_truth(truth_file)
     cases = truth["cases"][:3]
     results = [{"id": cases[0]["id"], "answer": cases[0]["answer"]},          # exact
                {"id": cases[1]["id"], "answer": cases[1]["answer"] * 1.001},  # inside tolerance
                {"id": cases[2]["id"], "answer": cases[2]["answer"] * 2}]      # wrong
-    rec = eval_driver.grade_local(results, "train", tmp_path / "runs", model="test")
+    rec = eval_driver.grade_local(results, "train", tmp_path / "runs", truth_path=truth_file, model="test")
     assert rec["n_cases"] == 3 and rec["n_correct"] == 2
     assert Path(rec["run_record"]).exists()
     assert rec["meta"]["model"] == "test"

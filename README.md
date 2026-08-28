@@ -35,7 +35,7 @@ Works on CSV files, DuckDB, Postgres, BigQuery, and Snowflake.
 
 ## Ten-minute start
 
-Nothing to sign up for. The repo includes public practice data (S&P 500 daily prices, sector ETFs, FRED macro series, and synthetic A/B experiments with answer keys).
+Nothing to sign up for, and no data baked in. On first run the analyst interviews you and helps you connect your own data, so it starts on your world instead of a toy dataset.
 
 ```bash
 git clone https://github.com/ai-analyst-lab/ai-analyst.git
@@ -44,13 +44,19 @@ pip install -e ".[dev]"
 claude
 ```
 
-Then, inside Claude Code:
+Then, inside Claude Code, get set up:
 
 ```
-/analyst Using data/sp500/sp500_daily.csv, I need to decide whether to keep our equity allocation. How did the S&P 500 do in 2023 versus 2022, and what was the worst drawdown along the way? Save me a one-page brief with one chart.
+/setup
 ```
 
-It frames the decision, profiles the file, runs the comparison, flags anything odd, and writes the brief and chart into `outputs/`. When you are ready for your own data, run `/connect-data` (CSV folder, DuckDB, Postgres, BigQuery, or Snowflake) and it builds the `.knowledge/` context for that dataset automatically.
+`/setup` runs a short conversational interview (who you are, what you work on, what data to connect) and wires up your source, CSV folder, DuckDB, MotherDuck, Postgres, BigQuery, or Snowflake, building the `.knowledge/` context for it automatically. Then ask a real question:
+
+```
+/analyst Using the orders table, how did revenue trend last quarter versus the one before, and where did we lose the most? Save me a one-page brief with one chart.
+```
+
+It frames the decision, profiles the data, runs the comparison, flags anything odd, and writes the brief and chart into `outputs/`. (Want practice data first? The course sample datasets, S&P 500 prices, FRED macro series, and synthetic A/B experiments with answer keys, live in the `ai-analyst-plus` repo under `course-examples/`.)
 
 **Explicit beats implicit.** Starting a request with `/analyst` runs the full method by name every time. Plain questions work too, and the analyst-core skill steers them, but the command is the reliable path when you want the whole method.
 
@@ -129,7 +135,7 @@ It profiles the data, writes schema documentation, and remembers context across 
 
 Most AI-analysis tools ask you to trust them. This one includes an eval harness.
 
-`data/eval/ground_truth.yaml` holds 10 verified questions over the bundled S&P 500 data, each with a computed answer, a tolerance, and the method used to derive it (`data/eval/make_ground_truth.py` regenerates the whole file, so the answer key is auditable). Run `/eval train` and the analyst is driven on each question blind, then graded; the run record carries the git sha, the model, and which metrics were defined at the time, so you can watch accuracy move as you change skills or add context. Add your own ground-truth cases in the same shape.
+The eval harness grades the analyst against a ground-truth set you define for your own data: each case is a question with a computed answer, a tolerance, and the method used to derive it, so the answer key is auditable. Run `/eval train` and the analyst is driven on each question blind, then graded; the run record carries the git sha, the model, and which metrics were defined at the time, so you can watch accuracy move as you change skills or add context. The repo ships no ground truth (it ships no data); a worked example set over public S&P 500 data lives in `ai-analyst-plus` under `course-examples/`.
 
 Two companion checks: `/reliability` asks the same question N times and reports whether the answer is stable, and `/context-compare` runs a question with and without a piece of context to measure whether that context is worth keeping.
 
@@ -162,7 +168,7 @@ v3 replaces the v2 tree. The v2 release is preserved as the `v2` branch and the 
 - **Architecture.** v2 had 23 agents and no skills; v3 is skills-first (63) with the agents (39) behind the pipeline. Your v2 `CLAUDE.md` customizations need to be re-applied on the v3 file.
 - **Knowledge store.** `.knowledge/` layout is the same idea with a richer tree (corrections, archaeology, organizations, reliability). Run `/connect-data` again on your datasets to rebuild the brain.
 - **Removed.** The north-star skill (its reference corpus is not ours to redistribute), community skills tied to a course, and duplicate skills merged into their stronger sibling (see CHANGELOG).
-- **Data.** v2 bundled one demo dataset. v3 bundles several public ones plus the eval ground-truth set.
+- **Data.** v2 bundled a demo dataset. v3 ships blank: you connect your own on first run, and the sample datasets live in `ai-analyst-plus/course-examples/`.
 
 ## Cowork plugin
 

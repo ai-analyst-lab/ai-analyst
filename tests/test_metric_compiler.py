@@ -1,8 +1,8 @@
 """Tests for the Tier A metric compiler (helpers/data/metric_compiler.py).
 
 Covers: compile correctness, the whitelist guards (reject unknown dim/filter), parameter binding
-(values are bound, never interpolated), the ratio bound guard, and end-to-end execution against
-the bundled sp500 data with the exact expected numbers.
+(values are bound, never interpolated), the ratio bound guard, and end-to-end execution against a tiny SYNTHETIC dataset built at
+runtime in a temp dir (the repo ships no data), with exact expected numbers derived from it.
 """
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from helpers.data import metric_compiler as mc
 ROOT = Path(__file__).resolve().parents[1]
 
 # Fixture metrics for the tests. The repo ships NO baked-in metrics (a user defines their own),
-# so the compiler is tested against these fixtures pointed at the bundled, tracked sp500 CSVs.
+# so the compiler is tested against these fixtures pointed at a synthetic dataset built in a temp dir.
 _FIXTURES = {
     "avg-daily-volume": {"compile": {
         "measure": "AVG(Volume)", "table": "sp500_daily", "grain_key": ["Date"],
@@ -98,21 +98,34 @@ def test_is_compilable():
 # ---- execution against the bundled sp500 data ----
 
 @pytest.fixture(scope="module")
-def conn():
+def conn(tmp_path_factory):
+    # Build a tiny, deterministic dataset in a temp dir so the tests carry their own data.
+    # sp500_daily: 1 row/day. 2023: Volume 100,200 (avg 150) Close 4000,4200 (avg 4100).
+    #              2024: Volume 300,500 (avg 400, sum 800) Close 5000,5800.
+    # sector_etfs_daily (2024): Tech 300+400=700, Energy 100+200=300, total 1000 -> shares .7/.3.
     from helpers.data.connection_manager import ConnectionManager
-    cm = ConnectionManager(config={"type": "csv", "csv_path": str(ROOT / "data" / "sp500")})
+    d = tmp_path_factory.mktemp("synth_sp500")
+    (d / "sp500_daily.csv").write_text(
+        "Date,Volume,Close\n"
+        "2023-06-01,100,4000\n2023-06-02,200,4200\n"
+        "2024-06-01,300,5000\n2024-06-02,500,5800\n")
+    (d / "sector_etfs_daily.csv").write_text(
+        "Date,Sector,Volume\n"
+        "2024-06-01,Tech,300\n2024-06-01,Energy,100\n"
+        "2024-06-02,Tech,400\n2024-06-02,Energy,200\n")
+    cm = ConnectionManager(config={"type": "csv", "csv_path": str(d)})
     cm.connect()
     return cm
 
 
 def test_avg_daily_volume_2024_exact(conn):
     df = mc.run_metric(conn, _load("avg-daily-volume"), filters={"year": 2024})
-    assert math.isclose(float(df["value"].iloc[0]), 3921145476.1905, rel_tol=1e-6)
+    assert math.isclose(float(df["value"].iloc[0]), 400.0, rel_tol=1e-9)  # (300+500)/2
 
 
 def test_avg_close_2023_exact(conn):
     df = mc.run_metric(conn, _load("avg-close"), filters={"year": 2023})
-    assert math.isclose(float(df["value"].iloc[0]), 4283.7294, rel_tol=1e-5)
+    assert math.isclose(float(df["value"].iloc[0]), 4100.0, rel_tol=1e-9)  # (4000+4200)/2
 
 
 def test_sector_share_sums_to_one_and_bounded(conn):

@@ -105,6 +105,13 @@ silently and proceed.
    relevant to this question or its deliverable (taught rules like reporting
    currency, preferred formats, known caveats), apply them to the output.
 
+0. **No data connected yet.** Before anything else, if no dataset is connected (no
+   `.knowledge/active.yaml` and nothing under `.knowledge/datasets/`), do not guess or
+   invent data. Say so and run the onboarding interview: invoke the setup skill (`/setup`)
+   or `/connect-data` to learn what the user wants to analyze and wire up their source. The
+   repo ships blank on purpose. If the user names a dataset they do not have yet (for example
+   "I want S&P 500 data"), help them find a source and connect it rather than assuming a file.
+
 4. **Dataset-switch detection.** If the question references a dataset other
    than the active one, including mid-session ("actually use the Q3 file"),
    say so: "It looks like you're asking about {name}, but the active dataset
