@@ -364,12 +364,10 @@ def detect_active_source():
     }
 
     # --- Determine best available connection type ---
-    # Opted-in remote (snowflake/postgres/bigquery/motherduck) > local duckdb > csv
-    if declared_type in ("snowflake", "postgres", "bigquery") and use_remote:
+    # Opted-in remote (snowflake/postgres/bigquery/databricks) > local duckdb > csv
+    if declared_type in ("snowflake", "postgres", "bigquery", "databricks") and use_remote:
         source_info["type"] = declared_type
         source_info["schema_prefix"] = conn.get("schema", "") or manifest.get("schema_prefix", "")
-    elif conn.get("type") == "motherduck" or (declared_type == "motherduck" and use_remote):
-        source_info["type"] = "motherduck"
     elif source_info["duckdb_path"] and Path(source_info["duckdb_path"]).exists():
         source_info["type"] = "duckdb"
     elif source_info["csv_path"] and Path(source_info["csv_path"]).is_dir():

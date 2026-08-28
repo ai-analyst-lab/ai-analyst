@@ -44,12 +44,12 @@ except ImportError:
 
 # Supported connection types and their required packages.
 SUPPORTED_TYPES = {
-    "motherduck": {"package": "duckdb", "installed": _DUCKDB_AVAILABLE},
     "duckdb": {"package": "duckdb", "installed": _DUCKDB_AVAILABLE},
     "csv": {"package": "duckdb", "installed": _DUCKDB_AVAILABLE},
     "postgres": {"package": "psycopg2", "installed": False},
     "bigquery": {"package": "google-cloud-bigquery", "installed": False},
     "snowflake": {"package": "snowflake-connector-python", "installed": False},
+    "databricks": {"package": "databricks-sql-connector", "installed": False},
 }
 
 
@@ -140,7 +140,7 @@ class ConnectionManager:
         """
         conn_type = self._conn_type
 
-        if conn_type in ("motherduck", "duckdb"):
+        if conn_type == "duckdb":
             self._connect_duckdb()
         elif conn_type == "postgres":
             self._connect_postgres()
@@ -148,6 +148,8 @@ class ConnectionManager:
             self._connect_bigquery()
         elif conn_type == "snowflake":
             self._connect_snowflake()
+        elif conn_type == "databricks":
+            self._connect_databricks()
         elif conn_type == "csv":
             self._connect_csv()
         else:
@@ -176,7 +178,7 @@ class ConnectionManager:
             dict: {ok: bool, type: str, message: str}
         """
         try:
-            if self._conn_type in ("motherduck", "duckdb"):
+            if self._conn_type in ("duckdb",):
                 if self._connection is None:
                     self.connect()
                 self._connection.sql("SELECT 1").fetchone()
@@ -217,6 +219,25 @@ class ConnectionManager:
                                     if ok else "Connected but CURRENT_ACCOUNT() is empty"),
                         **ident}
 
+            elif self._conn_type == "bigquery":
+                if self._connection is None:
+                    self.connect()
+                self._connection.query("SELECT 1").result()
+                proj = getattr(self._connection, "project", None)
+                return {"ok": bool(proj), "type": "bigquery",
+                        "message": f"Connected to BigQuery project {proj}, dataset {self._schema_prefix}",
+                        "project": proj, "dataset": self._schema_prefix}
+
+            elif self._conn_type == "databricks":
+                if self._connection is None:
+                    self.connect()
+                ident = self._databricks_identity()
+                ok = "error" not in ident
+                return {"ok": ok, "type": "databricks",
+                        "message": (f"Live on catalog {ident.get('catalog')}, schema {ident.get('schema')}"
+                                    if ok else ident.get("error", "unknown")),
+                        **ident}
+
             else:
                 return {"ok": False, "type": self._conn_type, "message": "Not yet implemented"}
 
@@ -240,30 +261,42 @@ class ConnectionManager:
         except Exception as exc:
             return {"error": str(exc)}
 
+    _REMOTE_TYPES = ("snowflake", "postgres", "bigquery", "databricks")
+
     def verify_remote(self, expect_account: str | None = None) -> dict:
-        """Prove this connection is on live Snowflake, not the local DuckDB fallback.
+        """Prove this connection is on a live remote warehouse, not the local DuckDB fallback.
 
         Returns {"remote": bool, "connection_type": str, "identity": {...}, "reason": str}.
         The guided setup flow calls this after connecting and refuses to declare success unless
-        ``remote`` is True (and, when given, the account matches ``expect_account``).
+        ``remote`` is True (and, for Snowflake with ``expect_account``, the account matches).
         """
-        if self._conn_type != "snowflake":
+        if self._conn_type not in self._REMOTE_TYPES:
             return {"remote": False, "connection_type": self._conn_type, "identity": {},
-                    "reason": (f"Connection resolved to {self._conn_type!r}, not snowflake. "
+                    "reason": (f"Connection resolved to {self._conn_type!r}, not a remote warehouse. "
                                "Set AAP_USE_REMOTE=1 (same shell) or use_remote: true in "
                                ".knowledge/active.yaml, then reconnect.")}
         if self._connection is None:
             self.connect()
-        ident = self._snowflake_identity()
-        acct = ident.get("account")
-        if not acct:
+        if self._conn_type == "snowflake":
+            ident = self._snowflake_identity(); label = ident.get("account")
+        elif self._conn_type == "databricks":
+            ident = self._databricks_identity(); label = ident.get("catalog")
+        elif self._conn_type == "bigquery":
+            proj = getattr(self._connection, "project", None)
+            ident = {"project": proj, "dataset": self._schema_prefix}; label = proj
+        else:  # postgres
+            ident = {"schema": self._schema_prefix}; label = "connected"
+        if "error" in ident:
+            return {"remote": False, "connection_type": self._conn_type,
+                    "identity": ident, "reason": ident["error"]}
+        if not label:
+            return {"remote": False, "connection_type": self._conn_type, "identity": ident,
+                    "reason": "connected but the session identity came back empty"}
+        if expect_account and self._conn_type == "snowflake" and str(label).upper() != expect_account.upper():
             return {"remote": False, "connection_type": "snowflake", "identity": ident,
-                    "reason": ident.get("error", "CURRENT_ACCOUNT() returned empty")}
-        if expect_account and acct.upper() != expect_account.upper():
-            return {"remote": False, "connection_type": "snowflake", "identity": ident,
-                    "reason": f"On account {acct}, expected {expect_account}"}
-        return {"remote": True, "connection_type": "snowflake", "identity": ident,
-                "reason": f"Live on {acct} / {ident.get('warehouse')}"}
+                    "reason": f"On account {label}, expected {expect_account}"}
+        return {"remote": True, "connection_type": self._conn_type, "identity": ident,
+                "reason": f"Live on {self._conn_type}: {label}"}
 
     # ------------------------------------------------------------------
     # Table operations
@@ -275,7 +308,7 @@ class ConnectionManager:
         Returns:
             list[str]: Sorted table names.
         """
-        if self._conn_type in ("motherduck", "duckdb") and self._connection:
+        if self._conn_type in ("duckdb",) and self._connection:
             try:
                 df = self._connection.sql("SHOW TABLES").df()
                 return sorted(df["name"].tolist()) if "name" in df.columns else []
@@ -310,6 +343,24 @@ class ConnectionManager:
             except Exception:
                 return []
 
+        elif self._conn_type == "bigquery" and self._connection:
+            try:
+                proj = getattr(self._connection, "project", None)
+                ref = f"{proj}.{self._schema_prefix}" if proj else self._schema_prefix
+                return sorted(t.table_id for t in self._connection.list_tables(ref))
+            except Exception:
+                return []
+
+        elif self._conn_type == "databricks" and self._connection:
+            try:
+                cur = self._connection.cursor()
+                cur.execute("SHOW TABLES")
+                rows = cur.fetchall()
+                cur.close()
+                return sorted(r[1] for r in rows)  # (database, tableName, isTemporary)
+            except Exception:
+                return []
+
         elif self._conn_type == "csv":
             if self._csv_views:
                 return sorted(self._csv_views)
@@ -326,7 +377,7 @@ class ConnectionManager:
         Returns:
             list[dict]: Each dict has keys: name, type, nullable.
         """
-        if self._conn_type in ("motherduck", "duckdb") and self._connection:
+        if self._conn_type in ("duckdb",) and self._connection:
             try:
                 df = self._connection.sql(f"DESCRIBE {table_name}").df()
                 columns = []
@@ -390,7 +441,7 @@ class ConnectionManager:
             self.connect()
 
         start = time.perf_counter()
-        if self._conn_type in ("motherduck", "duckdb", "csv") and self._connection:
+        if self._conn_type in ("duckdb", "csv") and self._connection:
             df = self._connection.sql(sql).df()
         elif self._conn_type == "postgres" and self._connection:
             df = pd.read_sql(sql, self._connection)
@@ -399,6 +450,16 @@ class ConnectionManager:
             try:
                 cur.execute(sql)
                 df = cur.fetch_pandas_all() if cur.description else pd.DataFrame()
+            finally:
+                cur.close()
+        elif self._conn_type == "bigquery" and self._connection:
+            df = pd.DataFrame([dict(r) for r in self._connection.query(sql).result()])
+        elif self._conn_type == "databricks" and self._connection:
+            cur = self._connection.cursor()
+            try:
+                cur.execute(sql)
+                cols = [d[0] for d in cur.description] if cur.description else []
+                df = pd.DataFrame(cur.fetchall(), columns=cols) if cols else pd.DataFrame()
             finally:
                 cur.close()
         else:
@@ -475,7 +536,7 @@ class ConnectionManager:
         Returns:
             pandas.DataFrame
         """
-        if self._conn_type in ("motherduck", "duckdb") and self._connection:
+        if self._conn_type in ("duckdb",) and self._connection:
             return self._connection.sql(f"SELECT * FROM {table_name}").df()
 
         elif self._conn_type == "csv":
@@ -490,6 +551,15 @@ class ConnectionManager:
 
         elif self._conn_type == "snowflake" and self._connection:
             schema = self._schema_prefix or "PUBLIC"
+            return self.query(f"SELECT * FROM {schema}.{table_name}", log=False)
+
+        elif self._conn_type == "bigquery" and self._connection:
+            proj = getattr(self._connection, "project", None)
+            ref = f"`{proj}.{self._schema_prefix}.{table_name}`" if proj else f"`{self._schema_prefix}.{table_name}`"
+            return self.query(f"SELECT * FROM {ref}", log=False)
+
+        elif self._conn_type == "databricks" and self._connection:
+            schema = self._schema_prefix or "default"
             return self.query(f"SELECT * FROM {schema}.{table_name}", log=False)
 
         raise RuntimeError(f"Cannot read table for connection type: {self._conn_type}")
@@ -686,3 +756,38 @@ class ConnectionManager:
         self._connection = snowflake.connector.connect(**connect_kwargs)
         self._schema_prefix = conn_config.get("schema", "public")
         self._conn_type = "snowflake"
+
+    def _connect_databricks(self):
+        """Connect to a Databricks SQL warehouse. Requires databricks-sql-connector."""
+        try:
+            from databricks import sql as dbsql
+        except ImportError:
+            raise ConnectionError(
+                "databricks-sql-connector not installed. "
+                "Install with: pip install databricks-sql-connector"
+            )
+        c = self._config.get("connection", {})
+        kwargs = dict(
+            server_hostname=c.get("server_hostname", ""),
+            http_path=c.get("http_path", ""),
+            access_token=c.get("access_token", ""),
+        )
+        if c.get("catalog"):
+            kwargs["catalog"] = c["catalog"]
+        if c.get("schema"):
+            kwargs["schema"] = c["schema"]
+        self._connection = dbsql.connect(**kwargs)
+        self._schema_prefix = c.get("schema", "default")
+        self._conn_type = "databricks"
+
+    def _databricks_identity(self) -> dict:
+        """Return the live session's catalog + schema (proves a real Databricks session)."""
+        try:
+            cur = self._connection.cursor()
+            cur.execute("SELECT current_catalog(), current_schema()")
+            row = cur.fetchone() or []
+            cur.close()
+            return {"catalog": row[0] if len(row) > 0 else None,
+                    "schema": row[1] if len(row) > 1 else None}
+        except Exception as exc:
+            return {"error": str(exc)}

@@ -1,0 +1,35 @@
+# Connection Template: Databricks SQL warehouse
+# Copy to .knowledge/datasets/{name}/manifest.yaml and fill in values.
+# Requires: pip install databricks-sql-connector  (or: pip install -e ".[warehouses]")
+# Auth: a personal access token (store it in .env as $DATABRICKS_TOKEN).
+
+dataset_id: "{dataset_id}"
+display_name: "{Display Name}"
+description: "{Brief description of the dataset}"
+domain: "{e-commerce|saas|fintech|marketplace|other}"
+created_at: "{YYYY-MM-DD}"
+is_seed: false
+
+connection:
+  type: databricks
+  server_hostname: "{workspace}.cloud.databricks.com"   # from the SQL warehouse "Connection details"
+  http_path: "/sql/1.0/warehouses/{warehouse_id}"       # same "Connection details" panel
+  access_token: "$DATABRICKS_TOKEN"                      # personal access token, kept in .env
+  catalog: "{catalog}"                                   # Unity Catalog catalog (e.g. main)
+  schema: "{schema}"                                     # e.g. default
+
+summary:
+  table_count: null
+  total_rows: null
+  date_range: null
+  primary_entities: []
+  key_dimensions: []
+  last_profiled: null
+
+local_data:
+  path: null
+  duckdb: null
+
+status: active
+last_used: null
+analysis_count: 0

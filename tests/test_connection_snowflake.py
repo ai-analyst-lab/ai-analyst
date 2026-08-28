@@ -21,7 +21,7 @@ class _FakeCursor:
         self._p.executed.append(sql)
         u = sql.upper()
         if "CURRENT_ACCOUNT" in u:
-            self._row = ("ACME-PROD", "ANALYST_WH", "NOVAMART", "PUBLIC", "8.1.0")
+            self._row = ("ACME-PROD", "ANALYST_WH", "SALES_DB", "PUBLIC", "8.1.0")
             self.description = [("a",)]
         elif "INFORMATION_SCHEMA.TABLES" in u:
             self._rows = [("customers",), ("orders",), ("products",)]

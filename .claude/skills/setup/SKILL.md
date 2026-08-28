@@ -212,7 +212,7 @@ Then proceed to Phase 2.
 1. "Let's connect your data. What do you have?
    - **CSV files** in a local directory
    - **DuckDB** database file
-   - **Cloud warehouse** (MotherDuck, Postgres, BigQuery, Snowflake)
+   - **Cloud warehouse** (Snowflake, BigQuery, Postgres, Databricks)
    - **Nothing yet** — I want to use a sample dataset"
 
 STOP. Wait for response before continuing.
@@ -238,7 +238,7 @@ The user's answer to Group 1 determines what happens next.
 **If Cloud warehouse:**
 - Explain: "Cloud warehouses connect via MCP (Model Context Protocol). This
   requires configuring `.claude/mcp.json` with your credentials."
-- Invoke Connect Data: `skill: "connect-data"`, `args: "type={warehouse_type}"` (warehouse_type = motherduck, postgres, bigquery, or snowflake).
+- Invoke Connect Data: `skill: "connect-data"`, `args: "type={warehouse_type}"` (warehouse_type = snowflake, bigquery, postgres, or databricks).
 - Connect Data will guide the MCP setup.
 - After Connect Data returns, check its status. If it says "MCP configuration needed", mark Phase 2 as `partial`.
 - **Do not block Phase 3.** Continue the interview even if warehouse setup is incomplete.

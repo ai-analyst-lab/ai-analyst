@@ -1,7 +1,7 @@
 ---
 name: connect-data
 description: |
-  Guided wizard to connect a new dataset to the AI Analyst system. Use this skill whenever the user wants to add a new data source, connect a database, set up data access, or configure a new dataset for analysis. This skill handles the full connection workflow: choosing connection type (CSV, DuckDB, MotherDuck, PostgreSQL, BigQuery, Snowflake), collecting credentials, validating connectivity, profiling schema, and setting up the knowledge brain. Trigger this skill when users say things like "/connect-data", "connect my database", "add a new dataset", "set up my data", "I have a database I want to analyze", "can you connect to my Postgres/BigQuery/Snowflake", "I need to add CSV files", "how do I get my data into this system", or "connect to my warehouse". Also trigger after first-run welcome when users need to set up their first dataset, or after /switch-dataset when the target dataset doesn't exist yet. This is the primary entry point for all new data connections — always offer this when users mention having data they want to analyze but haven't connected yet.
+  Guided wizard to connect a new dataset to the AI Analyst system. Use this skill whenever the user wants to add a new data source, connect a database, set up data access, or configure a new dataset for analysis. This skill handles the full connection workflow: choosing connection type (CSV, DuckDB, PostgreSQL, Snowflake, BigQuery, Databricks), collecting credentials, validating connectivity, profiling schema, and setting up the knowledge brain. Trigger this skill when users say things like "/connect-data", "connect my database", "add a new dataset", "set up my data", "I have a database I want to analyze", "can you connect to my Postgres/BigQuery/Snowflake", "I need to add CSV files", "how do I get my data into this system", or "connect to my warehouse". Also trigger after first-run welcome when users need to set up their first dataset, or after /switch-dataset when the target dataset doesn't exist yet. This is the primary entry point for all new data connections — always offer this when users mention having data they want to analyze but haven't connected yet.
 ---
 > Once a CSV folder is registered, it is SQL-queryable through `ConnectionManager().query(sql)`:
 > each file becomes a table named after its file stem (`orders.csv` -> `orders`), and the
@@ -32,10 +32,10 @@ description: |
 Present options:
 1. **CSV files** — "I have CSV files in a local directory"
 2. **DuckDB** — "I have a local DuckDB database file"
-3. **MotherDuck** — "I have a MotherDuck cloud database"
-4. **PostgreSQL** — "I have a PostgreSQL database"
+3. **PostgreSQL** — "I have a PostgreSQL database"
+4. **Snowflake** — "I have a Snowflake warehouse"
 5. **BigQuery** — "I have a Google BigQuery dataset"
-6. **Snowflake** — "I have a Snowflake warehouse"
+6. **Databricks** — "I have a Databricks SQL warehouse"
 
 ### Step 2: Collect Connection Details
 
@@ -49,9 +49,11 @@ Present options:
 - Verify file exists
 - Test connection with `SELECT 1`
 
-**For MotherDuck:**
-- Ask: "Database name and schema?"
-- Note: "MotherDuck connects via MCP. Make sure your token is configured."
+**For Databricks:**
+- Copy `connection_templates/databricks.yaml.example`
+- Ask for: server_hostname, http_path (both from the SQL warehouse "Connection
+  details" panel), catalog, schema
+- Store the personal access token in `.env` as `$DATABRICKS_TOKEN` (never inline)
 
 **For PostgreSQL / BigQuery:**
 - Copy the appropriate template from `connection_templates/`
@@ -61,11 +63,8 @@ Present options:
 
 **For Snowflake:**
 - Route to the dedicated setup wizard: "Run `/setup-snowflake` for guided
-  Snowflake setup — it'll configure your credentials, test the MCP connection,
-  and explore your data."
-- If `.env` already has `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USER`, and
-  `SNOWFLAKE_PASSWORD`, skip the wizard and use the Snowflake MCP
-  `run_snowflake_query` tool directly for testing and schema profiling.
+  Snowflake setup — it collects every field, writes the password to `.env`,
+  and verifies you are live on the warehouse before finishing."
 
 ### Step 3: Create Dataset Brain
 1. **Generate a dataset_id from the display name** using lowercase letters with hyphens (NOT underscores).

@@ -19,6 +19,7 @@ from helpers.data.dialects.duckdb_dialect import DuckDBDialect
 from helpers.data.dialects.postgres import PostgresDialect
 from helpers.data.dialects.bigquery import BigQueryDialect
 from helpers.data.dialects.snowflake import SnowflakeDialect
+from helpers.data.dialects.databricks import DatabricksDialect
 
 
 # Registry mapping connection_type strings to dialect classes.
@@ -29,6 +30,7 @@ _DIALECT_MAP: dict[str, type[SQLDialect]] = {
     "postgresql": PostgresDialect,
     "bigquery": BigQueryDialect,
     "snowflake": SnowflakeDialect,
+    "databricks": DatabricksDialect,
 }
 
 
