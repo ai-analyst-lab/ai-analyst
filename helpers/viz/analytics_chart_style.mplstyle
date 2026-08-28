@@ -2,7 +2,7 @@
 # Usage: plt.style.use("helpers/viz/analytics_chart_style.mplstyle")
 
 # Figure
-figure.figsize:     8, 5
+figure.figsize:     10, 6
 figure.dpi:         150
 figure.facecolor:   "#F7F6F2"
 figure.edgecolor:   "#F7F6F2"
@@ -16,7 +16,7 @@ font.size:          10
 axes.facecolor:     "#F7F6F2"
 axes.edgecolor:     "E5E7EB"
 axes.linewidth:     0.5
-axes.titlesize:     14
+axes.titlesize:     16
 axes.titleweight:   bold
 axes.titlepad:      16
 axes.labelsize:     10
@@ -24,7 +24,9 @@ axes.labelcolor:    "4B5563"
 axes.labelpad:      8
 axes.spines.top:    False
 axes.spines.right:  False
-axes.prop_cycle:    cycler('color', ['D97706', 'DC2626', 'E5E7EB', '9CA3AF', '6B7280'])
+# Focus blue first (sane single-series default AND the one accent), then grays, then orange.
+# Never a rainbow: a plain multi-series loop recedes to gray instead of coloring every line.
+axes.prop_cycle:    cycler('color', ['0072B2', '757575', 'BDBDBD', 'D55E00', '404040'])
 
 # Grid
 axes.grid:          False

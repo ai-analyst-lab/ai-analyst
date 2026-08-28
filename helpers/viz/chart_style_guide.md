@@ -3,6 +3,12 @@
 **Internal reference for all AI Analytics for Builders course visuals.**
 Based on Cole Nussbaumer Knaflic's *Storytelling with Data* (SWD) principles.
 
+> **Palette source of truth: `helpers/viz/palette.py`.** Focus color is blue `#0072B2`
+> (Okabe-Ito); the reserved second accent is orange `#D55E00`; everything else is gray.
+> The pair is colorblind-safe by construction (blue vs orange, never red vs green).
+> Amber `#D97706` remains the BRAND color for decks and thumbnails; it is retired from the
+> chart focus role. Older amber/red examples below predate this and are being updated.
+
 ---
 
 ## Philosophy

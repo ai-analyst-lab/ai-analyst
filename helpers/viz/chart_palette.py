@@ -132,7 +132,6 @@ def ensure_contrast(
 
     # Decide direction: darken foreground if background is light, else lighten
     bg_is_light = bg_lum > 0.5
-    step = -0.02 if bg_is_light else 0.02  # shift lightness
 
     r, g, b = fg
     for _ in range(200):  # safety cap

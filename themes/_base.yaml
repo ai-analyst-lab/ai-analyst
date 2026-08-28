@@ -10,38 +10,36 @@ theme:
 
 colors:
   # Primary palette (SWD-inspired)
-  primary: "#4878CF"        # Blue — key data, call-to-action
-  secondary: "#5ABF55"      # Green — positive, growth
-  accent: "#D65F5F"         # Red — alerts, negative, emphasis
-  neutral: "#B0B0B0"        # Gray — supporting, context
+  primary: "#0072B2"        # Okabe-Ito blue — focus / key data
+  secondary: "#D55E00"      # Okabe-Ito orange — second accent
+  accent: "#D55E00"         # Orange — alerts / negative (no red-green)
+  neutral: "#BDBDBD"        # Gray — supporting, context
   background: "#F7F6F2"     # Warm off-white (matches analytics_chart_style.mplstyle)
   text: "#333333"           # Dark gray — body text
   text_light: "#666666"     # Medium gray — captions, annotations
   # Categorical palette (8 colors, colorblind-safe — no red-green adjacent)
+  # Okabe-Ito, non-adjacent, capped at 5 (more categories is a signal to rethink the chart)
   categorical:
-    - "#4878CF"   # blue
-    - "#5ABF55"   # green
-    - "#B47CC7"   # purple
-    - "#D65F5F"   # red
-    - "#C4AD66"   # gold
-    - "#5FAECC"   # light blue
-    - "#D68E5C"   # orange
-    - "#8C8C8C"   # gray
+    - "#0072B2"   # blue (focus)
+    - "#D55E00"   # orange (secondary)
+    - "#009E73"   # bluish green
+    - "#CC79A7"   # reddish purple
+    - "#404040"   # dark gray
   # Sequential palette (for heatmaps, density)
   sequential:
-    low: "#E8F4FD"          # Lightest blue
-    mid: "#4878CF"          # Mid blue
-    high: "#1A3A6C"         # Darkest blue
+    low: "#F2F7FB"          # Lightest blue
+    mid: "#9CC7E4"          # Mid blue
+    high: "#0072B2"         # Focus blue
   # Diverging palette (for positive/negative)
   diverging:
-    negative: "#D65F5F"     # Red — decline, loss
-    neutral: "#F7F6F2"      # Background — midpoint
-    positive: "#5ABF55"     # Green — growth, improvement
+    negative: "#D55E00"     # Orange — decline, loss (no red-green)
+    neutral: "#F0F0F0"      # Neutral midpoint
+    positive: "#0072B2"     # Blue — growth, improvement
   # Highlight colors (for SWD highlight_bar/highlight_line)
   highlight:
-    focus: "#4878CF"        # Draw attention to key data
-    comparison: "#B0B0B0"   # De-emphasize supporting data
-    alert: "#D65F5F"        # Flag problems or outliers
+    focus: "#0072B2"        # Blue — draw attention to key data
+    comparison: "#BDBDBD"   # Gray — de-emphasize supporting data
+    alert: "#D55E00"        # Orange — flag problems or outliers
 
 typography:
   font_family: "Helvetica Neue, Helvetica, Arial, sans-serif"
@@ -76,12 +74,12 @@ charts:
       left: true            # Keep left spine
     spine_color: "#CCCCCC"  # Light gray spines
   bar:
-    default_color: "#B0B0B0"    # Gray — context bars
-    highlight_color: "#4878CF"  # Blue — the story bar
+    default_color: "#BDBDBD"    # Gray — context bars
+    highlight_color: "#0072B2"  # Blue — the story bar
     edge_width: 0               # No bar edges (declutter)
   line:
-    default_color: "#B0B0B0"    # Gray — context lines
-    highlight_color: "#4878CF"  # Blue — the story line
+    default_color: "#BDBDBD"    # Gray — context lines
+    highlight_color: "#0072B2"  # Blue — the story line
     width: 2.0                  # Standard line weight
     highlight_width: 2.5        # Slightly heavier for emphasis
   annotations:
@@ -98,7 +96,7 @@ presentations:
   slide_caption_size: "14px"  # Small for source lines
   slide_background: "#FFFFFF"   # Clean white slides
   slide_text: "#333333"         # Dark gray text
-  slide_accent: "#4878CF"       # Blue accent elements
+  slide_accent: "#0072B2"       # Blue accent elements
   # Dark mode variant (for analytics-dark theme)
   dark:
     slide_background: "#1E1E2E" # Deep dark background

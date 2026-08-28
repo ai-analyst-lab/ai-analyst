@@ -33,27 +33,32 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import numpy as np
 
+from helpers.viz import palette as _pal
+
 # ---------------------------------------------------------------------------
-# Color palette — source of truth: themes/analytics-dark.css
+# Color palette — single source of truth: helpers/viz/palette.py
+# Blue #0072B2 focus, orange #D55E00 secondary, gray context (Okabe-Ito, colorblind-safe).
 # ---------------------------------------------------------------------------
 
 COLORS = {
-    "action":   "#D97706",
-    "accent":   "#DC2626",
-    "negative": "#DC2626",
-    "success":  "#059669",
-    "warning":  "#D97706",
-    "danger":   "#DC2626",
-    "gray900":  "#1F2937",
-    "gray600":  "#6B7280",
-    "gray400":  "#9CA3AF",
-    "gray200":  "#E5E7EB",
-    "gray100":  "#F3F4F6",
+    # Focus (the one thing the takeaway argues) is blue; second accent is orange.
+    # Both are Okabe-Ito, so any pairing is colorblind-safe. No red-green semantics.
+    "action":   _pal.FOCUS,        # #0072B2 blue — main data series / focus
+    "accent":   _pal.SECONDARY,    # #D55E00 orange — second accent / emphasis
+    "negative": _pal.SECONDARY,    # #D55E00 orange — decline/loss (was red)
+    "success":  _pal.FOCUS,        # #0072B2 blue — positive (was green; keep to one focus hue)
+    "warning":  _pal.SECONDARY,    # #D55E00 orange
+    "danger":   _pal.SECONDARY,    # #D55E00 orange
+    "gray900":  _pal.TEXT,             # #1F2937 — the only near-black text
+    "gray600":  _pal.TEXT_SECONDARY,   # #4B5563 — one recessive gray for all structural text
+    "gray400":  _pal.CONTEXT,          # #BDBDBD — default context
+    "gray200":  _pal.CONTEXT_LIGHT,    # #E0E0E0
+    "gray100":  _pal.CONTEXT_LIGHTEST, # #F0F0F0
     "white":    "#FFFFFF",
-    "bg":       "#F7F6F2",
+    "bg":       _pal.BACKGROUND,       # #F7F6F2 warm off-white
     # Semantic aliases for analytical chart builders
-    "primary":  "#D97706",   # same as action — main data series
-    "muted":    "#9CA3AF",   # same as gray400 — supporting elements
+    "primary":  _pal.FOCUS,        # main data series
+    "muted":    _pal.CONTEXT,      # supporting elements
 }
 
 # ---------------------------------------------------------------------------
@@ -125,7 +130,7 @@ def swd_style(theme: dict | None = None):
     else:
         # Fallback: apply critical settings directly
         plt.rcParams.update({
-            "figure.figsize": (8, 5),
+            "figure.figsize": (10, 6),
             "figure.dpi": 150,
             "figure.facecolor": "#F7F6F2",
             "axes.facecolor": "#F7F6F2",
@@ -288,14 +293,43 @@ def highlight_line(ax, x, y_dict, highlight=None, highlight_color=None,
     ax.set_axisbelow(True)
 
 
+import re as _re
+import warnings as _warnings
+
+def _warn_if_not_takeaway(title: str) -> None:
+    """Warn when a chart title reads as a topic or a question rather than a takeaway."""
+    if not title or not isinstance(title, str):
+        return
+    t = title.strip()
+    if t.endswith("?"):
+        _warnings.warn(
+            f"Chart title is a question ({title!r}); SWD prefers a takeaway that states the "
+            "conclusion. Question titles split attention and signal uncertainty.",
+            stacklevel=2,
+        )
+        return
+    # Topic tell: "<Noun> by <dimension>" with no verb, e.g. "Revenue by Region".
+    if _re.search(r"\bby\b\s+[\w /]+$", t) and len(t.split()) <= 6:
+        _warnings.warn(
+            f"Chart title {title!r} looks like a topic, not a takeaway. State the so-what "
+            "(e.g. 'West leads revenue, 27% above the field'), not the subject.",
+            stacklevel=2,
+        )
+
+
 def action_title(ax, title, subtitle=None):
-    """Add a bold action title and optional subtle subtitle.
+    """Add a bold takeaway title and optional subtle subtitle.
+
+    SWD: the title states the conclusion in a full sentence ("iOS drove the June spike"),
+    not the topic ("Support tickets by platform"). A topic-shaped or question-shaped title
+    is warned about, not blocked.
 
     Args:
         ax: Matplotlib Axes.
         title: The takeaway statement (e.g. "iOS drove the June spike").
         subtitle: Context line (e.g. "Support Tickets, 2024").
     """
+    _warn_if_not_takeaway(title)
     if subtitle:
         ax.text(0, 1.12, title, transform=ax.transAxes,
                 fontsize=17, fontweight="bold", color=COLORS["gray900"],
@@ -458,7 +492,7 @@ def stacked_bar(ax, categories, layers, colors_map=None, highlight_layer=None,
         if colors_map and name in colors_map:
             color = colors_map[name]
         elif name == highlight_layer:
-            color = COLORS["accent"]
+            color = COLORS["primary"]  # focus = blue (orange is reserved for negative/2nd series)
         else:
             color = COLORS["gray200"]
 
@@ -534,8 +568,9 @@ def retention_heatmap(ax, cohort_labels, period_labels, retention_matrix,
     Returns:
         (fig, ax) tuple — fig is ax's parent figure.
     """
-    cmap_high = cmap_high or COLORS["success"]
-    cmap_low = cmap_low or COLORS["negative"]
+    # Single-hue blue sequential by default (was green-high / red-low, a colorblind trap).
+    cmap_high = cmap_high or _pal.SEQUENTIAL_HIGH
+    cmap_low = cmap_low or _pal.SEQUENTIAL_LOW
 
     matrix = np.array(retention_matrix, dtype=float)
     n_rows, n_cols = matrix.shape
@@ -823,7 +858,7 @@ def big_number_layout(ax, metrics, findings=None, recommendation=None,
 
 def sensitivity_table(ax, x_label, y_label, x_values, y_values, output_values,
                       highlight_cell=None, breakeven_cell=None, fmt=None,
-                      cmap_positive="#059669", cmap_negative="#DC2626"):
+                      cmap_positive=None, cmap_negative=None):
     """Render a heatmap-style sensitivity table for two-variable analysis.
 
     Shows how an output metric changes as two assumptions vary. Useful for
@@ -847,6 +882,9 @@ def sensitivity_table(ax, x_label, y_label, x_values, y_values, output_values,
     """
     ax.axis("off")
     fmt = fmt or "${:,.0f}"
+    # Orange (low) <-> white <-> blue (high) diverging by default. NOT red-green.
+    cmap_positive = cmap_positive or _pal.DIVERGING_HIGH
+    cmap_negative = cmap_negative or _pal.DIVERGING_LOW
 
     n_rows = len(y_values)
     n_cols = len(x_values)
@@ -867,21 +905,22 @@ def sensitivity_table(ax, x_label, y_label, x_values, y_values, output_values,
         row_colors = []
         for j in range(n_cols):
             row_text.append(fmt.format(vals[i][j]))
-            # Interpolate between negative and positive colors via white
+            # Interpolate negative -> white -> positive using the two accent colors,
+            # so the ramp honors cmap_negative/cmap_positive instead of a hardcoded pair.
             ratio = (vals[i][j] - v_min) / v_range
-            # Simple green-white-red: low=red, mid=white, high=green
+            def _hx(h):
+                h = h.lstrip("#")
+                return tuple(int(h[k:k + 2], 16) for k in (0, 2, 4))
+            white = (255, 255, 255)
             if ratio >= 0.5:
-                # White to green
                 t = (ratio - 0.5) * 2
-                r = int(255 * (1 - t * 0.91))  # 255 -> 22
-                g = int(255 * (1 - t * 0.36))  # 255 -> 163
-                b = int(255 * (1 - t * 0.71))  # 255 -> 74
+                c0, c1 = white, _hx(cmap_positive)
             else:
-                # Red to white
                 t = ratio * 2
-                r = int(220 + t * 35)   # 220 -> 255
-                g = int(38 + t * 217)   # 38 -> 255
-                b = int(38 + t * 217)   # 38 -> 255
+                c0, c1 = _hx(cmap_negative), white
+            r = int(c0[0] + (c1[0] - c0[0]) * t)
+            g = int(c0[1] + (c1[1] - c0[1]) * t)
+            b = int(c0[2] + (c1[2] - c0[2]) * t)
             row_colors.append(f"#{r:02x}{g:02x}{b:02x}")
         cell_text.append(row_text)
         cell_colors.append(row_colors)
@@ -1127,7 +1166,7 @@ def funnel_waterfall(ax, steps, counts, highlight_step=None,
         fmt: Format string for count labels. Default: "{:,.0f}".
     """
     bar_color = bar_color or COLORS["gray200"]
-    highlight_color = highlight_color or COLORS["accent"]
+    highlight_color = highlight_color or COLORS["primary"]  # focus = blue
     fmt = fmt or "{:,.0f}"
 
     n = len(steps)
@@ -1549,3 +1588,174 @@ def control_chart_plot(series, center_line, ucl, lcl, violations=None,
     action_title(ax, chart_title)
 
     return fig, ax
+
+
+# ---------------------------------------------------------------------------
+# Direct-labeling and annotation helpers (SWD: label in place, avoid legends)
+# ---------------------------------------------------------------------------
+
+def end_label(ax, x, y, text, color=None, weight="normal", pad=0.01):
+    """Place a direct label at the end of a line, replacing a legend entry.
+
+    Args:
+        ax: Matplotlib Axes.
+        x, y: Coordinates of the series endpoint (typically x[-1], y[-1]).
+        text: The series label.
+        color: Label color. Default: the focus blue; pass the series color to match.
+        weight: "bold" for the focus series, "normal" for context.
+        pad: Horizontal offset as a fraction of the x-range, so the text clears the point.
+    """
+    color = color or COLORS["primary"]
+    xlo, xhi = ax.get_xlim()
+    dx = (xhi - xlo) * pad
+    ax.text(x + dx, y, text, va="center", ha="left", fontsize=9,
+            color=color, fontweight=weight, clip_on=False)
+
+
+def callout(ax, x, y, text, color=None, offset=(20, 20)):
+    """Annotate one data point with a short, rationed note and a faint leader.
+
+    A thin wrapper over annotate_point kept as the SWD-vocabulary name; use it for the ONE
+    load-bearing observation on a chart, not for scattered labels.
+    """
+    return annotate_point(ax, x, y, text, arrow_color=color, offset=offset)
+
+
+def reference_line(ax, value, label=None, orient="h", color=None,
+                   linestyle="--", label_side="right"):
+    """Draw a light reference/goal line with an inline label (no legend).
+
+    Args:
+        ax: Matplotlib Axes.
+        value: The y-value (orient="h") or x-value (orient="v") of the line.
+        label: Inline label text (e.g. "Target: 80%"). None draws just the line.
+        orient: "h" for a horizontal line, "v" for a vertical one.
+        color: Line/label color. Default: secondary text gray (recessive, not a data accent).
+        linestyle: Matplotlib linestyle. Default: dashed.
+        label_side: "right"/"left" for a horizontal line; "top"/"bottom" for vertical.
+    """
+    color = color or COLORS["gray600"]
+    if orient == "h":
+        ax.axhline(value, color=color, linewidth=1.0, linestyle=linestyle, zorder=1)
+        if label:
+            xlo, xhi = ax.get_xlim()
+            x = xhi if label_side == "right" else xlo
+            ha = "right" if label_side == "right" else "left"
+            ax.text(x, value, f" {label} ", va="bottom", ha=ha, fontsize=9,
+                    color=color, clip_on=False)
+    else:
+        ax.axvline(value, color=color, linewidth=1.0, linestyle=linestyle, zorder=1)
+        if label:
+            ylo, yhi = ax.get_ylim()
+            y = yhi if label_side != "bottom" else ylo
+            ax.text(value, y, f" {label}", va="top", ha="left", fontsize=9,
+                    color=color, clip_on=False)
+
+
+# ---------------------------------------------------------------------------
+# Single-value and single-bar builders (SWD-endorsed, previously missing)
+# ---------------------------------------------------------------------------
+
+def big_number(ax, value, label=None, color=None, delta=None, delta_good="up"):
+    """Show one number as text, the SWD default when there is nothing to compare on a chart.
+
+    Args:
+        ax: Matplotlib Axes (turned off; used as a text canvas).
+        value: The headline value, already formatted (e.g. "$1.2M", "94%").
+        label: A short caption under the number.
+        color: Number color. Default: focus blue.
+        delta: Optional change string (e.g. "+12% vs last quarter").
+        delta_good: "up" if a rising delta is good (colors + blue / - orange), "down" to flip.
+    """
+    ax.axis("off")
+    color = color or COLORS["primary"]
+    ax.text(0.5, 0.60, str(value), fontsize=54, fontweight="bold", color=color,
+            ha="center", va="center", transform=ax.transAxes)
+    if label:
+        ax.text(0.5, 0.34, label, fontsize=13, color=COLORS["gray600"],
+                ha="center", va="center", transform=ax.transAxes, linespacing=1.4)
+    if delta:
+        rising = str(delta).lstrip().startswith(("+", "↑"))
+        good = rising == (delta_good == "up")
+        dcolor = COLORS["primary"] if good else COLORS["accent"]
+        ax.text(0.5, 0.20, delta, fontsize=12, color=dcolor, ha="center",
+                va="center", transform=ax.transAxes)
+
+
+def share_bar(ax, parts, highlight=None, colors_map=None, fmt="{:.0%}"):
+    """A single horizontal 100% stacked bar: the SWD replacement for a pie chart.
+
+    Args:
+        ax: Matplotlib Axes.
+        parts: Dict mapping segment_name -> value. Rendered left to right in iteration order,
+            normalized to the total so the bar always spans 0-100%.
+        highlight: Segment name to color with the focus accent; others recede to gray.
+        colors_map: Optional explicit segment_name -> hex overrides.
+        fmt: Label format for each segment's share. Default: whole-percent.
+    """
+    names = list(parts.keys())
+    vals = np.array([float(parts[n]) for n in names])
+    total = vals.sum() or 1.0
+    shares = vals / total
+    left = 0.0
+    grays = [COLORS["gray400"], COLORS["gray200"], COLORS["gray100"], COLORS["gray600"]]
+    gi = 0
+    for name, share in zip(names, shares):
+        if colors_map and name in colors_map:
+            color = colors_map[name]
+        elif highlight is not None and name == highlight:
+            color = COLORS["primary"]
+        else:
+            color = grays[gi % len(grays)]
+            gi += 1
+        ax.barh([0], [share], left=left, color=color, height=0.5)
+        if share >= 0.05:
+            txt_color = COLORS["white"] if color in (COLORS["primary"], COLORS["gray600"]) else COLORS["gray900"]
+            ax.text(left + share / 2, 0, f"{name}\n{fmt.format(share)}", ha="center",
+                    va="center", fontsize=9, color=txt_color,
+                    fontweight="bold" if name == highlight else "normal")
+        left += share
+    ax.set_xlim(0, 1)
+    ax.set_ylim(-0.5, 0.5)
+    ax.axis("off")
+
+
+def bullet(ax, value, target, ranges=None, label=None, color=None,
+           target_color=None, fmt="{:,.0f}"):
+    """A bullet chart: measure bar over light qualitative bands with a target tick.
+
+    The compact SWD-friendly replacement for a gauge, for one metric versus its target.
+
+    Args:
+        ax: Matplotlib Axes.
+        value: The measured value (the dark bar length).
+        target: The target value (drawn as a vertical tick).
+        ranges: Ascending qualitative thresholds for the background bands
+            (e.g. [50, 80, 100]). Default: three even bands up to max(value, target).
+        label: Row label shown at the left.
+        color: Measure-bar color. Default: near-black text gray (the measure, not an accent).
+        target_color: Target-tick color. Default: focus blue.
+        fmt: Value label format.
+    """
+    color = color or COLORS["gray900"]
+    target_color = target_color or COLORS["primary"]
+    top = max(value, target, (ranges[-1] if ranges else 0))
+    if ranges is None:
+        ranges = [top / 3, 2 * top / 3, top]
+    bands = [COLORS["gray100"], COLORS["gray200"], COLORS["gray400"]]
+    prev = 0.0
+    for i, r in enumerate(ranges):
+        ax.barh([0], [r - prev], left=prev, color=bands[min(i, len(bands) - 1)], height=0.7)
+        prev = r
+    ax.barh([0], [value], color=color, height=0.35)
+    ax.plot([target, target], [-0.28, 0.28], color=target_color, linewidth=3)
+    ax.text(value, 0, f" {fmt.format(value)}", va="center", ha="left",
+            fontsize=9, color=COLORS["gray900"], clip_on=False)
+    if label:
+        ax.text(-0.02, 0.5, label, transform=ax.get_yaxis_transform(),
+                ha="right", va="center", fontsize=10, color=COLORS["gray900"])
+    ax.set_xlim(0, top * 1.12)
+    ax.set_ylim(-0.5, 0.5)
+    ax.set_yticks([])
+    for sp in ("top", "right", "left"):
+        ax.spines[sp].set_visible(False)

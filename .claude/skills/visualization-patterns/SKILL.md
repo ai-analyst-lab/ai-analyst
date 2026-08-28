@@ -26,7 +26,7 @@ palette options only when the user asks about themes or colors.
 
 Unless the user specifies otherwise, ALWAYS use the **minimal** theme. It's clean, professional, and suitable for most business contexts:
 - Warm off-white background (#F7F6F2) for reduced eye strain
-- Action Blue accent (#2563EB) for focus
+- Focus blue accent (#0072B2, an Okabe-Ito color) for the one element the takeaway argues
 - Helvetica font family
 - Left-aligned titles, minimal gridlines
 
@@ -96,7 +96,7 @@ Every chart follows the SWD methodology by Cole Nussbaumer Knaflic:
 
 > **Gray everything first. Color is reserved for the one data point that tells the story.**
 
-- Maximum **2 colors + gray** per chart. Action Amber (`#D97706`) for the primary focus, Accent Red (`#DC2626`) for a secondary callout. Everything else is gray.
+- Mostly gray. One focus accent, blue (`#0072B2`), for the element the takeaway argues; a second accent, orange (`#D55E00`), only for a genuine two-focal or good-vs-bad case. Both are Okabe-Ito colors, so the pair is colorblind-safe (blue vs orange, never red vs green). Everything else is gray. Use up to 5 Okabe-Ito categoricals ONLY when categories are truly independent; more than that is a signal to rethink the chart, never to add hues. (Amber `#D97706` stays the BRAND color for decks and thumbnails; it is retired from the chart focus role.)
 - **Titles state the takeaway**, not a description. "iOS drove the June ticket spike" not "Tickets by Platform."
 - Every visual element must earn its place — if it doesn't help the reader understand the story, remove it.
 - Prefer text over charts for single numbers. Prefer horizontal bars over pie charts. Prefer direct labels over legends.
@@ -147,6 +147,15 @@ All chart helpers live in `helpers/viz/chart_helpers.py`. The style file is `hel
 | `action_title()` | Bold takeaway title + optional subtitle | `title`, `subtitle=` |
 | `annotate_point()` | Clean annotation with arrow | `x`, `y`, `text`, `offset=` |
 | `save_chart()` | Tight layout + correct DPI | `fig`, `path`, `dpi=150` |
+| `stacked_bar()` | Stacked / 100% stacked (`normalize=True`) bar | `highlight_layer=`, `normalize=` |
+| `share_bar()` | Single horizontal 100% stacked bar (pie replacement) | `parts={}`, `highlight=` |
+| `slope_chart()` | Two-time-point change across items | `start_col`, `end_col`, `highlight_label=` |
+| `funnel_waterfall()` | Funnel drop-off; highlights the biggest drop | `highlight_step=` |
+| `retention_heatmap()` | Cohort retention as a blue-sequential table | keeps numbers in cells |
+| `big_number()` | One number as text (the no-chart default for 1-2 numbers) | `value`, `label=`, `delta=` |
+| `bullet()` | One metric vs target (gauge replacement) | `value`, `target`, `ranges=` |
+| `end_label()` | Direct end-of-line label (replaces a legend entry) | `x`, `y`, `text`, `color=` |
+| `reference_line()` | Goal/threshold line with an inline label | `value`, `label=`, `orient=` |
 
 ### Theme Definitions
 
@@ -200,10 +209,10 @@ ECONOMIST_THEME = {
 ```python
 MINIMAL_THEME = {
     "colors": {
-        "primary": "#333333",
-        "secondary": "#999999",
-        "accent": "#2563EB",
-        "palette": ["#2563EB", "#DC2626", "#059669", "#D97706", "#7C3AED", "#DB2777"],
+        "primary": "#1F2937",
+        "secondary": "#4B5563",
+        "accent": "#0072B2",
+        "palette": ["#0072B2", "#D55E00", "#009E73", "#CC79A7", "#404040"],
         "background": "#FFFFFF",
         "grid": "#F0F0F0",
     },
@@ -300,23 +309,36 @@ def apply_theme(fig, ax, theme):
 | **Correlation** | Scatter plot | Relationship between two continuous variables |
 | **Distribution** | Histogram | Single variable distribution |
 | **Distribution** (compare groups) | Box plot or violin | Distribution comparison across groups |
-| **Proportion** | Donut chart | ≤5 segments, one variable |
+| **Proportion / parts-to-whole** | Single 100% stacked bar (`share_bar()`) | Replaces the pie/donut; direct-labeled shares |
 | **Flow/Process** | Funnel chart | Conversion or drop-off rates |
 | **Intensity** | Heatmap | Two categorical dimensions + one value |
 | **Cumulative** | Area chart | Running totals over time |
 | **Ranking changes** | Bump chart | Rank position changes over time |
 | **Waterfall** | Waterfall chart | Additive/subtractive contributions |
 
+**Pick by intent, then encode by length or position, never area or angle.** Cleveland and McGill's
+graphical-perception ranking (position > length > angle > area) is why bars beat pies and why the
+avoid-list below exists. One or two numbers are not a chart: use `big_number()`. Discouraged charts
+(pie, donut, treemap, bubble, dual/secondary y-axis, 3D, radar, truncated bars, >5 series) are gated
+behind an explicit user request, never a default.
+
+**Builder verdicts (helpers/viz/chart_helpers.py):** horizontal bar is the default for long labels
+(zero baseline enforced); multi-line-with-one-highlighted (`highlight_line`) is the default line
+behavior (gray context + one accent, cap 4-5 lines); `slope_chart` is preferred for two-time-point
+change; `share_bar` replaces the pie; `retention_heatmap` is a blue-sequential table (numbers kept in
+cells); stacked bars are for when the TOTAL is the message, with the priority series on the baseline;
+stacked/multi-series area is discouraged (redirect to a line or 100% stacked bar).
+
 ### Annotation Standards
 
 1. **Always label key data points directly** — do not rely on legends for primary story elements
 2. **Use direct labels** on bars and line endpoints instead of requiring axis reading
 3. **Annotate inflection points** — mark where trends change with a brief note
-4. **Titles are takeaways, not descriptions** — "Revenue grew 23% after launch" not "Revenue by Month"
+4. **Titles are takeaways, not descriptions** — "Revenue grew 23% after launch" not "Revenue by Month". `action_title()` warns when a title reads as a topic ("... by X") or a question; rewrite it to state the so-what before shipping.
 5. **Subtitles provide context** — "Monthly revenue, Jan–Dec 2025, in $M"
 6. **Source line** at bottom-left in small gray text
 7. **Format numbers for readability** — "$1.2M" not "$1,234,567"; "23%" not "0.2345"
-8. **Max 6 colors** in any single chart — use gray for "other" or "rest"
+8. **Gray plus at most 2 accents** (blue focus, optional orange) — up to 5 Okabe-Ito categoricals only when categories are truly independent; never a rainbow
 9. **Highlight the story** — use accent color for the key data point, gray for context
 
 ### Standard Chart Setup
@@ -410,7 +432,7 @@ colors[key_index] = theme["colors"]["accent"]  # Highlight the story
 | **Truncated y-axes** | Exaggerate small differences (for bar charts) | Start at zero for bar charts |
 | **Cluttered annotations** | Annotating every data point defeats the purpose | Annotate only the story |
 | **Default matplotlib styling** | Looks generic, unprofessional | Always apply `swd_style()` first |
-| **More than 2 colors** | Creates visual noise, dilutes focus | Gray + Action Amber + optional Accent Red |
+| **Rainbow / red-green pairs** | Visual noise; red-green is unreadable for ~8% of men | Gray + focus blue + optional orange (Okabe-Ito) |
 
 ## Review Checklist
 

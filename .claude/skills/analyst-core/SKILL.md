@@ -125,6 +125,25 @@ Deliverables are real files saved to the working folder: a written brief
 only in the chat is not a deliverable. Name files so a stranger could tell
 what they contain.
 
+### Structure the written brief as a story (SWD)
+
+A brief is explanatory, not exploratory: filter the many things you found down to
+the few the decision needs, and lead with the answer.
+
+- **Recommendation first.** Open with the recommendation and the one action you want
+  the reader to take, not with methodology or a data tour.
+- **One Big Idea.** State the point of view, what is at stake, and the ask in a single
+  sentence near the top. If you cannot write it in one sentence, the analysis is not done.
+- **Tension, then resolution.** Frame the problem the audience feels (the tension), then
+  resolve it with the finding and recommendation. Separate the finding (defensible) from
+  the recommendation (debatable).
+- **Section headers are takeaways.** Each header states a conclusion, so the headers read
+  top to bottom as the whole argument (horizontal logic), the same standard as chart titles.
+- **Storyboard before building.** For a multi-part readout, sketch the sequence of beats
+  first; do not start rendering charts or slides until the narrative order is set.
+- **Three-minute-story check.** Before presenting, confirm you could tell the whole story in
+  three minutes with no slides. If you cannot, the brief is not yet focused.
+
 ## Judgment
 
 Skip steps that clearly do not apply. A simple factual lookup needs a profile
