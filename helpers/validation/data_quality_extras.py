@@ -9,10 +9,14 @@ Usage:
         check_null_concentration,
         check_outliers,
         safe_check_outliers,
+        sanity_check,
+        anomaly_scan,
+        freshness_check,
     )
 """
 
 import math
+from datetime import date, datetime
 
 import numpy as np
 import pandas as pd
@@ -180,3 +184,152 @@ def safe_check_outliers(series, method="iqr", **kwargs):
             "detail": f"Could not check outliers: {exc}",
             "outlier_indices": [],
         }
+
+
+# Columns whose values must lie in [0, 1]; used by ``sanity_check``.
+BOUNDED_RATE_COLUMNS = ("conversion_rate", "percentage", "rate", "pct", "ratio")
+
+
+def sanity_check(df, column, bounded_columns=BOUNDED_RATE_COLUMNS, skew_threshold=3.0):
+    """Summary statistics plus domain sanity issues for one numeric column.
+
+    Args:
+        df: pandas.DataFrame.
+        column: Name of the numeric column to check.
+        bounded_columns: Column names (exact match) whose values must lie in
+            ``[0, 1]``; values outside that range are a BLOCKER.
+        skew_threshold: Absolute skew above which the column is flagged
+            WARNING as highly skewed (default 3.0).
+
+    Returns:
+        ``(stats, issues)`` where ``stats`` is a dict with mean, median, std,
+        min, max, p1, p99, skew (NaN-safe floats) and ``issues`` is a list of
+        ``(severity, message)`` tuples. An empty or all-null column returns
+        NaN stats and a single WARNING issue.
+    """
+    series = pd.to_numeric(df[column], errors="coerce").dropna()
+    if len(series) == 0:
+        stats = {k: float("nan") for k in
+                 ("mean", "median", "std", "min", "max", "p1", "p99", "skew")}
+        return stats, [("WARNING", f"{column} has no numeric values to check")]
+
+    stats = {
+        "mean": float(series.mean()),
+        "median": float(series.median()),
+        "std": float(series.std()) if len(series) > 1 else 0.0,
+        "min": float(series.min()),
+        "max": float(series.max()),
+        "p1": float(series.quantile(0.01)),
+        "p99": float(series.quantile(0.99)),
+        "skew": float(series.skew()) if len(series) > 2 else 0.0,
+    }
+
+    issues = []
+    if column in bounded_columns and (stats["max"] > 1 or stats["min"] < 0):
+        issues.append(("BLOCKER", f"{column} has values outside [0,1] range"))
+    if not math.isnan(stats["skew"]) and abs(stats["skew"]) > skew_threshold:
+        issues.append(("WARNING",
+                       f"{column} is highly skewed (skew={stats['skew']:.1f})"))
+    return stats, issues
+
+
+def anomaly_scan(df, date_col, metric_col, window=14, threshold=2.0):
+    """Detect time-series anomalies using rolling mean +/- std bands.
+
+    Aggregate to daily or weekly granularity first; this is not meant for
+    raw event rows.
+
+    Args:
+        df: DataFrame with date and metric columns (pre-aggregated).
+        date_col: Name of the date column.
+        metric_col: Name of the metric column.
+        window: Rolling window size in periods (default 14).
+        threshold: Standard deviations for the anomaly band (default 2.0).
+
+    Returns:
+        dict with ``anomalies`` (list of dicts: date, value, direction, and
+        pct_above_normal or pct_below_normal) and ``summary`` (str).
+    """
+    if len(df) == 0:
+        return {"anomalies": [], "summary": f"0 anomalies in {metric_col} (no rows)"}
+
+    ts = df.sort_values(date_col).copy()
+    ts["rolling_mean"] = ts[metric_col].rolling(window, min_periods=3).mean()
+    ts["rolling_std"] = ts[metric_col].rolling(window, min_periods=3).std()
+    ts["upper"] = ts["rolling_mean"] + threshold * ts["rolling_std"]
+    ts["lower"] = ts["rolling_mean"] - threshold * ts["rolling_std"]
+
+    anomalies = []
+    for _, row in ts.iterrows():
+        mean = row["rolling_mean"]
+        value = row[metric_col]
+        if pd.notna(row["upper"]) and value > row["upper"]:
+            pct = ((value - mean) / mean) * 100 if mean else float("inf")
+            anomalies.append({
+                "date": row[date_col], "value": value,
+                "direction": "spike", "pct_above_normal": round(pct, 1),
+            })
+        elif pd.notna(row["lower"]) and value < row["lower"]:
+            pct = ((mean - value) / mean) * 100 if mean else float("inf")
+            anomalies.append({
+                "date": row[date_col], "value": value,
+                "direction": "drop", "pct_below_normal": round(pct, 1),
+            })
+    return {"anomalies": anomalies,
+            "summary": f"{len(anomalies)} anomalies in {metric_col}"}
+
+
+def freshness_check(df, date_col, current_date=None):
+    """Check data freshness and infer data cadence.
+
+    Args:
+        df: DataFrame with a date column.
+        date_col: Name of the date/timestamp column.
+        current_date: ``datetime.date`` override (for testing). Default: today.
+
+    Returns:
+        dict with ``max_date`` (str), ``days_ago`` (int or None),
+        ``cadence`` (daily / weekly / static/historical / unknown),
+        ``status`` (OK / WARNING) and ``note``.
+    """
+    if isinstance(current_date, datetime):
+        current_date = current_date.date()
+    current_date = current_date or datetime.now().date()
+
+    dates = pd.to_datetime(df[date_col], errors="coerce").dt.date.dropna()
+    if len(dates) == 0:
+        return {"max_date": None, "days_ago": None, "cadence": "unknown",
+                "status": "WARNING", "note": f"No parseable dates in {date_col}"}
+
+    max_date = dates.max()
+    days_ago = (current_date - max_date).days
+
+    # Infer cadence from the median gap between consecutive distinct dates.
+    distinct_dates = sorted(dates.unique())
+    stale_threshold = None
+    if len(distinct_dates) >= 2:
+        gaps = [(distinct_dates[i + 1] - distinct_dates[i]).days
+                for i in range(len(distinct_dates) - 1)]
+        median_gap = sorted(gaps)[len(gaps) // 2]
+        if median_gap <= 1.5:
+            cadence, stale_threshold = "daily", 2
+        elif median_gap <= 8:
+            cadence, stale_threshold = "weekly", 10
+        else:
+            cadence = "static/historical"
+    else:
+        cadence = "unknown"
+
+    if days_ago > 90:
+        cadence = "static/historical"
+        status = "OK"
+        note = f"Historical dataset, date range ends {max_date}"
+    elif stale_threshold and days_ago > stale_threshold:
+        status = "WARNING"
+        note = f"Data is {days_ago} days old (expected {cadence} refresh)"
+    else:
+        status = "OK"
+        note = f"Data is {days_ago} days old"
+
+    return {"max_date": str(max_date), "days_ago": days_ago,
+            "cadence": cadence, "status": status, "note": note}

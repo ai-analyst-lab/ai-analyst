@@ -61,7 +61,7 @@ _SQL_HINTS = [
             "for available table names:\n"
             "  Run /data to inspect the active schema, or\n"
             "  conn.sql(\"SHOW TABLES\").df() to list tables.\n"
-            "If using MotherDuck: schema.TABLE\n"
+            "If using a remote warehouse: schema.TABLE\n"
             "If using local DuckDB: just TABLE (no schema prefix)"
         ),
     },
@@ -306,18 +306,18 @@ def friendly_error(exception, context=None):
             "technical": technical,
         }
 
-    # --- MCP / MotherDuck connection failures ---
+    # --- Remote warehouse / MCP connection failures ---
     if _is_mcp_connection_error(exception):
         return {
             "error_type": "mcp_connection_error",
             "message": (
-                f"{context_prefix}Could not connect to MotherDuck via MCP. "
-                "This usually means the MCP server is not running or your token is invalid."
+                f"{context_prefix}Could not connect to the remote warehouse. "
+                "This usually means the connection is not configured, the server is not running, or the credentials are invalid."
             ),
             "suggestion": (
                 "Try these steps:\n"
-                "  1. Check that your MOTHERDUCK_TOKEN is set in the environment\n"
-                "  2. Verify the MCP server is running (check .claude/mcp.json)\n"
+                "  1. Run /setup to health-check the connection and its .env variables\n"
+                "  2. Verify the source in .knowledge/active.yaml and its manifest (AAP_USE_REMOTE / use_remote for warehouses)\n"
                 "  3. Fall back to local DuckDB:\n"
                 "     from helpers.data.data_helpers import get_local_connection\n"
                 "     conn = get_local_connection()\n"
@@ -527,7 +527,7 @@ def _is_duckdb_connection_error(exc):
 
 
 def _is_mcp_connection_error(exc):
-    """Check if an exception is an MCP/MotherDuck connection failure."""
+    """Check if an exception is a remote-warehouse / MCP connection failure."""
     exc_msg = str(exc).lower()
 
     # Exclude SQL parse/query errors that happen to contain "token"

@@ -1,6 +1,6 @@
 ---
 name: google-doc-export
-description: Create properly formatted Google Docs via the MCP API. This skill prevents common issues like text/image overlap, broken heading hierarchy, excessive whitespace, and inconsistent formatting. Use this skill automatically whenever you're building a Google Doc, calling any google-docs MCP tool (create_document, append_text, write_formatted_content, insert_image, upload_file_to_drive, etc.), designing a document structure, or when the google-doc-creator or google-doc-reviewer agent is running. This skill is essential for ANY workflow involving Google Docs creation, document formatting, analysis writeups in Google Docs, report generation to Docs, chart embedding in documents, or exporting analysis results to shareable Docs. Make sure to use this skill whenever the user wants to create a Doc, export to Google Docs, share analysis as a Doc, build a formatted document, or mentions Google Docs in any capacity.
+description: Create properly formatted Google Docs via the MCP API. This skill prevents common issues like text/image overlap, broken heading hierarchy, excessive whitespace, and inconsistent formatting. Use this skill automatically whenever you're building a Google Doc, calling any Google Docs MCP tool on the google-workspace server (create_doc, insert_doc_elements, insert_doc_image, batch_update_doc) or the google-docs server (upload_file_to_drive, write_formatted_content), designing a document structure, or when the google-doc-creator or google-doc-reviewer agent is running. This skill is essential for ANY workflow involving Google Docs creation, document formatting, analysis writeups in Google Docs, report generation to Docs, chart embedding in documents, or exporting analysis results to shareable Docs. Make sure to use this skill whenever the user wants to create a Doc, export to Google Docs, share analysis as a Doc, build a formatted document, or mentions Google Docs in any capacity.
 ---
 
 # Skill: Google Doc Export
@@ -46,14 +46,7 @@ upload_file_to_drive(
 
 **When:** Quick text-only docs with no images/tables (meeting notes, simple memos)
 
-**Available MCP functions:**
-- `mcp__google-docs__create_document(title)` — create blank doc
-- `mcp__google-docs__append_text(document_id, text)` — add text to end
-- `mcp__google-docs__write_formatted_content(document_id, content_blocks)` — headings + body text
-- `mcp__google-docs__insert_image(document_id, image_url, width_pts, height_pts)` — embed image
-- `mcp__google-docs__read_document(document_id)` — read doc content
-
-**The MCP server exposes only the functions listed in Section F.** Anything else (table insertion, paragraph styling, structure inspection) goes through the .docx → Google Docs workflow.
+**Which server:** This repo's doc agents (`google-doc-creator`, `google-doc-reviewer`) target the **`google-workspace`** MCP server, whose Docs functions are `create_doc`, `insert_doc_elements`, `insert_doc_image`, `inspect_doc_structure`, `batch_update_doc`, `update_paragraph_style`, and `get_doc_as_markdown`. Drive uploads (`upload_file_to_drive`, `upload_image_to_drive`) come from the `google-docs` server. `auth-preflight` detects which servers are installed; call only functions the installed server exposes (Section F lists both).
 
 ---
 
@@ -329,7 +322,7 @@ calculate the other from the image's aspect ratio.
 |---------|-------------|------------|
 | Use a public file-host URL | Expires quickly and leaks data | Upload to Drive first or use .docx embed |
 | Omit height in insert_image | API error: "height must be greater than 0" | Always specify both width AND height |
-| Use unavailable MCP functions | Tool not found error | Check Section 0 for available functions |
+| Call a function from the other MCP server | Tool not found error | Section F lists each server's functions; auth-preflight reports which is installed |
 | No local backup | Doc only exists in Google's cloud | Use .docx → Google Docs conversion |
 | Complex doc via API calls | Index errors, image placement failures | Use .docx conversion instead |
 | Too many empty paragraphs | Excessive whitespace, unprofessional | Max 2 consecutive empty paragraphs |
@@ -339,22 +332,29 @@ calculate the other from the image's aspect ratio.
 
 ## Section F: Quick Reference - Available MCP Functions
 
+Two MCP servers appear in this repo. Use the one that is installed (auth-preflight reports it); do not mix a function from one with a document created on the other.
+
 ```python
-# Document operations
-create_document(title: str) → {"document_id": str}
-read_document(document_id: str) → str
-append_text(document_id: str, text: str) → status
-write_formatted_content(document_id: str, content_blocks: str) → status
+# google-workspace server — used by google-doc-creator and google-doc-reviewer
+mcp__google-workspace__create_doc(title) → {"document_id": str}
+mcp__google-workspace__insert_doc_elements(document_id, elements)      # text, headings, tables
+mcp__google-workspace__insert_doc_image(document_id, image_url, index, width, height)
+mcp__google-workspace__inspect_doc_structure(document_id, detailed=True) # indices for edits
+mcp__google-workspace__batch_update_doc(document_id, requests)          # raw Docs API batch
+mcp__google-workspace__update_paragraph_style(document_id, ...)
+mcp__google-workspace__get_doc_as_markdown(document_id)
 
-# Image operations
-insert_image(document_id: str, image_url: str, width_pts: int, height_pts: int) → status
-upload_image_to_drive(file_path: str, file_name: str) → {"file_id": str, "url": str}
-
-# File operations (RECOMMENDED for complex docs)
-upload_file_to_drive(file_path: str, convert_to_google_doc: bool) → {"file_id": str, "url": str}
+# google-docs server — simple text-only docs and Drive uploads
+mcp__google-docs__create_document(title) → {"document_id": str}
+mcp__google-docs__read_document(document_id) → str
+mcp__google-docs__append_text(document_id, text) → status
+mcp__google-docs__write_formatted_content(document_id, content_blocks) → status
+mcp__google-docs__insert_image(document_id, image_url, width_pts, height_pts) → status
+mcp__google-docs__upload_image_to_drive(file_path, file_name) → {"file_id": str, "url": str}
+mcp__google-docs__upload_file_to_drive(file_path, convert_to_google_doc) → {"file_id": str, "url": str}
 ```
 
-These are the only functions the server exposes. For anything else (tables, paragraph styling, structure inspection), use the .docx → Google Docs workflow (Section A).
+The `.docx → Google Docs` workflow (Section A) needs only `upload_file_to_drive` and is the recommended path for any document with tables or images.
 
 ---
 
