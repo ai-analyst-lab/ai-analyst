@@ -69,230 +69,43 @@ number in this analysis, what would I need?"
 
 ## Workflow
 
-### Step 1: Gather all source artifacts
+### Step 1: Build the receipt skeleton
 
-Read these files (all optional — degrade gracefully if missing):
-
-| Artifact | Path Pattern | Required? |
-|----------|-------------|-----------|
-| Query log | `working/query_log_*.jsonl` | Yes |
-| Validation report | `outputs/validation_*.md` | Yes |
-| Cross-verification report | `working/cross_verification_*.yaml` | No |
-| Cross-verification markdown | `working/cross_verification_*.md` | No |
-| Pipeline state | `working/pipeline_state.json` | No |
-| Narrative | `outputs/narrative_*.md` | No |
-| Analysis report | `outputs/analysis_report_*.md` | No |
-
-Use the most recent file by date suffix when multiple exist.
-
-### Step 2: Parse the query log
-
-```python
-from helpers.provenance.query_log import read_log, coverage_report, to_markdown
-
-log_entries = read_log(query_log_path)
-coverage = coverage_report(log_entries)
-query_table_md = to_markdown(log_entries)
+```bash
+python3 scripts/build_receipt.py --dataset {{DATASET_NAME}} --date {{DATE}} \
+    [--run-dir working/runs/<run>]
 ```
 
-Extract:
-- Total queries executed
-- Queries per agent
-- Total execution time
-- Tables accessed (deduplicated)
-- Coverage percentage (claims with backing queries)
+The script writes Sections 1-7 of `outputs/analysis_receipt_{{DATASET_NAME}}_{{DATE}}.md`
+from the artifacts on disk and degrades gracefully when one is missing:
 
-### Step 3: Parse cross-verification results
+| Section | Built from |
+|---------|-----------|
+| 1. Environment | dataset manifest, query log (connection, tables), runtime versions |
+| 2. Findings Provenance | provenance YAML claims joined to the query log (full SQL, cross-verification, reproducibility) |
+| 3. Validation Summary | validation report (confidence, layers table, recommendations) |
+| 4. Full Query Log | query log JSONL (every query including failures; the 50 slowest when there are more than 100) |
+| 5. Cross-Verification Detail | provenance YAML (omitted when cross-verification did not run) |
+| 6. Pipeline Execution | `pipeline_state.json` (omitted when there is no state file) |
+| 7. Reproducibility Instructions | connection type, tables, tolerance for the source |
 
-If cross-verification YAML exists:
+Every section names its source file and modification time. Explicit paths
+(`--query-log`, `--validation`, `--cv-yaml`, `--state`, `--manifest`) override
+discovery when artifacts live somewhere unusual. If the script exits with
+"Query log not found", stop and report that: a receipt without queries is not a receipt.
 
-```python
-import yaml
+### Step 2: Write Section 8 (Caveats and Limitations)
 
-with open(cv_yaml_path) as f:
-    cv_data = yaml.safe_load(f)
+Read the skeleton. Section 8 opens with a placeholder comment followed by a list of
+**seed facts** the script pulled from the artifacts: validation warnings and
+recommendations, cross-verification checks that were N/A or WARN, reproducibility
+variance, degraded or failed agents, query-log coverage below 100%, errored or
+backfilled queries. Replace the placeholder with the caveats a reader needs before
+trusting the receipt, then delete the seed list. Every caveat must trace to an
+artifact listed above; never infer one. If the seeds say nothing was found, say so in
+one line.
 
-# Extract per-claim verification summaries
-for claim in cv_data:
-    claim_id = claim["claim_id"]
-    verification = claim["verification"]
-    # Determine highest-fidelity check applied (Type D > C > B > A)
-```
-
-### Step 4: Build provenance blocks (if not provided)
-
-If `{{PROVENANCE_BLOCKS}}` is not available, build them from the collected artifacts:
-
-```python
-from helpers.provenance.provenance_assembler import build_provenance_blocks
-
-# Extract findings from narrative or analysis report
-blocks = build_provenance_blocks(
-    findings=findings_list,
-    cross_verification=cv_data,
-    confidence_result=confidence,
-    query_log_entries=log_entries,
-    connection_type=connection_type,
-    database=database_name,
-)
-```
-
-### Step 5: Extract confidence factor breakdown
-
-From the validation report, extract:
-- Overall score and grade
-- Per-factor scores (all 9 factors)
-- Blockers and warnings
-- Recommendation text
-
-### Step 6: Extract pipeline metrics
-
-From pipeline state (if available):
-- Run ID
-- Start/end times
-- Per-agent execution times
-- Which agents completed, degraded, or were skipped
-
-### Step 7: Assemble the receipt
-
-Write the receipt to `outputs/analysis_receipt_{{DATASET_NAME}}_{{DATE}}.md` with these 8 sections:
-
-```markdown
-# Analysis Receipt
-
-**Run ID:** {run_id}
-**Dataset:** {dataset_name}
-**Question:** {business_question}
-**Date:** {date}
-**Validation Tier:** 3 (Deep)
-
----
-
-## 1. Environment
-
-| Property | Value |
-|----------|-------|
-| Connection type | {snowflake / duckdb / postgres / csv} |
-| Database | {database_name} |
-| Tables accessed | {comma-separated list} |
-| Python version | {version} |
-| Key libraries | pandas {ver}, duckdb {ver}, matplotlib {ver} |
-
----
-
-## 2. Findings Provenance
-
-For each finding, render the full provenance block:
-
-### F1: {finding_title}
-
-**Data:** {data_stamp.one_liner}
-
-**Methodology:**
-- Approach: {methodology.approach}
-- Aggregation: {methodology.aggregation}
-- Filters: {methodology.filters}
-- Date handling: {methodology.date_handling}
-
-**SQL:**
-```sql
-{full normalized SQL query}
-```
-
-**Cross-verification:**
-- Method: {Type B: Parts-to-whole}
-- Result: {PASS}
-- Detail: {diff 0.2%, within 1% tolerance}
-
-**Reproducibility:**
-- Runs: {3}
-- Variance: {0.0}
-- Deterministic: {true/false}
-
----
-
-## 3. Validation Summary
-
-| Factor | Score | Max | Status | Detail |
-|--------|-------|-----|--------|--------|
-| Data Completeness | X | 15 | PASS | ... |
-| Structural Integrity | X | 15 | PASS | ... |
-| Aggregation Consistency | X | 15 | PASS | ... |
-| Temporal Consistency | X | 15 | PASS | ... |
-| Business Plausibility | X | 15 | PASS | ... |
-| Simpson's Paradox Risk | X | 15 | PASS | ... |
-| Sample Size | X | 10 | PASS | ... |
-| Cross-Verification | X | 10 | PASS | ... |
-| Reproducibility | X | 5 | PASS | ... |
-| **Total** | **X** | **115** | **{grade}** | **{score}/100** |
-
-**Blockers:** {list or "None"}
-**Recommendation:** {recommendation text}
-
----
-
-## 4. Full Query Log
-
-{query_table_md from to_markdown()}
-
-**Coverage:** {coverage.pct}% of claims have backing queries ({coverage.matched}/{coverage.total})
-**Total queries:** {len(log_entries)}
-**Total execution time:** {sum of execution_ms}ms
-
----
-
-## 5. Cross-Verification Detail
-
-For each claim verified:
-
-| Claim | Type A | Type B | Type C | Type D | Repro | Overall |
-|-------|--------|--------|--------|--------|-------|---------|
-| C1: ... | PASS | PASS | N/A | PASS | PASS | Verified |
-| C2: ... | PASS | WARN | N/A | N/A | PASS | Partial |
-
----
-
-## 6. Pipeline Execution
-
-| Agent | Step | Status | Duration | Output |
-|-------|------|--------|----------|--------|
-| question-framing | 1 | complete | 45s | outputs/question_brief_*.md |
-| hypothesis | 3 | complete | 30s | outputs/hypothesis_doc_*.md |
-| ... | ... | ... | ... | ... |
-
-**Total pipeline time:** {total_duration}
-**Agents executed:** {count_complete} / {count_total}
-
----
-
-## 7. Reproducibility Instructions
-
-To reproduce this analysis:
-
-1. **Data source:** Connect to {connection_type} database `{database}`
-2. **Tables required:** {list of tables}
-3. **Date range:** {date_range from findings}
-4. **Run queries:** Execute each SQL query from Section 2 in order
-5. **Expected results:** Compare your output to the findings in Section 2
-6. **Tolerance:** For {connection_type}, expect up to {tolerance}% variance on approximate functions
-
-Note: {deterministic_note — e.g., "DuckDB/CSV sources should reproduce exactly. Snowflake may show minor variance on HyperLogLog functions."}
-
----
-
-## 8. Caveats and Limitations
-
-- {List any validation warnings or limitations}
-- {Note if any cross-verification checks were N/A}
-- {Note if reproducibility showed any variance}
-- {Note if query log coverage was below 100%}
-```
-
-### Step 8: Write the receipt
-
-Write the assembled markdown to `outputs/analysis_receipt_{{DATASET_NAME}}_{{DATE}}.md`.
-
-Report to the pipeline:
+Report to the pipeline using the counts the script prints:
 ```
 Receipt generated: outputs/analysis_receipt_{DATASET_NAME}_{DATE}.md
 Sections: 8

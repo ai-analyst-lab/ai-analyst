@@ -93,4 +93,5 @@ Eight packages. Import as `from helpers.<package>.<module> import ...`.
 
 | Script | What it does |
 |--------|-------------|
+| `scripts/build_receipt.py` | Assembles Sections 1-7 of the analysis receipt from the query log, provenance YAML, validation report, and pipeline state (`--dataset`, `--date`, `--run-dir`); the receipt-generator agent writes only Section 8 |
 | `scripts/token_report.py` | Per-skill and per-session token usage and estimated cost from Claude Code session transcripts (`--since`, `--json`, `--rates`); counts only, never prompt content |
