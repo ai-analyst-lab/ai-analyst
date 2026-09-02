@@ -82,6 +82,7 @@ Eight packages. Import as `from helpers.<package>.<module> import ...`.
 
 | Module | What it provides |
 |---|---|
+| `helpers/pipeline/dag.py` | Pipeline DAG resolver: `load_registry()`, `load_plans()`, `validate_registry()`, `resolve_plan()` (Kahn's algorithm, AND/OR gates), `ready_set()`, `init_run()`, `record_metrics()` |
 | `helpers/pipeline/error_helpers.py` | User-friendly errors: `friendly_error()`, `safe_query()`, `check_empty_dataframe()`, `suggest_column()` |
 | `helpers/pipeline/file_helpers.py` | Atomic writes, content hashing, YAML helpers: `atomic_write()`, `safe_read_yaml()`, `content_hash()`, `has_content_changed()` |
 | `helpers/pipeline/health_check.py` | System health: setup state, knowledge integrity, data connectivity, imports |

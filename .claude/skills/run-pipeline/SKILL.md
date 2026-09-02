@@ -148,74 +148,49 @@ After cleanup completes (or is skipped if no stale state found), proceed to Phas
 
 ### Phase 0: Pre-flight Validation
 
-Before any execution, validate the registry:
+The registry parse, file-existence and dangling-dependency checks, cycle detection, tier computation, and plan filtering are all in `helpers/pipeline/dag.py`. Run them once:
 
-1. **Read registry:** Parse `agents/registry.yaml`. Extract each agent's `name`, `file`, `pipeline_step`, `depends_on`, `depends_on_any`, `critical`, `inputs`, `outputs`, `knowledge_context`.
+```python
+from helpers.pipeline.dag import load_registry, load_plans, validate_registry, resolve_plan, plan_warnings
 
-2. **File existence check:** For each agent, verify the file at `agent.file` exists on disk. If any file is missing, HALT with: `"Agent file not found: {path}"`
+registry = load_registry()                      # agents/registry.yaml, keyed by name
+plans = load_plans()                            # .claude/skills/run-pipeline/plans.md
+plan = pipeline_args.get("plan", "full_presentation")   # a plan name, or the inline agents= list
+plan_agents = plans[plan]["agents"] if isinstance(plan, str) else plan
 
-3. **Dependency resolution:** For each agent's `depends_on` and `depends_on_any` lists, verify every referenced agent name exists in the registry. If any reference is dangling, HALT with: `"Unknown dependency: {agent} depends on {missing}"`
+errors = validate_registry(registry)            # missing agent files, unknown dependencies
+if errors:
+    raise SystemExit("Pre-flight failed:\n" + "\n".join(errors))   # HALT
 
-4. **Cycle detection:** Perform a topological sort on the dependency graph. If a cycle is detected, HALT with: `"Cycle detected: {cycle_path}"`
-   - Algorithm: Kahn's algorithm — iteratively remove nodes with in-degree 0. If nodes remain after no more can be removed, those nodes form a cycle.
+tiers = resolve_plan(registry, plan_agents)     # raises DagError on a cycle or unknown agent
+for w in plan_warnings(registry, plan_agents):  # plan agents whose dependencies are skipped
+    print("WARNING:", w)
+```
 
-5. **Compute execution tiers:** Group agents into tiers where all agents in a tier have their dependencies satisfied by agents in earlier tiers.
-   ```
-   Tier 0: agents with no dependencies (e.g., question-framing, data-explorer)
-   Tier 1: agents depending only on Tier 0 agents (e.g., hypothesis)
-   Tier 2: agents depending on Tier 0-1 agents (e.g., descriptive-analytics)
-   ...
-   ```
-
-6. **Apply execution plan:** Load the plan from `plans.md` (or use the default `full_presentation`). Filter the DAG to include only agents in the plan's allow-list. Agents not in the plan are marked `skipped`. If a plan agent depends on a skipped agent, warn: `"Agent {name} depends on skipped agent {dep}. Ensure required context exists."`
+`tiers` is the execution order: `tiers[0]` has no in-plan dependencies, each later tier depends only on earlier ones. Agents not in `plan_agents` are skipped.
 
 ### Phase 1: Initialize Run Directory & Pipeline State
 
-**Per-run directory setup:** Every pipeline run gets an isolated directory under `working/runs/`.
+Every run gets an isolated directory under `working/runs/`. `init_run` creates it, writes the initial `pipeline_state.json` (schema in `agents/pipeline_state_schema.md`, every plan agent `pending`, other pipeline agents `skipped`, `tiers` recorded), creates the empty query log, and points `working/latest` at the run:
 
-1. **Create run directory:**
-   ```
-   RUN_DIR = working/runs/{YYYY-MM-DD}_{DATASET_NAME}_{SHORT_TITLE}/
-   ```
-   Where `SHORT_TITLE` is derived from the business question -- lowercase, hyphens, max 40 chars
-   (e.g., `2026-02-23_acme-analytics_why-revenue-dropped-q3`).
+```python
+from helpers.pipeline.dag import init_run
 
-2. **Create subdirectories:**
-   ```
-   {RUN_DIR}/working/       -- intermediate files (tie-outs, storyboards, reviews)
-   {RUN_DIR}/outputs/       -- final deliverables (decks, charts, narratives)
-   {RUN_DIR}/pipeline_state.json  -- run state (authoritative)
-   {RUN_DIR}/pipeline_metrics.json -- execution timing
-   ```
+RUN_DIR = init_run(DATASET_NAME, question, plan_agents, registry=registry)
+# RUN_DIR = working/runs/{YYYY-MM-DD}_{DATASET_NAME}_{question-slug}/
+#   working/   outputs/   pipeline_state.json   working/query_log_{DATASET_NAME}_{DATE}.jsonl
+QUERY_LOG = RUN_DIR / "working" / f"query_log_{DATASET_NAME}_{DATE}.jsonl"
+```
 
-3. **Create symlink:** `working/latest` -> `{RUN_DIR}` (remove existing symlink first if present).
+Agents keep writing to the top-level `working/` and `outputs/` as before; also keep a copy of the query log at `working/query_log_{DATASET_NAME}_{DATE}.jsonl` for the agents that expect it there, and set `{{QUERY_LOG}}` in every agent's context. At pipeline end the final artifacts are copied into `{RUN_DIR}/working/` and `{RUN_DIR}/outputs/` so the run directory is self-contained.
 
-4. **Backward-compatible aliases:** Also create/maintain the legacy `working/` and `outputs/` paths.
-   All agents continue writing to `working/` and `outputs/` as before. At pipeline end,
-   copy final artifacts into `{RUN_DIR}/working/` and `{RUN_DIR}/outputs/` so the run
-   directory is self-contained.
+If **resuming** (`working/latest/pipeline_state.json`, else `working/pipeline_state.json`, exists with `status: paused` or `failed`): leave `completed` agents alone, reset `failed` agents to `pending`, then compute the ready set and skip to Phase 2:
 
-**Initialize query log** in `{RUN_DIR}/working/`:
-- Create the empty JSONL file: `{RUN_DIR}/working/query_log_{DATASET_NAME}_{DATE}.jsonl`
-- Also create a symlink or copy at `working/query_log_{DATASET_NAME}_{DATE}.jsonl` for backward compatibility
-- Set `{{QUERY_LOG}}` = the full path to this file for all agent context assembly
-- All agents that execute SQL will log to this file via `python3 scripts/log_query.py`
-
-**Initialize pipeline_state.json** in `{RUN_DIR}/` per the schema in `agents/pipeline_state_schema.md`:
-- Set `pipeline_id` to current ISO timestamp
-- Set `run_dir` to the full run directory path
-- Set `dataset` from active dataset
-- Set `question` from user input
-- Initialize **ALL** agents from the plan's allow-list as `pending`, skipped agents as `skipped`
-- Set pipeline `status: running`
-
-If **resuming** (pipeline_state.json already exists with `status: paused` or `status: failed`):
-- Read existing state (check `working/latest/pipeline_state.json` first, then fall back to `working/pipeline_state.json`)
-- Identify agents with `status: completed` -- leave them
-- Identify agents with `status: failed` -- reset to `pending` for retry
-- Compute the READY set (pending agents whose dependencies are all completed)
-- Report: `"Resuming from {N} completed agents. Next: {READY agent names}"`
-- Skip to Phase 2
+```python
+from helpers.pipeline.dag import ready_set
+READY = ready_set(registry, state["plan_agents"], state)
+print(f"Resuming from {completed_count} completed agents. Next: {READY}")
+```
 
 ### Phase 2: Walk the DAG
 
@@ -223,14 +198,11 @@ Execute agents tier by tier:
 
 ```
 FOR each tier in execution_tiers:
-  1. READY_SET = agents in this tier that satisfy BOTH:
-     - ALL `depends_on` agents have completed (AND-gate)
-     - At least ONE `depends_on_any` agent has completed, if specified (OR-gate)
-     (after plan filtering and skipping)
+  1. READY_SET = ready_set(registry, plan_agents, state) ∩ this tier
+     (AND-gate on `depends_on`, OR-gate on `depends_on_any`; only completed
+     agents satisfy a gate, skipped ones do not — the helper applies both rules)
 
-     Only agents with `status: completed` satisfy an OR-gate; skipped agents do not count.
-
-  2. If READY_SET is empty AND pending agents remain → deadlock → HALT
+  2. If is_deadlocked(registry, plan_agents, state) → HALT
 
   3. FOR each agent in READY_SET:
      a. Mark agent status: running in pipeline_state.json
@@ -290,7 +262,7 @@ Before launching each agent, resolve its runtime context:
 When `dry-run=true`:
 
 1. Run Phase 0 (pre-flight validation) — detect any issues
-2. Print the execution plan:
+2. Print `tiers` from `resolve_plan` with the checkpoint that fires after each tier:
    ```
    Execution Plan (dry-run):
    Plan: {plan_name}
@@ -492,49 +464,14 @@ Prevents runaway failures from consuming resources:
 
 ## EXECUTION METRICS
 
-After each agent completes (success or failure), record timing in `working/pipeline_metrics.json`:
+Timing is derived from the `started_at` / `completed_at` stamps in `pipeline_state.json`; nothing is computed by hand. After each tier completes, and again at pipeline end:
 
-```json
-{
-  "pipeline_id": "2026-02-16T09:30:00Z",
-  "started_at": "ISO datetime",
-  "completed_at": "ISO datetime",
-  "total_duration_seconds": 0,
-  "agents": {
-    "question-framing": {
-      "tier": 0,
-      "started_at": "ISO datetime",
-      "completed_at": "ISO datetime",
-      "duration_seconds": 0,
-      "status": "completed",
-      "retries": 0
-    }
-  },
-  "tiers": {
-    "0": {
-      "agents": ["question-framing", "data-explorer"],
-      "started_at": "ISO datetime",
-      "completed_at": "ISO datetime",
-      "duration_seconds": 0,
-      "parallel_agents": 2,
-      "sequential_duration_seconds": 0,
-      "parallel_efficiency": 0.0
-    }
-  },
-  "summary": {
-    "total_agents": 0,
-    "completed": 0,
-    "failed": 0,
-    "skipped": 0,
-    "total_tiers": 0,
-    "avg_parallel_efficiency": 0.0
-  }
-}
+```python
+from helpers.pipeline.dag import write_metrics
+metrics = write_metrics(state, RUN_DIR / "pipeline_metrics.json")   # tiers taken from state["tiers"]
 ```
 
-**Parallel efficiency** = sum(individual agent durations) / tier wall-clock duration. A value of 2.0 means 2x speedup from parallelism.
-
-Write metrics after each tier completes. Final summary written at pipeline end.
+The file carries per-agent durations, per-tier wall-clock vs. sequential duration, `parallel_efficiency` (sequential / wall-clock; 2.0 means a 2x speedup from parallelism), and a summary (completed / degraded / failed / skipped, `avg_parallel_efficiency`). Report `total_duration_seconds` and `avg_parallel_efficiency` at Pipeline Complete.
 
 ---
 
