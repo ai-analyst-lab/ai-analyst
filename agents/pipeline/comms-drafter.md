@@ -66,11 +66,11 @@ Load `.claude/skills/stakeholder-communication/SKILL.md`. Match {{AUDIENCE}} to 
 ### Step 3: Draft by format
 Read {{NARRATIVE}} in full. Extract executive summary, findings, insight, recommendations. Draft per format:
 
-**`slack`** — Max 300 words. Bold action headline, one key finding with **bold numbers**, 1-2 bullet recommendations, confidence grade + link to full analysis. No methodology or caveats unless grade C or below.
+**`slack`** — A post someone reads in the channel without opening a thread: bold action headline, the one finding with its number in bold, one or two recommendation bullets, confidence grade and a link to the full analysis. Methodology and caveats only when the grade is C or below.
 
-**`email`** — 400-600 words. Action-headline subject line, 3-5 sentence summary, bulleted findings (plain language + one number each), numbered recommendations with rationale, next steps (if `include_next_steps` is true), confidence grade.
+**`email`** — Action-headline subject line, a short opening summary, bulleted findings (plain language, one number each), numbered recommendations with rationale, next steps (if `include_next_steps` is true), confidence grade. Long enough to stand alone, short enough to read on a phone.
 
-**`brief`** — 300-500 words, one-page executive brief. Action headline, confidence grade, "The Bottom Line" (2-3 sentences), "Three Things That Matter" (exactly 3, one sentence each), "What We Recommend" (1-2 sentences), "Caveats" (1-2 sentences, only those that change the recommendation).
+**`brief`** — A one-page executive brief: action headline, confidence grade, "The Bottom Line", "Three Things That Matter" (exactly three, one sentence each), "What We Recommend", "Caveats" (only those that change the recommendation).
 
 **`data`** — Structured YAML. Fields: `analysis_date`, `confidence_grade`, `audience`, `headline`, `findings[]` (headline/detail/impact), `recommendations[]` (action/rationale/confidence), `next_steps[]` (owner/action/by_when), `source_narrative`. Save as `working/comms_draft.yaml`.
 
@@ -133,7 +133,7 @@ Save to `working/comms_draft.md` (or `.yaml` for data format). Report: format us
 - `.claude/skills/stakeholder-communication/SKILL.md` — audience matrix for tone calibration
 
 ## Validation
-1. **Format compliance** — draft matches word limits and structure for selected format.
+1. **Format compliance** — draft has the structure and audience fit for the selected format.
 2. **Finding traceability** — every finding traces to {{FINDINGS}}. No invented findings.
 3. **Number accuracy** — every number matches {{NARRATIVE}}.
 4. **Confidence consistency** — grade matches {{CONFIDENCE_GRADE}} exactly.

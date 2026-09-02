@@ -1,7 +1,7 @@
 ---
 name: visualization-patterns
 description: |
-  Apply this skill whenever you generate ANY chart, graph, or data visualization in this AI Product Analyst tool. This includes bar charts, line charts, scatter plots, heatmaps, funnel charts, distribution plots, or any visual representation of data. Use this skill when creating charts from SQL query results, when the user asks to "visualize" data, when building analysis deliverables that include charts, when the Chart Maker agent runs, when storytelling requires visual evidence, when comparing segments, when showing trends over time, or when illustrating findings. ALWAYS trigger for requests like "make a chart", "show me a graph", "visualize the funnel", "plot revenue over time", "create a distribution", or "build a dashboard". This skill enforces Storytelling with Data (SWD) methodology: gray everything first, color only for focus (max 2 colors + gray), action titles that state the takeaway, direct labels instead of legends, decluttered design, and theme consistency. Apply the appropriate theme (minimal, nyt, economist, corporate) and use the helper functions from `helpers/viz/chart_helpers.py` (swd_style, highlight_bar, highlight_line, action_title, save_chart). This skill ensures every chart tells a clear story and follows professional design standards. DO NOT skip this skill when charting — it prevents common visualization mistakes like rainbow palettes, pie charts, descriptive titles, cluttered layouts, missing annotations, and default matplotlib styling.
+  Apply whenever you generate any chart, graph, or data visualization — from SQL results, in the chart-maker agent, in decks, or on "make a chart / visualize / plot / dashboard" requests. Enforces Storytelling With Data: gray first, one focus color, action titles, direct labels, no pies, using the helpers in helpers/viz/chart_helpers.py.
 ---
 
 # Skill: Visualization Patterns
@@ -24,7 +24,7 @@ direct labels), and offer the pie only if they insist after seeing the bar. Prod
 When no theme or palette is set, use the default styling without asking; offer
 palette options only when the user asks about themes or colors.
 
-Unless the user specifies otherwise, ALWAYS use the **minimal** theme. It's clean, professional, and suitable for most business contexts:
+The **minimal** theme is clean, professional, and suitable for most business contexts:
 - Warm off-white background (#F7F6F2) for reduced eye strain
 - Focus blue accent (#0072B2, an Okabe-Ito color) for the one element the takeaway argues
 - Helvetica font family
@@ -34,9 +34,9 @@ The `swd_style()` function automatically loads the minimal theme. Other availabl
 
 ## Instructions
 
-### STEP 1: Mandatory Helper Import (DO THIS FIRST)
+### STEP 1: Import the SWD helpers
 
-Before writing ANY charting code, you MUST import and use the SWD helper functions. These functions implement all SWD principles automatically and prevent you from reinventing the wheel.
+Start every chart with the helpers in `helpers/viz/chart_helpers.py`; they set the R3 background, gray-plus-accent palette, direct labels and spine cleanup that the checkpoints verify.
 
 ```python
 from helpers.viz.chart_helpers import (
@@ -96,7 +96,7 @@ Every chart follows the SWD methodology by Cole Nussbaumer Knaflic:
 
 > **Gray everything first. Color is reserved for the one data point that tells the story.**
 
-- Mostly gray. One focus accent, blue (`#0072B2`), for the element the takeaway argues; a second accent, orange (`#D55E00`), only for a genuine two-focal or good-vs-bad case. Both are Okabe-Ito colors, so the pair is colorblind-safe (blue vs orange, never red vs green). Everything else is gray. Use up to 5 Okabe-Ito categoricals ONLY when categories are truly independent; more than that is a signal to rethink the chart, never to add hues. (Amber `#D97706` stays the BRAND color for decks and thumbnails; it is retired from the chart focus role.)
+- Mostly gray. One focus accent, blue (`#0072B2`), for the element the takeaway argues; a second accent, orange (`#D55E00`), only for a genuine two-focal or good-vs-bad case. Both are Okabe-Ito colors, so the pair is colorblind-safe (blue vs orange, never red vs green). Everything else is gray. Use up to 5 Okabe-Ito categoricals ONLY when categories are truly independent; more than that is a signal to rethink the chart, never to add hues. (Amber `#D97706` is the deck/thumbnail brand color; it is not a chart focus color.)
 - **Titles state the takeaway**, not a description. "iOS drove the June ticket spike" not "Tickets by Platform."
 - Every visual element must earn its place — if it doesn't help the reader understand the story, remove it.
 - Prefer text over charts for single numbers. Prefer horizontal bars over pie charts. Prefer direct labels over legends.
@@ -213,7 +213,7 @@ MINIMAL_THEME = {
         "secondary": "#4B5563",
         "accent": "#0072B2",
         "palette": ["#0072B2", "#D55E00", "#009E73", "#CC79A7", "#404040"],
-        "background": "#FFFFFF",
+        "background": "#F7F6F2",
         "grid": "#F0F0F0",
     },
     "fonts": {
@@ -374,40 +374,25 @@ def create_chart(data, chart_type, theme_name="minimal", title="", subtitle=""):
 
 ## Examples
 
-### Example 1: Bar chart with NYT theme
+### Example 1: Bar chart with one highlighted category
 ```python
 fig, ax = plt.subplots(figsize=(10, 6))
-categories = ["Mobile", "Desktop", "Tablet"]
-values = [45, 35, 20]
-colors = ["#D03A2B", "#666666", "#666666"]  # Accent on key finding
-
-bars = ax.bar(categories, values, color=colors, width=0.6)
-# Direct labels
-for bar, val in zip(bars, values):
-    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1,
-            f"{val}%", ha="center", fontsize=12, fontweight="bold")
-
-ax.set_title("Mobile drives nearly half of all sessions", loc="left",
-             fontfamily="Georgia", fontsize=18, fontweight="bold")
-ax.set_ylabel("")
-ax.set_ylim(0, 55)
-apply_theme(fig, ax, NYT_THEME)
+colors = swd_style()
+highlight_bar(ax, categories=["Mobile", "Desktop", "Tablet"], values=[45, 35, 20], highlight="Mobile")
+action_title(ax, "Mobile drives nearly half of all sessions",
+             subtitle="Share of sessions, Jan–Dec 2025")
+save_chart(fig, "outputs/charts/sessions_by_device_bar.png")
 ```
 
-### Example 2: Line chart with annotations
+### Example 2: Line chart with an annotated inflection point
 ```python
 fig, ax = plt.subplots(figsize=(10, 6))
-ax.plot(dates, revenue, color="#2563EB", linewidth=2)
-# Annotate the inflection point
-ax.annotate("Feature launch\n+23% MoM", xy=(launch_date, launch_value),
-            xytext=(launch_date - timedelta(days=30), launch_value + 50000),
-            fontsize=9, fontstyle="italic",
-            arrowprops=dict(arrowstyle="->", color="#666666"))
-# Direct label on endpoint
-ax.text(dates[-1], revenue[-1], f"${revenue[-1]/1e6:.1f}M",
-        fontsize=11, fontweight="bold", va="bottom")
-ax.set_title("Revenue grew 23% after feature launch", loc="left")
-apply_theme(fig, ax, MINIMAL_THEME)
+colors = swd_style()
+highlight_line(ax, x=months, y_dict={"Revenue": revenue}, highlight="Revenue")
+annotate_point(ax, x=launch_month, y=launch_value, text="Feature launch\n+23% MoM")
+action_title(ax, "Revenue grew 23% after feature launch",
+             subtitle="Monthly revenue, Jan–Dec 2025, in $M")
+save_chart(fig, "outputs/charts/revenue_trend_line.png")
 ```
 
 ### Example 3: Highlighting one segment

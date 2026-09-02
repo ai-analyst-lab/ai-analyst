@@ -76,12 +76,14 @@ Map each beat to its phase assignment and verify the arc structure:
 
 **Closing beats** (if present):
 - Must appear after ALL Resolution beats — never before or interleaved
-- Should follow an escalating commitment pattern (free resources -> paid offering)
+- Should point the audience to a concrete next step (a decision, an owner, a follow-up) rather than restating findings
 - Should not reference analytical findings — they bridge from the story to the audience's next step
 - Verify: if Closing beats exist, the Resolution beats still form a complete story on their own (Closing is additive, not structural)
 
 ### Step 3: Progressive focus test
 Track the evidence scope of each beat. The scope should narrow monotonically:
+
+*(Illustrative rows from a support-ticket example; the pattern applies to any drill-down dimension.)*
 
 | Scope Level | Example |
 |-------------|---------|
@@ -107,11 +109,11 @@ Assess how deep the drill-down goes. Map each beat to a depth level:
 | Level | What it answers |
 |-------|-----------------|
 | Level 0 | What is the overall metric? |
-| Level 1 | Is there a temporal pattern? |
-| Level 2 | Which time period is unusual? |
-| Level 3 | Which category/dimension drives the anomaly? |
-| Level 4 | Which sub-segment within that category? |
-| Level 5 | What is the specific root cause? What is the impact? |
+| Level 1 | Where in the data does the pattern live (a period, a segment, a cohort, a channel)? |
+| Level 2 | Which slice of that dimension is unusual, and how unusual? |
+| Level 3 | Which category or sub-population within that slice drives it? |
+| Level 4 | Which specific sub-segment, version, or event? |
+| Level 5 | What is the root cause, and what is the impact? |
 
 **Evaluate:**
 - What is the deepest level reached?
@@ -127,6 +129,8 @@ Assess how deep the drill-down goes. Map each beat to a depth level:
 For each transition between consecutive beats, read the beat's transition question and verify the next beat answers it.
 
 **Common gap patterns:**
+
+*(Illustrative rows from a support-ticket example; the pattern applies to any drill-down dimension.)*
 
 | After this beat says... | The audience asks... | Gap if next beat shows... |
 |-------------------------|---------------------|---------------------------|

@@ -39,6 +39,9 @@ CONTRACT_END -->
 ## Purpose
 Generate a single styled chart from data and a chart specification, applying visualization skill standards for theme, color, typography, and annotation.
 
+## Operating mode
+You run unattended as one step of the pipeline; the user is not watching and cannot answer mid-step. For reversible actions that follow from your inputs, proceed without asking; stop only at the pipeline's checkpoint gates, on a Tier 1a HALT, or when an input you require is missing. Before reporting a step as done, check the claim against a tool result from this run — report what you can point to, say plainly what was skipped or failed, and never describe a next step you have not taken.
+
 ## Inputs
 - {{DATA}}: Path to the data source — a CSV file, a SQL query result, a pandas DataFrame reference, or a path to a parquet file. The agent will load the data and use the columns specified in {{CHART_SPEC}}.
 - {{CHART_SPEC}}: A structured chart specification containing:
@@ -67,7 +70,7 @@ The fix report follows the format from the visual-design-critic agent: each issu
 
 ### Query Logging
 
-If you execute any SQL query to load chart data, log it by running this Bash command:
+Queries run through `ConnectionManager.query()` are logged automatically. Log by hand only when you bypass it (an MCP query tool, inline duckdb/pandas), using:
 
 ```bash
 python3 scripts/log_query.py \
@@ -268,10 +271,10 @@ After generating the chart, run through the SWD declutter checklist before savin
 
 If any check fails, fix it before saving. Reference `helpers/viz/chart_style_guide.md` for the full checklist and common gotchas.
 
-10. **Annotation collision check — HARD HALT (REQUIRED before saving):**
+11. **Annotation collision check (before saving):**
 
-    Run the collision detector with auto-fix enabled. If collisions remain after
-    3 attempts, HALT — never save a chart with known collisions.
+    Run the collision detector with auto-fix. If collisions remain after three
+    attempts, do not save — raise, as below, so the fix loop can intervene.
 
     ```python
     from helpers.viz.chart_helpers import check_label_collisions

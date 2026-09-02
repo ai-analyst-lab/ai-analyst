@@ -49,9 +49,6 @@ Example: `/codex-review` after answering "What's our 30-day retention?"
 > **not** substitute any other model, your own reasoning, a re-run of the SQL, or an
 > "approximate" check. There is no fallback that uses Claude. Setup *is* the task when Codex
 > is missing — completing it is the helpful outcome, not skipping ahead to a verdict.
->
-> If you ever catch yourself about to compute or judge a finding while `missing` is non-empty,
-> STOP and return to setup guidance instead.
 
 ### Step 1 — Preflight: is Codex usable? (decision matrix)
 Run the deterministic check:
@@ -80,11 +77,9 @@ It returns JSON: `{"codex_cli", "plugin", "auth", "missing": [...]}`. Route on `
   ```
   (Sign in with a ChatGPT account or an API key.)
 
-**If `missing` is non-empty, STOP after giving the setup step.** Do not continue to Step 2.
-Do not validate the analysis with Claude, another model, or a re-run of the SQL — there is no
-non-Codex path (see the Hard Gate above). End the turn with: the one setup step the student
-needs, plus "Once that's done, re-run `/codex-review` and I'll have Codex check it." The next
-invocation re-runs `--check` and proceeds only when `missing` is empty.
+**If `missing` is non-empty, stop after giving the setup step** and end the turn with "Once
+that's done, re-run `/codex-review` and I'll have Codex check it." The next invocation re-runs
+`--check` and proceeds only when `missing` is empty.
 
 **Restart gate.** If the student just installed the **plugin**, also remind them the plugin's
 tools aren't loaded until they run `/reload-plugins` — so the sequence is install →
@@ -201,10 +196,8 @@ On any DISAGREE, offer to re-run the relevant analysis step, define the metric v
    *same* metric definition — only the SQL and numbers are its own.
 
 ## Edge Cases
-- **Codex not installed (the common student case)** → this is NOT a reason to validate with
-  Claude instead. Help the student install/log in to Codex, then stop. The validation happens
-  on the *next* run once `--check` is clean. Doing the analysis yourself here is the single
-  worst failure of this skill — it hands the student a fake "validated ✓".
+- **Codex not installed (the common student case)** → help the student install/log in, then
+  stop; validation happens on the next run once `--check` is clean.
 - **No recent analysis to validate** → ask the user what to check; offer a path or finding.
 - **Codex can't reach the warehouse** → the brief should hand it the local DuckDB/CSV
   fallback (`manifest.local_data`) so it can still derive independently.

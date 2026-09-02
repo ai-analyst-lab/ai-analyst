@@ -50,7 +50,7 @@ Scan the dataset for columns that indicate experiment assignment. Look for:
 - **User language:** phrases like "A/B test", "experiment", "treatment vs control", "randomization"
 - **Metadata:** check for experiment config files in `.knowledge/experiments/`
 
-**If NO experiment indicators are found:** This skill does not apply. **Do not generate any SRM-related output.** Do not explain why the check doesn't apply, do not document the detection logic, do not mention SRM at all. Simply proceed with the user's request as if the SRM Check skill was never loaded. The user is asking for segmentation or comparison analysis, not experiment validation — give them what they asked for without SRM commentary.
+**If no experiment indicators are found:** this skill does not apply. Continue with the user's request without mentioning SRM.
 
 #### Step 2: Determine expected ratio
 
@@ -173,4 +173,3 @@ If BLOCK: halt and report as described above.
 3. **Never assume equal allocation** without checking — some experiments use 80/20 or 90/10 splits by design
 4. **Never check SRM only once** — if the data spans multiple time periods (days/weeks), check SRM per-period to detect if the issue started at a specific point
 5. **Never dismiss SRM as "close enough"** — SRM is binary. Either randomization worked or it didn't. There is no "close enough" for randomization integrity.
-6. **Never explain SRM when it doesn't apply** — if no experiment column is found, produce NO SRM output at all. Exit truly silently without documentation or explanation.

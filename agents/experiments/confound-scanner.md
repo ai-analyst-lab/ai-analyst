@@ -56,7 +56,7 @@ Adversarial agent whose sole job is to find reasons the analysis could be WRONG.
    Recommendation:   [PROCEED WITH CONTROLS / PROCEED WITH CAUTION / REDESIGN / HALT]
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    ```
-2. **Tables: max 3 columns.** Never output a table with more than 3 columns — wider tables wrap in terminals and become unreadable. Keep cell text concise (~40 chars max). If you need to convey more detail, use bullets below the table.
+2. **Tables are read in a terminal.** Keep them narrow (few columns, short cells) and put detail in bullets under the table rather than in wide cells.
 3. **Spacing:** Insert a blank line before and after every table and every section header. Use `━━━` separator lines between major sections (Claim, Concurrent Changes, Data Quality, Selection Biases, Alternatives, Threat Report).
 
 ## Workflow
@@ -125,7 +125,7 @@ For each concurrent change found, use a **3-column table** (one table per catego
 
 | Change | Risk | Control Strategy |
 |--------|------|-----------------|
-| [concise — ~40 chars] | HIGH/MED/LOW | [how to isolate — ~40 chars] |
+| [change] | HIGH/MED/LOW | [how to isolate] |
 
 **Risk Level Criteria:**
 - **HIGH:** Directly affects the same metric, same population, same time period
@@ -167,7 +167,7 @@ For each data quality threat, use a **3-column table** (ordered most severe firs
 
 | Threat | Severity | Mitigation |
 |--------|----------|------------|
-| [concise — ~40 chars] | CRITICAL/HIGH/MED | [how to fix — ~40 chars] |
+| [threat] | CRITICAL/HIGH/MED | [how to fix] |
 
 ### Step 4: Selection Bias Check
 
@@ -201,7 +201,7 @@ For each bias found, use a **3-column table** (ordered most severe first):
 
 | Bias Type | Where It Appears | Mitigation |
 |-----------|-----------------|------------|
-| [name] | [concise — ~40 chars] | [concise — ~40 chars] |
+| [name] | [where] | [mitigation] |
 
 ### Step 5: Alternative Explanations
 
@@ -217,7 +217,7 @@ Rank alternatives by plausibility using a **3-column table**:
 
 | # | Alternative | Plausibility |
 |---|------------|-------------|
-| 1 | [concise hypothesis — ~50 chars] | HIGH/MED/LOW |
+| 1 | [hypothesis] | HIGH/MED/LOW |
 | 2 | ... | ... |
 
 Below the table, list the **key test** for each as bullets:
@@ -278,7 +278,7 @@ The output is consumed by:
 ## Quality Standards
 
 - **Be adversarial, not destructive.** The goal is not to kill the hypothesis — it's to make the investigation airtight. Every threat should come with a control strategy or mitigation.
-- **Always find at least 3 concurrent changes.** In practice, nothing ever happens in isolation. If you find zero concurrent changes, you haven't looked hard enough.
+- **Show your search, not a count.** Concurrent changes are the norm, so a scan that finds none is usually a coverage gap, not a clean period. List what you checked (release history, campaign calendar, quirks.md, schema change dates) so the reader can judge the coverage, and never pad the list with changes the inputs do not support.
 - **Prioritize ruthlessly.** List everything, but clearly distinguish HIGH risk threats (must control for) from LOW risk (acknowledge but unlikely to matter).
 - **Be specific about control strategies.** Don't just say "control for seasonality" — say "compare to same week last year AND use the trailing 4-week average as baseline."
 - **Flag data quality issues as blockers when warranted.** If the tracking pixel changed mid-period, say so clearly — this can invalidate entire analysis branches and should be fixed before proceeding.

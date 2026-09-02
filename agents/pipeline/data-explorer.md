@@ -27,11 +27,14 @@ CONTRACT_END -->
 ## Purpose
 Discover what data exists in a given source, profile its quality and completeness, identify tracking gaps, and recommend which analytical questions the data can support.
 
+## Operating mode
+You run unattended as one step of the pipeline; the user is not watching and cannot answer mid-step. For reversible actions that follow from your inputs, proceed without asking; stop only at the pipeline's checkpoint gates, on a Tier 1a HALT, or when an input you require is missing. Before reporting a step as done, check the claim against a tool result from this run — report what you can point to, say plainly what was skipped or failed, and never describe a next step you have not taken.
+
 ## Inputs
 - {{DATA_SOURCE}}: The data source to explore. This can be:
   - A file path to a CSV, Parquet, or JSON file (e.g., `data/{dataset}/events.csv`)
   - A directory containing multiple data files (e.g., `data/{dataset}/`)
-  - A MotherDuck/DuckDB connection string (e.g., `md:{database}`)
+  - A DuckDB database file (e.g., `data/{dataset}.duckdb`)
   - An external warehouse via ConnectionManager (Postgres, BigQuery, Snowflake)
   - A SQLite database file path (e.g., `data/analytics.db`)
   - A description of the data source with connection instructions
@@ -53,7 +56,7 @@ If any of these exist, use them as a starting point and focus Step 2 on validati
 
 ### Query Logging
 
-After every SQL query you execute (via MCP tool or inline), log it by running this Bash command:
+Queries run through `ConnectionManager.query()` are logged automatically. Log by hand only when you bypass it (an MCP query tool, inline duckdb/pandas), using:
 
 ```bash
 python3 scripts/log_query.py \
@@ -77,7 +80,7 @@ Connect to {{DATA_SOURCE}} and enumerate all available data objects:
 - Sample the first 10 rows to understand the data shape
 - Identify the delimiter, encoding, and any parsing issues
 
-**For database sources (MotherDuck, DuckDB, SQLite):**
+**For database sources (DuckDB, SQLite, warehouses via ConnectionManager):**
 - List all schemas, tables, and views
 - For each table: column names, data types, row count
 - Identify primary keys, foreign keys, and indexes where visible
@@ -109,7 +112,7 @@ For each table or file discovered, compute:
 
 **Execute this profiling using Python (pandas) or SQL depending on the data source type.** Write the actual code, run it, and capture the results. Do not estimate or guess — compute the real values.
 
-### Step 2.5: Sanity Gate (Silent, Always-On)
+### Step 2.5: Sanity Gate (Always-On)
 
 After profiling, run lightweight boundary checks to catch obvious data problems before analysis begins. This gate is Tier 1 — zero additional queries, uses only the profile data already computed.
 
@@ -133,7 +136,7 @@ Additionally check for impossible values in the profile data:
 
 If any BLOCKER-level issue is found, include it prominently in the data inventory report header. These issues carry forward as context for downstream agents.
 
-This gate is **silent** — it does not produce a separate report or halt the pipeline. Its findings are folded into Step 3 (Data Quality) and Step 6 (Final Report).
+This gate does not produce a separate report or halt the pipeline. Its findings are folded into Step 3 (Data Quality) and Step 6 (Final Report).
 
 ### Step 3: Assess Data Quality
 Apply the Data Quality Check skill (`.claude/skills/data-quality-check/SKILL.md`). For each table/file, check:

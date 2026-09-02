@@ -1,7 +1,7 @@
 ---
 name: run-pipeline
 description: |
-  Execute the complete end-to-end analysis pipeline — from raw data and business question to validated slide deck with charts. This is your power tool for delivering full analyses fast. Use this skill whenever the user wants to run a comprehensive analysis workflow, needs a complete deck with insights and recommendations, says things like "/run-pipeline", "run the full pipeline", "analyze this end-to-end", "take this through the full workflow", "I need a complete analysis", "build me a deck", "investigate this data thoroughly", "do the full analytical treatment", or when you detect a complex analytical request (L4-L5 from question-router) that requires multiple phases. This skill manages the entire DAG-based execution engine: pre-flight validation, per-run directory isolation, dynamic dependency resolution, parallel agent execution, checkpoint gates, chart fan-out, automated validation loops, Marp linting, PDF/HTML export, metric capture, and analysis archival. It handles crash recovery, timeout management, circuit breakers, and progress reporting. Always consider this skill when an analysis requires more than just data exploration — when you need hypothesis generation, root cause investigation, opportunity sizing, storyboarding, charting, narrative writing, and deck creation all orchestrated together. This is the skill that turns "why did our conversion rate drop?" into a polished 15-slide presentation with validated findings and actionable recommendations.
+  Run the complete end-to-end analysis pipeline: from data and a business question to a validated Marp deck with charts, via the DAG of agents in agents/registry.yaml. Use for `/run-pipeline`, "run the full pipeline", "build me a deck", "do the full analytical treatment", or any L4-L5 request that needs hypothesis generation, root cause, sizing, storyboarding, charting and deck creation orchestrated together.
 ---
 
 # Skill: Run Pipeline
@@ -12,20 +12,11 @@ Single entry point for end-to-end analysis — from raw data to finished slide d
 ## When to Use
 Invoke with: `/run-pipeline`, "run the full pipeline", "analyze end-to-end", or "take this data through the full workflow".
 
-## CRITICAL: Completion Guarantee
+## Completion
 
-**You MUST deliver a complete deck.** This is non-negotiable. The pipeline's purpose is to produce presentation-ready slides — everything else (validation, checkpoints, metrics) serves that goal.
+The pipeline's deliverable is a presentation-ready deck; validation, checkpoints and metrics serve that. You are operating autonomously: the user is not watching in real time, so for reversible steps that follow from the request, proceed without asking. Before ending your turn, check your last paragraph — if it is a plan, a question, or a promise about work not yet done, do that work now. End only when the deck exists or you are blocked on input only the user can provide.
 
-**If you cannot complete the full DAG:**
-1. **Produce a minimal viable deck** using whatever phase you've reached:
-   - Got to data exploration? → Create a 5-slide "Data Profile" deck
-   - Got to analysis? → Create an 8-slide "Findings" deck with charts
-   - Got to storyboard? → Create a draft deck from storyboard beats
-2. **Mark pipeline_state.json as `degraded`** and document which phases were skipped
-3. **Save all completed artifacts** to outputs/ so the work isn't lost
-4. **Tell the user** what was completed and what would improve with `/resume-pipeline`
-
-**Never stop with only intermediate files (question briefs, hypotheses, data inventories).** If you produce those, you MUST also produce slides, even if they're draft quality.
+**If you cannot complete the full DAG**, produce the best deck the reached phase supports (data profile → 5-slide profile deck; analysis → findings deck with charts; storyboard → draft deck from beats), mark `pipeline_state.json` as `degraded` with the skipped phases, save every completed artifact to `outputs/`, and tell the user what `/resume-pipeline` would add.
 
 ## Fast Path Guidance
 
@@ -76,9 +67,7 @@ If required arguments are missing, prompt the user before proceeding.
 
 ---
 
-## NON-NEGOTIABLE RULES
-
-These rules override any default behavior. Violation of any rule is a pipeline failure.
+## Pipeline rules (checked at checkpoints)
 
 ### R1: Theme Default is Light
 Standard analysis → `analytics` (light theme). Dark theme (`analytics-dark`) only when `context` is "workshop" or "talk", OR when the user explicitly passes `theme=analytics-dark`. When in doubt, use light.
@@ -218,7 +207,6 @@ Before any execution, validate the registry:
 - Set `dataset` from active dataset
 - Set `question` from user input
 - Initialize **ALL** agents from the plan's allow-list as `pending`, skipped agents as `skipped`
-- **CRITICAL:** Include `cross-verification` if it is in the plan. The `full_presentation` and `deep_dive` plans both include it. Do NOT omit it — cross-verification depends on `root-cause-investigator` (AND-gate) and at least one of `descriptive-analytics|overtime-trend|cohort-analysis` (OR-gate via `depends_on_any`).
 - Set pipeline `status: running`
 
 If **resuming** (pipeline_state.json already exists with `status: paused` or `status: failed`):
@@ -240,14 +228,7 @@ FOR each tier in execution_tiers:
      - At least ONE `depends_on_any` agent has completed, if specified (OR-gate)
      (after plan filtering and skipping)
 
-     IMPORTANT: `depends_on_any` is an OR-gate. For example, cross-verification
-     has `depends_on: [root-cause-investigator]` AND `depends_on_any: [descriptive-analytics,
-     overtime-trend, cohort-analysis]`. It is READY when root-cause-investigator is
-     completed AND at least ONE of the three analysis agents is completed. Do NOT
-     require all three — that would be an AND-gate, not an OR-gate.
-
-     If an agent in `depends_on_any` was skipped (not in the plan), it does NOT
-     count as completed. Only agents with `status: completed` satisfy OR-gates.
+     Only agents with `status: completed` satisfy an OR-gate; skipped agents do not count.
 
   2. If READY_SET is empty AND pending agents remain → deadlock → HALT
 
@@ -258,11 +239,11 @@ FOR each tier in execution_tiers:
      d. Read agent file from disk (R8)
 
   4. LAUNCH agents:
-     - If Task tool available AND READY_SET has 2+ agents:
-       Launch up to 3 parallel Tasks, each with agent file + context
+     - If a sub-agent tool is available and READY_SET has 2+ agents: launch them
+       in parallel, each with agent file + context, and keep working while they run
      - Else: Execute sequentially inline
 
-  5. WAIT for completion (with timeout — see Timeout Handling)
+  5. WAIT for completion (see Agent Failure Handling)
 
   6. FOR each completed agent:
      a. Record completed_at, output_files in pipeline_state.json
@@ -486,20 +467,9 @@ When chart-maker becomes READY (after narrative-coherence-reviewer):
 
 ---
 
-## TIMEOUT HANDLING
+## AGENT FAILURE HANDLING
 
-Each agent has a 5-minute execution timeout:
-
-1. When an agent starts, record `started_at`
-2. If 5 minutes elapse with no completion:
-   - Mark the attempt as timed out
-   - **Retry once** with the same context
-3. If the retry also times out:
-   - Mark agent as `failed` with error: `"Timeout after 2 attempts (5min each)"`
-   - Apply degradation policy: if the agent is non-critical (visual-design-critic, narrative-coherence-reviewer), continue pipeline with a warning. If critical (cross-verification, validation), HALT.
-
-**Critical agents** (HALT on timeout): cross-verification, validation, data-explorer
-**Non-critical agents** (degrade on timeout): visual-design-critic, narrative-coherence-reviewer, opportunity-sizer
+If an agent errors or returns without its declared outputs, retry it once with the same context. On a second failure, mark it `failed` and apply the degradation policy: non-critical agents (visual-design-critic, narrative-coherence-reviewer, opportunity-sizer) degrade with a warning; critical agents (cross-verification, validation, data-explorer) HALT.
 
 ---
 

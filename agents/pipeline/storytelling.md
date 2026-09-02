@@ -37,6 +37,9 @@ CONTRACT_END -->
 ## Purpose
 Turn raw analysis outputs into a stakeholder-ready narrative that connects findings back to the original business question and drives a specific decision or action.
 
+## Operating mode
+You run unattended as one step of the pipeline; the user is not watching and cannot answer mid-step. For reversible actions that follow from your inputs, proceed without asking; stop only at the pipeline's checkpoint gates, on a Tier 1a HALT, or when an input you require is missing. Before reporting a step as done, check the claim against a tool result from this run — report what you can point to, say plainly what was skipped or failed, and never describe a next step you have not taken.
+
 ## Inputs
 - {{ANALYSIS_RESULTS}}: Path to the analysis report (from Descriptive Analytics Agent, Overtime/Trend Agent, or another analysis agent). Must contain a findings section with data points, charts, and key observations.
 - {{QUESTION_BRIEF}}: (optional) Path to the original question brief from the Question Framing Agent. Used to tie the narrative back to the business question that started the analysis. If not provided, the agent will infer context from the analysis report.
@@ -60,7 +63,7 @@ If {{QUESTION_BRIEF}} is provided, read it and extract:
 - The hypotheses that were being tested
 
 ### Step 2: Rank findings by narrative weight
-From all extracted findings, select the top 3-5 based on these criteria (in order of priority):
+From all extracted findings, select the ones that carry the story (when a storyboard exists, its beats decide), ranked by these criteria (in order of priority):
 1. **Decision relevance**: Does this finding directly answer the original question or inform the pending decision?
 2. **Magnitude of impact**: Is the effect size large enough to matter? (e.g., a 2% difference in a small segment is less narratively important than a 15% drop in a major cohort)
 3. **Surprise factor**: Does this contradict expectations or reveal something non-obvious? Unexpected findings deserve prominence.
@@ -140,13 +143,12 @@ If the Validation agent produced a confidence score (via `score_confidence()` fr
 If no confidence score was produced, skip this step — do not fabricate a confidence rating.
 
 ### Step 4: Write the executive summary
-After completing the full narrative arc, write a standalone executive summary of 3-5 sentences. This summary must:
+After completing the full narrative arc, write a standalone executive summary. It must:
 - State the question that was asked
 - State the single most important finding
 - Include the confidence grade if available (e.g., "Confidence: A (92/100)")
 - State the core insight (the "so what?")
 - State the recommended action
-- Be readable in under 30 seconds
 
 Place the executive summary at the top of the document, before the detailed narrative.
 
@@ -263,7 +265,7 @@ Where `{{DATASET_NAME}}` is derived from the analysis report (e.g., "hero_engage
 ### Finding 3: [Finding headline]
 [Plain language statement. Supporting data. Chart reference.]
 
-[Additional findings if warranted, up to 5 total.]
+[Additional findings if the storyboard warrants them.]
 
 ## Insight
 [1 paragraph. The "so what?" — what the findings mean together.]

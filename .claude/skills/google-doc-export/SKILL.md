@@ -53,7 +53,7 @@ upload_file_to_drive(
 - `mcp__google-docs__insert_image(document_id, image_url, width_pts, height_pts)` — embed image
 - `mcp__google-docs__read_document(document_id)` — read doc content
 
-**Note:** Many functions referenced in older docs (batch_update_doc, update_paragraph_style, modify_doc_text, insert_table, debug_table_structure, format_text, inspect_doc_structure) do NOT exist in the current MCP API.
+**The MCP server exposes only the functions listed in Section F.** Anything else (table insertion, paragraph styling, structure inspection) goes through the .docx → Google Docs workflow.
 
 ---
 
@@ -219,21 +219,16 @@ Use this structure for analysis reports:
       Never insert an image into a paragraph that already contains text.
 - [ ] **Bottom-to-top image insertion** — insert the last section's image first,
       then work backwards. Prevents index invalidation.
-- [ ] **Re-read structure after each image** — call `inspect_doc_structure` after
-      every `insert_doc_image` call to get fresh indices.
 - [ ] **Heading hierarchy is clean** — exactly one H1, H2 for sections, H3 for
       subsections. No skipped levels.
 - [ ] **No more than 2 consecutive empty paragraphs** anywhere in the document.
 - [ ] **Drive file IDs used for images** — never public-host URLs (they expire and leak data).
-- [ ] **Image deduplication audit** — before inserting any image, inspect the doc
-      structure and check for existing 2-char paragraphs (inline object + newline)
-      at the target location. If an image already exists there, skip insertion.
 - [ ] **Table spacing** — every table must have 1 empty paragraph before and after
       it. Text must never run directly into a table or start immediately after one.
 - [ ] **No stub headings** — never insert a heading without body content beneath it.
       If data for a section doesn't exist, omit the heading entirely.
-- [ ] **Both width AND height specified for images** — `insert_doc_image` requires
-      both dimensions. Omitting height causes an API error.
+- [ ] **Both width AND height specified for images** — `insert_image` requires both;
+      omitting height is an API error.
 
 ---
 
@@ -359,16 +354,7 @@ upload_image_to_drive(file_path: str, file_name: str) → {"file_id": str, "url"
 upload_file_to_drive(file_path: str, convert_to_google_doc: bool) → {"file_id": str, "url": str}
 ```
 
-**Functions that DO NOT exist:**
-- batch_update_doc
-- update_paragraph_style
-- modify_doc_text
-- insert_table
-- debug_table_structure
-- format_text
-- inspect_doc_structure
-
-If you need these features, use the .docx → Google Docs workflow (Section A).
+These are the only functions the server exposes. For anything else (tables, paragraph styling, structure inspection), use the .docx → Google Docs workflow (Section A).
 
 ---
 

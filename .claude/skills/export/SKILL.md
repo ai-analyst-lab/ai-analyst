@@ -43,7 +43,7 @@ pipeline outputs into ready-to-share deliverables.
 - Check `working/` for partial results
 - If nothing found: "No analysis results to export. Run an analysis first or use `/run-pipeline`."
 
-**Critical:** Once you identify the primary source, read it COMPLETELY before generating any export. Do not assume you know the content — always verify what analysis you're exporting.
+Read the primary source in full before generating any export.
 
 ### Step 2: Generate Requested Format
 
@@ -56,31 +56,27 @@ pipeline outputs into ready-to-share deliverables.
 - Structure: Subject line + 3-paragraph body (context, key finding, recommendation)
 - Tone: Executive-friendly, no jargon, action-oriented
 - Include: 1-2 key numbers, the "so what", and a clear ask
-- **Content source:** Use ONLY findings from the source narrative — do not calculate derived metrics (e.g., revenue impact) unless they appear in the source. Simplify technical findings, but never fabricate numbers.
 - **Output file:** Write the email content to `outputs/email_summary_{DATE}.md` where {DATE} is today's date in YYYY-MM-DD format (e.g., `email_summary_2026-04-04.md`). This specific file path is important for consistent organization.
 
 **Format: slack**
 - Structure: ONE focused update with bold headline + 3-5 bullet points
-- Keep under 300 words, thread-friendly format
+- Short enough to read in a channel without expanding; one headline, a few bullets
 - Use emoji sparingly (checkmarks, arrows only)
 - Include: key metric, direction, and recommended action
 - Include a data stamp for each key finding (abbreviated format): `50K | Jan-Mar 2026 | EVENTS | B (82)`
-- **Content source:** Extract directly from the source narrative — use exact numbers and findings. Do not reinterpret or add context not present in the source.
-- Do not create multiple versions (Full/Short/Executive) — produce one concise update that works for team channels
 - **Output file:** Write to `outputs/slack_update_{DATE}.md` where {DATE} is today's date in YYYY-MM-DD format (e.g., `slack_update_2026-04-04.md`)
 
 **Format: brief**
 - Structure: Title + Executive Summary (3 sentences) + Key Findings (numbered) +
   Recommendation + Next Steps + Appendix (data sources, methodology)
-- 1 page target (~500 words)
-- **Content source:** Extract all content from source narrative — do not add interpretation or derived metrics
+- One page: a reader should get the decision and the evidence without scrolling
 - **Output file:** Write to `outputs/decision_brief_{DATE}.md` where {DATE} is today's date in YYYY-MM-DD format (e.g., `decision_brief_2026-04-04.md`)
 
 **Format: data**
 - Export all DataFrames from `working/` as CSVs to the `outputs/data/` directory
 - Filename pattern: Use descriptive names based on what the data represents (e.g., `conversion_by_platform.csv`, `funnel_steps.csv`)
 - Create `outputs/data/README.md` documenting each CSV file: columns, row count, use cases, data quality notes
-- Do not create extra analysis variants or multiple versions — export only the source DataFrames that were actually used in the analysis
+- Export only the source DataFrames that were actually used in the analysis
 - **Output location:** All CSV files in `outputs/data/` directory plus `outputs/data/README.md` manifest
 
 **Format: gdoc**
@@ -99,7 +95,7 @@ Readout template: Summary (30-second read) → Analysis (30-minute read) → Res
 
 Check if `mcp__google-docs__*` tools are accessible:
 
-1. Attempt `read_document` on any known document ID (lightweight probe).
+1. Run the `auth-preflight` skill (it probes with a create call, not a read).
 2. **If auth works:** Proceed to Step 2a. Say nothing about auth.
 3. **If MCP tools unavailable or auth expired:** Say "Connecting your Google
    account..." and run `authorize_google_docs`. Follow the browser OAuth flow.
@@ -326,6 +322,7 @@ Say: "Analysis receipt generated at `{path}`. Contains {N} findings, {N} queries
 6. The `gdoc`, `notion`, and `receipt` formats create external resources or audit trails — never include them in `/export all`
 7. Always generate the .docx before attempting Google upload (local fallback)
 8. If `outputs/gdoc_export.yaml` shows unchanged source, offer to open existing doc
+9. Every format is one version, built only from numbers and findings in the source narrative; simplify wording, never add derived metrics or alternate versions
 
 ## Edge Cases
 - **Partial analysis:** Export what's available, note gaps: "Note: validation step was not completed."

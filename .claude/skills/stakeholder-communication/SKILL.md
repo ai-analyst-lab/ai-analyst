@@ -48,7 +48,7 @@ Different audiences care about different things. For the same finding, adapt:
 
 #### Step 1: Identify the Audience
 
-Detect the audience from both **explicit mentions** and **context clues**. Never guess blindly - if unclear after checking these signals, ask the user to clarify.
+Detect the audience from both **explicit mentions** and **context clues**.
 
 **Explicit signals** (direct audience mentions):
 - "Prepare this for the leadership team" / "my VP wants to see this" / "present to the CEO" → Executive
@@ -70,7 +70,7 @@ Detect the audience from both **explicit mentions** and **context clues**. Never
   - "how confident are we?" / "validate this" / "peer review"
   - Requests for methodology, statistical rigor, caveats
 
-If no audience is specified and no clear context clues, default to **Product Team** format (most versatile).
+If the audience is unclear: for a live presentation or time-boxed request, ask "Who will read this?"; for a document that will be shared widely, use the multi-audience structure; otherwise default to **Product Team** (most versatile).
 
 #### Step 2: Select the Lead
 
@@ -114,15 +114,12 @@ Each level includes everything above it plus more depth.
 - It's a formal analysis report that serves as a reference document
 - The user explicitly says "this needs to work for everyone" or mentions multiple audience types
 - You're creating an artifact that will be archived/referenced later by different stakeholders
-- **Unclear who the audience is** (when in doubt, default to multi-audience with labeled sections)
 
 **Use single-audience format when:**
 - The user specifies a single audience ("prepare this for my VP", "write this for engineering")
 - It's a live presentation (deck, meeting brief) — pick the primary audience in the room
 - Time is constrained ("tomorrow morning") — optimize for one audience, don't try to serve everyone
 - The context is meeting-specific ("sprint planning", "board meeting") — tailor to that meeting's attendees
-
-**Default rule:** When unclear about the audience, ASK the user "Who will read this?" before proceeding. A quick clarification question saves rework.
 
 **Multi-audience structure** (when needed):
 1. **Executive Summary** (Level 1) — 3-5 sentences, bottom line first

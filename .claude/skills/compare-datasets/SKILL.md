@@ -22,7 +22,7 @@ similar across both product lines") and dataset-specific anomalies.
 
 ## Instructions
 
-### Step 0: Feasibility Check (NEW)
+### Step 0: Feasibility Check
 Before running the full 6-step workflow, verify the comparison is possible:
 
 1. **Check minimum requirements:**
@@ -117,7 +117,7 @@ suggested_investigations:
   - "Profile analytics_prod and company_postgres to check for device tracking"
 ```
 
-**IMPORTANT:** Actually write this file to disk using the Write tool. In previous tests, this file was mentioned but not saved — that's a gap to fix.
+Write this file to disk with the Write tool; it is the persistent record of the comparison.
 
 **Why this file matters:** It creates a persistent record of cross-dataset insights that future analyses can reference. If Dataset B matures later, we can re-run the comparison and see how findings evolved.
 
@@ -191,7 +191,7 @@ Compare schemas and metric definitions only. State: "Neither dataset has analysi
 ### Many datasets (>5)
 Compare pairwise with the active dataset only. List all datasets but only run the 6-step workflow for active vs. each other dataset. Present results in a summary table at the end.
 
-### Insufficient data for comparison (NEW)
+### Insufficient data for comparison
 **Example:** User asks to compare retention curves but Dataset B has only 27 days of data vs. Dataset A's 12 months.
 
 **Response:**
@@ -201,9 +201,9 @@ Compare pairwise with the active dataset only. List all datasets but only run th
 4. Provide decision framework: "We can compare when Dataset B has [X months] of data and [Y sample size]."
 5. Still write the cross_dataset_observations.yaml with the `comparison_type: feasibility-blocked` flag
 
-**Rationale:** Better to clearly state "we can't compare yet" than to produce misleading partial results. This was the strongest output from Test Case 3 — the skill correctly identified that comparison was impossible and explained why.
+**Rationale:** Better to clearly state "we can't compare yet" than to produce misleading partial results.
 
-### Data quality issues (NEW)
+### Data quality issues
 **Example:** Dataset B has future-dated records, customer ID mismatches across tables, or temporal inconsistencies.
 
 **Response:**
@@ -213,15 +213,3 @@ Compare pairwise with the active dataset only. List all datasets but only run th
 4. Recommend fixing data quality before re-attempting comparison
 
 **Rationale:** Data quality issues can make comparisons meaningless. Better to diagnose and fix the source data than to compare bad data.
-
-## Why These Changes Matter
-
-**Upfront feasibility check (Step 0):** Prevents wasted work when comparison is impossible. Test Case 3 showed that clearly diagnosing "this comparison is blocked" is more valuable than attempting partial analysis.
-
-**Explicit handling of empty metric dictionaries:** Test Cases 1 and 2 both encountered empty metric dictionaries. The skill should acknowledge this and explain that definitions are inferred rather than formal.
-
-**Actually writing cross_dataset_observations.yaml:** This file was mentioned but not shown in outputs. Making it explicit ensures the knowledge artifact is created.
-
-**Comparison Status line in output:** Helps the user immediately understand if they're looking at a full comparison, partial comparison, or diagnostic report explaining why comparison failed.
-
-**Data quality diagnostics:** Test Case 3 revealed future-dated records in one dataset. The skill should surface these issues and recommend fixes.

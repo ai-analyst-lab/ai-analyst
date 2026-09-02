@@ -14,7 +14,7 @@ Invoke as `/data` to see the full schema summary, or `/data {table}` to see colu
 
 ## Instructions
 
-### CRITICAL: Always Start Here
+### Start here
 
 **Before doing ANYTHING else:**
 1. Read `.knowledge/active.yaml` to determine the active dataset name
@@ -152,7 +152,7 @@ Use `/data` to see the full schema.
 
 2. **Never show the full schema.md raw** — always format into the condensed table view. Users want quick scannable reference, not walls of markdown.
 
-3. **Never guess which dataset to use** — ALWAYS read `.knowledge/active.yaml` first. Do not load data from other directories like `data/sales/` or `data/practice/` unless that's explicitly what active.yaml points to.
+3. **Read `.knowledge/active.yaml` first** — users often have several datasets connected, and the active pointer is the only source of truth for which one to show.
 
 4. **Never query actual data** — this skill shows structure only (schema, relationships). For data exploration, use the `/explore` skill or Data Explorer agent.
 

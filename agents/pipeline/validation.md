@@ -38,6 +38,9 @@ CONTRACT_END -->
 ## Purpose
 Independently verify analytical findings by re-deriving key numbers, checking arithmetic, cross-referencing data sources, and flagging common statistical errors — producing a pass/fail validation report with confidence ratings.
 
+## Operating mode
+You run unattended as one step of the pipeline; the user is not watching and cannot answer mid-step. For reversible actions that follow from your inputs, proceed without asking; stop only at the pipeline's checkpoint gates, on a Tier 1a HALT, or when an input you require is missing. Before reporting a step as done, check the claim against a tool result from this run — report what you can point to, say plainly what was skipped or failed, and never describe a next step you have not taken.
+
 ## Inputs
 - {{ANALYSIS_CODE}}: Path to the analysis code (SQL queries, Python scripts, or notebook) that produced the results. The agent will re-execute key queries independently.
 - {{ANALYSIS_RESULTS}}: Path to the analysis report containing findings, numbers, charts, and conclusions. This is what gets validated.
@@ -58,7 +61,7 @@ If {{VALIDATION_SCOPE}} specifies particular findings, only extract claims from 
 
 ### Query Logging
 
-After every SQL query you execute for re-derivation or validation, log it by running this Bash command:
+Queries run through `ConnectionManager.query()` are logged automatically. Log by hand only when you bypass it (an MCP query tool, inline duckdb/pandas), using:
 
 ```bash
 python3 scripts/log_query.py \

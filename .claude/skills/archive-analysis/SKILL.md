@@ -32,15 +32,9 @@ Check if this is an **archive request** (create new entry) or a **verification r
 
 ### Step 1: Gather Analysis Metadata from Session Context
 
-**IMPORTANT: Capture only what the user explicitly mentioned or what exists in actual files. DO NOT invent:**
-- Findings not stated by the user
-- Metrics not mentioned in the analysis
-- Files not actually present in outputs/ or working/
-- Validation grades if validation wasn't run
-- Business impact estimates unless explicitly provided
-- Detailed analysis steps or methodology not mentioned
-
-**DO NOT fabricate or invent session details.** Extract metadata from actual files and session history.
+Record only what exists: findings, metrics, agents, and files come from the files and session
+history listed below, or from what the user stated. Anything not found is `null` or `[]`, never
+invented.
 
 **Where to look:**
 
@@ -75,7 +69,6 @@ Check if this is an **archive request** (create new entry) or a **verification r
    - Include both deliverables (outputs/) and working files (working/)
    - **ONLY list files that actually exist** — check the directory before listing
    - If no files exist or user didn't mention any outputs, set `output_files: []`
-   - DO NOT invent file names or list files from unrelated analyses
 9. **Tags:** Auto-generate from:
    - Keywords in the original question (mobile, checkout, seasonal, etc.)
    - Metric names used
@@ -103,10 +96,9 @@ Example entry format:
   question: "What caused the conversion rate drop and how does it relate to the mobile checkout flow?"
   question_level: L4
   findings:
-    - "Mobile checkout flow has significant usability issues causing conversion drop"
-    - "Checkout funnel shows critical drop-off points in mobile experience"
-    - "Conversion rate varies significantly by device type"
-    - "Mobile optimization is required to recover lost conversions"
+    - "Mobile checkout conversion fell 2.1pp (5.4% → 3.3%) in March; desktop was flat"
+    - "82% of the drop is concentrated at the payment step on iOS"
+    - "Sessions with a payment error retry at 11% vs. 64% baseline"
   metrics:
     - conversion_rate
     - checkout_completion
@@ -224,13 +216,12 @@ Use `/history` to browse all past analyses.
 
 ## Rules
 1. **Never overwrite an existing archive entry** — always append
-2. **Never fabricate session context** — read from actual files or use what the user provided
-3. Key findings should be one sentence each, factual, with numbers where possible
-4. Tags should be lowercase, no spaces (use hyphens)
-5. If validation was not run, set confidence to null and note it
-6. Archive even partial analyses — mark as `partial: true`
-7. **Verification requests don't create new entries** — read and report existing archives
-8. **DO NOT create standalone analysis markdown files or archive directories** — the archive system stores metadata in `index.yaml` only. Output files remain in their original locations (`outputs/`, `working/`) and are referenced by path in the `output_files` array. DO NOT copy or duplicate artifacts.
+2. Key findings should be one sentence each, factual, with numbers where possible
+3. Tags should be lowercase, no spaces (use hyphens)
+4. If validation was not run, set confidence to null and note it
+5. Archive even partial analyses — mark as `partial: true`
+6. **Verification requests don't create new entries** — read and report existing archives
+7. **DO NOT create standalone analysis markdown files or archive directories** — the archive system stores metadata in `index.yaml` only. Output files remain in their original locations (`outputs/`, `working/`) and are referenced by path in the `output_files` array. DO NOT copy or duplicate artifacts.
 
 ## Edge Cases
 - **No outputs exist:** Set `output_files: []`, do not invent file names. Archive with metadata only.

@@ -52,9 +52,9 @@ the correct `tab_id` to get all element positions, types, and indices.
 Call `mcp__google-workspace__get_doc_as_markdown` to get the rendered content
 for readability review.
 
-### Step 2: Run the 6-category checklist
+### Step 2: Run the checklist
 
-For each category, evaluate and record PASS or FAIL with specifics.
+For each check below, evaluate and record PASS or FAIL with specifics.
 
 #### Check 1: Heading Hierarchy
 
@@ -135,8 +135,9 @@ Severity: WARNING for missing components.
 
 #### Check 6: Document Length and Readability
 
-**Rule:** Executive summary should be under 300 words. Individual sections should
-be under 500 words. Appendix can be longer.
+**Rule:** The executive summary answers the question without the reader opening a
+section; a section is something a stakeholder can read in one sitting. Flag sections
+whose length comes from repetition rather than evidence. Appendix can be longer.
 
 **How to check:** Count words between section headers in the markdown output.
 
@@ -144,8 +145,7 @@ Severity: WARNING for sections exceeding limits.
 
 #### Check 7: Duplicate Images
 
-**Rule:** No two image paragraphs should be adjacent (within 3 indices of each
-other). No text paragraph should contain an inline image character (paragraph
+**Rule:** No two image paragraphs should sit within 5 indices of each other. No text paragraph should contain an inline image character (paragraph
 length exceeds visible text length by 1+).
 
 **How to check:** From `inspect_doc_structure`, find all 2-char paragraphs
@@ -339,22 +339,7 @@ include the review summary in its final report.
    fix is often to add a page break or extra spacing rather than trying to
    move the image. Flag complex image issues for human review.
 
-## Google Docs Image Best Practices
-
-When inserting images into Google Docs (for the creator agent to follow):
-
-1. **Always insert images at dedicated paragraph positions** — create an empty
-   paragraph first, then insert the image there. Never insert into a paragraph
-   that already contains text.
-
-2. **Add spacing paragraphs** — insert one empty paragraph before and after each
-   image to prevent crowding.
-
-3. **Center-align image paragraphs** — use `update_paragraph_style` with
-   `alignment="CENTER"` on the image paragraph.
-
-4. **Preferred image width: 400-500pt** — large enough to be readable, small
-   enough to not overflow the content area.
-
-5. **One image per section maximum** — if a section needs multiple charts,
-   split into subsections or use a single composite chart.
+7. **Run to completion.** No one is watching this step; do not stop to ask whether
+   to apply a fix that the checklist already classifies as FIXABLE. Only list a fix
+   in the review file after the `batch_update` call that made it returned success;
+   anything unverified goes under Requires Human Review.

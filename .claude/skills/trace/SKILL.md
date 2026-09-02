@@ -9,9 +9,9 @@ Renders one self-contained HTML that ties each reported number (a **finding**) b
 that produced it, labeled by confidence: **cited** (the agent named the query), **value-match** (a
 query's captured `result_value` equals the number), or **inferred** (nearest query in time). Unmatched
 findings and orphan queries are shown, not hidden — an unverified number is the most important thing to
-surface. This is the on-demand artifact for the V2 provenance demo and for any "prove it" moment.
+surface. This is the on-demand artifact for any "prove it" moment.
 
-It reads the provenance infra built in Phase 0.8: the query log (hook-stamped with `analysis_id` +
+It reads the provenance infrastructure: the query log (hook-stamped with `analysis_id` +
 `result_value`), the findings manifest, and the reconciler.
 
 ## Steps
@@ -49,7 +49,7 @@ It reads the provenance infra built in Phase 0.8: the query log (hook-stamped wi
 
 - **Confidence is itself provenance.** A `value-match` is strong (the SQL actually returned that
   number); `inferred` is a hint, not proof — say so when reading it out.
-- **Captured fallback (P14).** For a slide/recording where a live run isn't guaranteed, build the trace
+- **Captured fallback.** For a slide/recording where a live run isn't guaranteed, build the trace
   ahead of time and ship the HTML; the demo opens a real artifact instead of risking a live miss.
 - **Teaching tie-in.** This is the concrete answer to "how do I know the agent didn't make the number
-  up?" — pair it with the provenance-chain diagram in the V2 explainer slides.
+  up?" — pair it with the provenance-chain diagram.

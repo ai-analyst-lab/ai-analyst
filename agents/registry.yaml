@@ -38,23 +38,6 @@ agents:
   knowledge_context:
   - .knowledge/datasets/{active}/schema.md
   - .knowledge/datasets/{active}/quirks.md
-- name: source-tieout
-  file: agents/pipeline/cross-verification.md
-  pipeline_step: null
-  critical: false
-  depends_on:
-  - data-explorer
-  inputs:
-  - DATA_SOURCE
-  - DUCKDB_PATH
-  - DATASET_NAME
-  - TABLE_MAPPING
-  outputs:
-  - working/tieout_{{DATASET_NAME}}_{{DATE}}.md
-  - working/tieout_mapping.md
-  knowledge_context:
-  - .knowledge/datasets/{active}/schema.md
-  - .knowledge/datasets/{active}/quirks.md
 - name: cross-verification
   file: agents/pipeline/cross-verification.md
   pipeline_step: 6.5
@@ -424,8 +407,10 @@ agents:
   critical: true
   depends_on:
   - experiment-analyzer
+  - experiment-interpreter
   inputs:
   - ANALYSIS_RESULTS
+  - INTERPRETATION
   - AUDIENCE
   - CONTEXT
   outputs:

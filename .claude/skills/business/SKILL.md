@@ -8,23 +8,12 @@ description: Browse, search, and explore your organization's business context sy
 > Interactive browser for your organization's knowledge system. Explore terms,
 > products, metrics, objectives, and team structure.
 
-## ⚠️ CRITICAL: This Skill's Purpose
+## Scope
 
-**This skill is for browsing ORGANIZATIONAL KNOWLEDGE FILES, not analyzing data.**
-
-What this skill does:
-- Shows what's documented in `.knowledge/organizations/{org}/business/` YAML files
-- Displays glossary terms, product catalogs, metric definitions, OKRs, team structure
-- Searches across business knowledge categories
-
-What this skill does NOT do:
-- ❌ Query datasets or run SQL
-- ❌ Analyze actual data in tables
-- ❌ Show user profiles (separate system)
-- ❌ Show analysis history (use `/history` instead)
-- ❌ Show corrections log (separate system)
-
-**If the user wants to know what products exist in the DATA, use `/explore` or Data Explorer agent instead. If they invoke `/business products`, show what's in the products YAML file.**
+This skill browses the organization's documented knowledge in
+`.knowledge/organizations/{org}/business/` (via `helpers/knowledge/business_context.py`).
+It never queries the dataset: `/business products` shows the product catalog YAML, not the
+`products` table. For what exists in the data, use `/explore`; for analysis history, `/history`.
 
 ## Trigger
 Invoked as `/business` or `/business {subcommand}`
@@ -59,7 +48,6 @@ Type /business {category} for details.
    - The helper handles file not found errors, parsing errors, and provides consistent structure
 3. Count entries in each category (glossary, products, metrics, objectives, teams)
 4. Display summary table
-5. ⚠️ **SCOPE BOUNDARY:** Show ONLY business context categories. Do NOT include analysis history, corrections, user profile, or dataset info — those are separate systems.
 5. **If business context is empty or sparse (fewer than 3 categories populated):**
    - Check `.knowledge/analyses/index.yaml` for past analyses
    - If analyses exist, add a section called "Implicit Knowledge (from Past Analyses)"
@@ -85,7 +73,7 @@ Display all business term definitions:
 ```
 
 **Implementation:**
-1. Load from `business/glossary/terms.yaml`
+1. Load via the helper (`get_glossary()`)
 2. Sort alphabetically
 3. Show first 20 terms; offer "Show all" if more
 4. If empty: "No glossary terms defined. Add terms to `.knowledge/organizations/{org}/business/glossary/terms.yaml`."
@@ -104,11 +92,9 @@ Display product hierarchy:
 ```
 
 **Implementation:**
-1. ⚠️ **DO NOT query the dataset.** Read the YAML file at `business/products/index.yaml`
-2. Load product entries from the YAML file (NOT from database tables)
-3. Display in table format
-4. If empty: "No products defined. Add products to `.knowledge/organizations/{org}/business/products/index.yaml`."
-5. **Common mistake:** Querying `products` table or `checkout_sessions` table in the database. This is WRONG. `/business products` shows what's DOCUMENTED in YAML files, not what's in the data.
+1. Load via the helper (`get_products()`)
+2. Display in table format
+3. If empty: "No products defined. Add products to `.knowledge/organizations/{org}/business/products/index.yaml`."
 
 ### `/business metrics` — Inspect Metric Definitions
 Display metric dictionary:
@@ -124,10 +110,10 @@ Display metric dictionary:
 ```
 
 **Implementation:**
-1. Load from `business/metrics/index.yaml`
+1. Load via the helper (`get_metrics()`)
 2. Cross-reference with `.knowledge/datasets/{active}/metrics/` if available
 3. Show definition, type, owner
-4. If empty: "No metrics defined. Use `/metrics add` to define metrics, or add to `.knowledge/organizations/{org}/business/metrics/index.yaml`."
+4. If empty: "No metrics defined. Use the metric-spec skill to define metrics, or add to `.knowledge/organizations/{org}/business/metrics/index.yaml`."
 
 ### `/business objectives` — Review OKRs/Goals
 Display current objectives:
@@ -143,7 +129,7 @@ Display current objectives:
 ```
 
 **Implementation:**
-1. Load from `business/objectives/index.yaml`
+1. Load via the helper (`get_objectives()`)
 2. Show status indicators (On Track / At Risk / Behind)
 3. If empty: "No objectives defined. Add OKRs to `.knowledge/organizations/{org}/business/objectives/index.yaml`."
 
@@ -161,7 +147,7 @@ Display team organization:
 ```
 
 **Implementation:**
-1. Load from `business/teams/index.yaml`
+1. Load via the helper (`get_teams()`)
 2. Show team summary
 3. If empty: "No teams defined. Add team structure to `.knowledge/organizations/{org}/business/teams/index.yaml`."
 

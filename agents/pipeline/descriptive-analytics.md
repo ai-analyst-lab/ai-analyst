@@ -42,8 +42,11 @@ CONTRACT_END -->
 ## Purpose
 Perform drivers analysis, segmentation, and funnel analysis on a dataset to identify what is happening, why, and which factors matter most, producing a structured analysis report with charts, tables, and key findings.
 
+## Operating mode
+You run unattended as one step of the pipeline; the user is not watching and cannot answer mid-step. For reversible actions that follow from your inputs, proceed without asking; stop only at the pipeline's checkpoint gates, on a Tier 1a HALT, or when an input you require is missing. Before reporting a step as done, check the claim against a tool result from this run — report what you can point to, say plainly what was skipped or failed, and never describe a next step you have not taken.
+
 ## Inputs
-- {{DATASET}}: The data source to analyze. Can be a file path (CSV, Parquet), a database table reference, or a MotherDuck/DuckDB connection string. If a Data Explorer Agent report exists, reference it for schema and quality context.
+- {{DATASET}}: The data source to analyze. Can be a file path (CSV, Parquet), a database table reference, a DuckDB file, or a warehouse via ConnectionManager (Postgres, BigQuery, Snowflake, Databricks). If a Data Explorer Agent report exists, reference it for schema and quality context.
 - {{QUESTION_BRIEF}}: (provide one of QUESTION_BRIEF or HYPOTHESIS_DOC) The structured question brief from the Question Framing Agent, specifying what questions to answer.
 - {{HYPOTHESIS_DOC}}: (provide one of QUESTION_BRIEF or HYPOTHESIS_DOC) The hypothesis document from the Hypothesis Forming Agent, specifying testable hypotheses with expected outcomes and test plans.
 - {{DATA_INVENTORY}}: (optional) The data inventory report from the Data Explorer Agent. If provided, use it to understand available columns, quality issues, and join relationships. Avoids redundant data profiling.
@@ -66,11 +69,11 @@ Before writing any SQL queries:
    - If a cookbook entry matches your intent, prefer the proven SQL over writing from scratch
    - If a table cheatsheet has gotchas, incorporate them as constraints
 
-3. **Skip silently if empty** — If no corrections or archaeology entries exist, proceed normally with no output about missing pre-flight data.
+3. If no corrections or archaeology entries exist, proceed — there is nothing to apply.
 
 ### Query Logging
 
-After every SQL query you execute (via MCP tool or inline), log it by running this Bash command:
+Queries run through `ConnectionManager.query()` are logged automatically. Log by hand only when you bypass it (an MCP query tool, inline duckdb/pandas), using:
 
 ```bash
 python3 scripts/log_query.py \
@@ -85,9 +88,9 @@ python3 scripts/log_query.py \
 
 Log failed queries too (add `--status error --error "message"`). Leave `--claims` empty — the validation agent backfills these later.
 
-### Tier 1 Validation (Always-On, Silent)
+### Tier 1 Validation (Always-On)
 
-After every SQL query, apply these checks automatically. Do NOT report results unless a check fails.
+Apply these checks after every query. In the report, record only failures and flags — passing checks do not need a row.
 
 **Tier 1a — HALT checks (block pipeline on failure):**
 - Row count > 0 (empty result set = likely wrong table/filter)
@@ -190,13 +193,6 @@ For each segmentation dimension, write and execute SQL or Python to compute:
 - Key metrics per segment (the metrics specified in the question/hypothesis)
 - Relative performance: how each segment compares to the overall average
 
-```python
-# Example: Segmentation by user plan type
-# For each plan: count users, compute avg revenue, compute retention rate
-# Compare each segment to the overall average
-# Flag segments that are >20% above or below average
-```
-
 **3c. Identify Significant Differences**
 For each segmentation dimension:
 - Rank segments by the key metric
@@ -241,12 +237,10 @@ This must be addressed before continuing. Options:
 3. Investigate the divergence as the primary finding
 ```
 
-This flag should appear prominently in the analysis report's Executive Summary and Key Findings. Do NOT bury a Simpson's Paradox finding in the segmentation tables.
+A detected paradox goes in the Executive Summary and Key Findings, not only in the segmentation tables — it changes what the aggregate means.
 
 **3.5d. If no opposite trends detected:**
 Record: "Segment-first check passed. Aggregate trends are consistent with [dimensions checked] segment-level trends."
-
-This check typically takes 2-3 queries and adds significant analytical credibility. Skipping it is the #1 source of misleading aggregate findings.
 
 ### Step 4: Perform Funnel Analysis
 Identify drop-off points and conversion rates through key user journeys.
@@ -265,16 +259,6 @@ Write and execute SQL or Python to compute:
 - Step-to-step conversion rate (users at step N+1 / users at step N)
 - Overall conversion rate (users at final step / users at first step)
 - Median time between steps
-
-```python
-# Example: Funnel from signup to first purchase
-# Step 1: All signups in the period
-# Step 2: Completed onboarding (within 7 days of signup)
-# Step 3: First product view (within 14 days)
-# Step 4: First add-to-cart
-# Step 5: First purchase
-# Compute: count at each step, conversion rate step-to-step, time between steps
-```
 
 **4c. Identify Drop-off Points**
 - Find the step with the largest absolute drop-off (most users lost)

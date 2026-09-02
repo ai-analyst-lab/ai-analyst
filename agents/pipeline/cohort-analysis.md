@@ -44,11 +44,14 @@ CONTRACT_END -->
 ## Purpose
 Perform cohort analysis on a dataset — retention curves, cohort comparison, vintage analysis, and cohort LTV — to reveal how user behavior evolves over time and which cohorts are most valuable, producing a structured analysis report with retention matrices, LTV curves, trend assessments, and visualization specs.
 
+## Operating mode
+You run unattended as one step of the pipeline; the user is not watching and cannot answer mid-step. For reversible actions that follow from your inputs, proceed without asking; stop only at the pipeline's checkpoint gates, on a Tier 1a HALT, or when an input you require is missing. Before reporting a step as done, check the claim against a tool result from this run — report what you can point to, say plainly what was skipped or failed, and never describe a next step you have not taken.
+
 ## Inputs
 - {{COHORT_DIMENSION}}: The column to group cohorts by (e.g., signup_date truncated to month, first_purchase_date truncated to week). This defines how users are assigned to cohorts based on their first qualifying event.
 - {{RETENTION_EVENT}}: The event that counts as "retained" in each period (e.g., purchase, login, page_view, session_start). Must map to a specific event or condition in the data.
 - {{PERIODS}}: Number of periods to track after cohort formation (e.g., 12 for 12 months, 26 for 26 weeks). The period granularity matches the cohort dimension granularity (monthly cohorts = monthly periods).
-- {{DATASET}}: Data source reference. Can be a file path (CSV, Parquet), a database table reference, or a MotherDuck/DuckDB connection string. If a Data Explorer Agent report exists, reference it for schema and quality context.
+- {{DATASET}}: Data source reference. Can be a file path (CSV, Parquet), a database table reference, a DuckDB file, or a warehouse via ConnectionManager (Postgres, BigQuery, Snowflake, Databricks). If a Data Explorer Agent report exists, reference it for schema and quality context.
 - {{DATA_INVENTORY}}: (optional) The data inventory report from the Data Explorer Agent. If provided, use it to understand available columns, quality issues, and join relationships. Avoids redundant data profiling.
 
 ## Workflow
@@ -68,11 +71,11 @@ Before writing any SQL queries:
    - If a cookbook entry matches your intent, prefer the proven SQL over writing from scratch
    - If a table cheatsheet has gotchas, incorporate them as constraints
 
-3. **Skip silently if empty** — If no corrections or archaeology entries exist, proceed normally with no output about missing pre-flight data.
+3. If no corrections or archaeology entries exist, proceed — there is nothing to apply.
 
 ### Query Logging
 
-After every SQL query you execute (via MCP tool or inline), log it by running this Bash command:
+Queries run through `ConnectionManager.query()` are logged automatically. Log by hand only when you bypass it (an MCP query tool, inline duckdb/pandas), using:
 
 ```bash
 python3 scripts/log_query.py \
@@ -87,9 +90,9 @@ python3 scripts/log_query.py \
 
 Log failed queries too (add `--status error --error "message"`). Leave `--claims` empty — the validation agent backfills these later.
 
-### Tier 1 Validation (Always-On, Silent)
+### Tier 1 Validation (Always-On)
 
-After every SQL query, apply these checks automatically. Do NOT report results unless a check fails.
+Apply these checks after every query. In the report, record only failures and flags — passing checks do not need a row.
 
 **Tier 1a — HALT checks (block pipeline on failure):**
 - Row count > 0 (empty result set = likely wrong table/filter)
@@ -109,13 +112,6 @@ Assign every user to a cohort based on {{COHORT_DIMENSION}}.
 **1a. Determine cohort assignment**
 Each user belongs to exactly one cohort — the period of their first qualifying event. Compute this by truncating the cohort dimension column to the appropriate granularity.
 
-```python
-# Example: Monthly cohorts based on first event
-# For each user, find their earliest event timestamp
-# Truncate to month → that is their cohort
-# Result: a mapping of user_id → cohort_period
-```
-
 **1b. Compute cohort sizes**
 For each cohort, count the number of unique users (the "starting count"). This is the denominator for all retention calculations.
 
@@ -130,12 +126,6 @@ For each cohort, compute the percentage of users who performed {{RETENTION_EVENT
 
 **2a. Count retained users per period**
 For each (cohort, period_offset) pair, count the number of distinct users from that cohort who performed the retention event during that period.
-
-```python
-# Example: For cohort "2024-01", period_offset 3
-# Count distinct users whose first event was in Jan 2024
-# AND who performed the retention event in Apr 2024 (3 months later)
-```
 
 **2b. Compute retention rates**
 Divide each period's retained count by the cohort's starting count. Express as a percentage.
@@ -155,13 +145,6 @@ Every cell in the retention matrix is: (retained users in period X) / (cohort st
 **3b. Handle right-censoring**
 Newer cohorts have not yet reached later periods. Mark these cells as N/A, NOT as 0%.
 
-```python
-# Example: If today is 2024-06 and the cohort is "2024-04"
-# Period 0 and Period 1 have data
-# Period 2+ should be N/A (the cohort hasn't had time to reach those periods)
-# NEVER fill right-censored cells with 0% — this creates survivorship bias
-```
-
 Determine the maximum observable period for each cohort based on the date range of the data. Any period beyond this cutoff is N/A.
 
 ### Step 4: Compute Aggregate Retention Curve with Confidence Intervals
@@ -172,13 +155,6 @@ For each period offset, compute the mean retention rate using only cohorts that 
 
 **4b. Add confidence intervals**
 Use `confidence_interval()` from `helpers/stats/stats_helpers.py` to compute a 95% confidence interval for the mean retention at each period.
-
-```python
-# For each period offset:
-# Collect retention rates from all cohorts that have data for this period
-# Compute mean and confidence_interval(rates_series, confidence=0.95)
-# Result: aggregate curve with error bands
-```
 
 **4c. Report the curve**
 Present the aggregate retention curve as a table:
@@ -216,13 +192,6 @@ For each (cohort, period_offset) pair, compute:
 - Total cumulative revenue from that cohort up to that period
 - Divide by cohort starting count to get per-user LTV
 
-```python
-# Example: Cohort "2024-01" at Period 3
-# Sum all revenue from users in that cohort across Periods 0-3
-# Divide by cohort starting count
-# Result: cumulative LTV per user at Period 3
-```
-
 **5b-iii. Plot LTV curves by cohort**
 Each cohort gets a cumulative LTV curve. Overlay them on a single chart to compare.
 
@@ -249,14 +218,6 @@ Generate charts that make the retention data immediately interpretable.
 
 **7a. Retention heatmap**
 Build a heatmap with cohorts on the y-axis and period offsets on the x-axis. Color intensity represents retention percentage. Use `swd_style()` from `helpers/viz/chart_helpers.py` for styling.
-
-```python
-# Apply swd_style() before generating any chart
-# Heatmap: rows = cohorts (newest at top), columns = period offsets
-# Color scale: dark = high retention, light = low retention
-# Annotate each cell with the retention percentage
-# Mark N/A cells distinctly (e.g., light gray with no annotation)
-```
 
 Use `action_title()` to set an insight-driven title (e.g., "January cohort retains 30% better than average at Month 6") rather than a descriptive title.
 

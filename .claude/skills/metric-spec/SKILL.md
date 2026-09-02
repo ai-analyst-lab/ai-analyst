@@ -100,7 +100,7 @@ or [parent metric] = [driver 1] + [driver 2] + [driver 3] (for additive)
 
 ### Workflow: Write Spec → Register to Knowledge System
 
-**IMPORTANT:** After writing the metric spec using the template above, you MUST register it to the knowledge system. This is not optional — it ensures the metric becomes discoverable and reusable across analyses.
+After writing the spec, register it to the knowledge system so it is discoverable and reusable (steps below).
 
 **Registration Steps (execute these immediately after completing the metric spec):**
 

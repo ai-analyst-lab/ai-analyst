@@ -41,9 +41,9 @@ This skill orchestrates the full lifecycle: **hunch → testable hypothesis → 
 
 ---
 
-## CRITICAL: First Action - Show Architecture Preview
+## First action: architecture preview
 
-**BEFORE doing ANYTHING else, output the architecture preview.** This is the very first thing you do when this skill is invoked. Do not read agent files, do not start Stage 1, do not process inputs — show the preview first.
+Open by printing the preview below so the user sees the stages before Stage 1 runs.
 
 ### Preview Format
 
@@ -114,13 +114,9 @@ Applying timeline compression:
   │          key segments identified    │
   └──────────────┬──────────────────────┘
                  │
-                 ├─ ⏸ CHECKPOINT: Present Stage 1 summary.
-                 │   Output: "⏸ STAGE 1 COMPLETE
-                 │   Review the hypothesis above.
-                 │   Reply 'continue' to proceed to Stage 2,
-                 │   or provide corrections."
-                 │   STOP HERE. WAIT for user response.
-                 │   Do NOT proceed to Stage 2 automatically.
+                 ├─ CHECKPOINT: present the Stage 1 summary.
+                 │   In guided mode, pause for the user;
+                 │   in narrated/autopilot, continue.
                  │
                  ▼
   ┌─────────────────────────────────────┐
@@ -135,13 +131,9 @@ Applying timeline compression:
   │          selection biases           │
   └──────────────┬──────────────────────┘
                  │
-                 ├─ ⏸ CHECKPOINT: Present Stage 2 summary.
-                 │   Output: "⏸ STAGE 2 COMPLETE
-                 │   Review the confounds above.
-                 │   Reply 'continue' to proceed to Stage 3,
-                 │   or provide corrections."
-                 │   STOP HERE. WAIT for user response.
-                 │   Do NOT proceed to Stage 3 automatically.
+                 ├─ CHECKPOINT: present the Stage 2 summary.
+                 │   In guided mode, pause for the user;
+                 │   in narrated/autopilot, continue.
                  │
                  ▼
   ┌─────────────────────────────────────┐
@@ -272,6 +264,8 @@ Generate the document via the Google Doc Creator agent (see `agents/export/googl
 
 | Checkpoint | Type | When | Skippable? |
 |------------|------|------|------------|
+| Stage 1 summary | B (draft review) | After Hypothesis Sharpener | Yes — pauses only in guided pace mode |
+| Stage 2 summary | B (draft review) | After Confound Scanner | Yes — pauses only in guided pace mode |
 | Plan Review | B (draft review) | After Stage 3 generates plan | Yes — "just do it" skips |
 | V1 Presentation | C (branch decision) | After Stage 3b | No — user must decide to gather feedback or proceed |
 
@@ -279,7 +273,7 @@ Generate the document via the Google Doc Creator agent (see `agents/export/googl
 
 ## Integration with Other Skills
 
-- **Analysis Design Spec skill** — this skill supersedes it for complex investigations. For simple L1/L2 questions, Analysis Design Spec is sufficient.
+- **question-framing skill** — the lightweight framing gate (7-field Analysis Design Spec) runs before every analysis; this skill is the heavier on-demand pipeline for hunches, confounds, and V2 redesigns.
 - **`/stress-test`** — can be invoked independently on ANY analysis plan (not just ones produced by this skill)
 - **Descriptive Analytics agent** — called during Stage 3b for V1 execution
 - **Question Framing skill** — fires automatically at Stage 1 if the hunch is too vague to sharpen

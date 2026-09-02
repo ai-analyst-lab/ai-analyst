@@ -1,12 +1,12 @@
 ---
 name: knowledge-bootstrap
-description: Initialize all knowledge subsystems at session start to load active dataset context, user profile, corrections, learnings, query archaeology, and analysis history into working memory. Use this skill automatically at the start of EVERY new session, immediately after the conversation begins. Also trigger after `/connect-data` or `/switch-dataset` to reload dataset context. Apply when the system detects missing or stale knowledge files, when returning to the tool after a break, during session initialization, at the beginning of any conversation, when Claude Code first starts, when a new Claude conversation opens, or at any session boundary. This skill is critical for contextual awareness — it ensures you understand the user's data environment, preferences, and past work before beginning any analysis. Without running this skill at session start, you lack essential context about what dataset is active, what the user prefers, and what corrections have been logged. Always run this skill first, before responding to any analytical request. Even if the user's first message is a simple question like "what's our conversion rate?", you MUST bootstrap knowledge context before answering so you know which dataset to query and what format the user expects. Make this skill your default session initialization behavior — treat it like loading configuration at startup. If you're ever unsure whether a session just started, err on the side of running bootstrap. The skill gracefully handles missing files, so running it unnecessarily is harmless, but skipping it when needed breaks contextual continuity.
+description: Load session context — active dataset, user profile, corrections, learnings, query archaeology, analysis history — into working memory. Run at the start of every session before answering any analytical question (even a one-line "what's our conversion rate?" needs the active dataset and logged corrections), and again after /connect-data or /switch-dataset. Handles missing files gracefully, so running it when unsure is harmless.
 ---
 
 # Skill: Knowledge Bootstrap
 
 ## Purpose
-Initialize all 7 knowledge subsystems for a new session. Loads setup state,
+Initialize the knowledge subsystems for a new session. Loads setup state,
 dataset, user profile, integrations, org context, corrections, learnings,
 query archaeology, and analysis archive into working memory.
 

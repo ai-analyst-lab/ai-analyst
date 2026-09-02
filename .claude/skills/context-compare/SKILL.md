@@ -60,7 +60,7 @@ reliability skill uses:
 
 Compute this arm's statistics deterministically with the bundled script:
 ```
-python3 <reliability skill dir>/scripts/reliability_stats.py .knowledge/comparisons/<question-slug>/<ts>-baseline
+python3 helpers/stats/reliability_stats.py .knowledge/comparisons/<question-slug>/<ts>-baseline
 ```
 It writes `stats.json` and `report.md` into the run dir. Never estimate these numbers.
 

@@ -1,16 +1,14 @@
 ---
 name: question-router
 description: |
-  Classify incoming analytical questions into complexity levels (L1-L5) and route them to the appropriate response path. This skill ensures that simple questions get quick answers without unnecessary overhead, while complex investigations get the full analytical treatment they deserve. Use this skill at the start of EVERY user interaction that involves data analysis, metrics, business questions, or investigative requests. Trigger on phrases like "analyze", "why did", "what's happening with", "how many", "compare", "show me", "breakdown", "investigate", "root cause", "size the opportunity", "design an experiment", "create a deck", "run the pipeline", or ANY question that asks about data, metrics, trends, segments, funnels, user behavior, revenue, conversion, retention, or any other analytical topic. Also apply when users ask follow-up questions mid-analysis, when they request charts or visualizations, when they mention datasets or tables, when they ask about business performance, when they want to understand why something changed, or when they need to make a data-driven decision. This skill should be your FIRST step before launching any analytical workflow — it prevents wasting time on over-engineered responses to simple questions and ensures complex questions get the depth they deserve. Even if the question seems straightforward, use this skill to confirm the appropriate level of depth. Apply liberally.
+  Classify every analytical request (anything about data, metrics, trends, segments, funnels, revenue, retention, experiments, or "why did X change") into complexity levels L1-L5 and route it before any analytical workflow starts, including follow-ups mid-analysis and chart requests. Simple lookups get a direct answer; investigations get the depth they need. Run this first even when the question looks simple.
 ---
 
 # Skill: Question Router
 
 ## Purpose
 Classify incoming user questions into complexity levels (L1-L5) and route
-them to the appropriate response path. This replaces the old "skip-step"
-logic with a structured classification that adapts the workflow depth to
-the question's actual needs.
+them to the appropriate response path.
 
 ## When to Use
 - At the start of every user interaction that looks like an analytical request
@@ -29,8 +27,6 @@ the question's actual needs.
 **Response path:** Query the data directly. Return the answer with source
 citation (table, column, filter). No agents needed.
 
-**Time:** ~30 seconds
-
 ### L2: Simple Comparison
 **Pattern:** User wants to compare two things or see a breakdown.
 **Examples:**
@@ -40,8 +36,6 @@ citation (table, column, filter). No agents needed.
 
 **Response path:** Query + quick chart. Use `chart_helpers` directly.
 Apply Visualization Patterns skill. No full pipeline.
-
-**Time:** ~2 minutes
 
 ### L3: Guided Analysis
 **Pattern:** User has a specific analytical question requiring multiple steps.
@@ -53,8 +47,6 @@ Apply Visualization Patterns skill. No full pipeline.
 **Response path:** Subset of the pipeline — Frame → Explore → Analyze →
 Validate → Present findings. Skip storyboard/deck unless requested.
 Use 3-5 agents.
-
-**Time:** ~10 minutes
 
 ### L4: Deep Investigation
 **Pattern:** User needs root cause analysis, opportunity sizing, or
@@ -68,8 +60,6 @@ experiment design.
 Analyze → Root Cause → Validate → Size → Present findings.
 Use 6-10 agents.
 
-**Time:** ~20 minutes
-
 ### L5: Full Presentation
 **Pattern:** User wants a complete analysis with a polished slide deck.
 **Examples:**
@@ -79,8 +69,6 @@ Use 6-10 agents.
 
 **Response path:** Complete 18-step pipeline. All agents, full storyboard,
 charts, narrative, and Marp deck.
-
-**Time:** ~30-45 minutes
 
 ## Classification Algorithm
 
@@ -127,10 +115,8 @@ Enrichment steps — never block routing. If any sub-step fails, skip it silentl
 **IMPORTANT:** Only report pre-flight findings if they actually find something.
 Silent skip if nothing found.
 
-1. **Feedback check** — The Feedback Capture skill runs BEFORE this router.
-   By the time a message reaches here, corrections/learnings are already
-   captured. If the message was purely feedback (no analytical question),
-   it was handled upstream — skip routing.
+1. **Feedback check** — If the message is a correction or feedback with no
+   analytical question, hand it to the `log-correction` skill and skip routing.
 
 2. **Entity disambiguation** — If the entity index is loaded (from bootstrap):
    - Call `resolve_entity(query_text, entity_index)` from
@@ -138,19 +124,16 @@ Silent skip if nothing found.
    - If matches found, call `format_disambiguation(matches)` and set
      `{{RESOLVED_ENTITIES}}` for downstream agents.
    - Example: "why is cvr dropping?" → Resolved: 'cvr' -> conversion_rate (metric)
-   - **ONLY REPORT IF MATCHES FOUND.** If no matches, silent skip.
 
 3. **Corrections check** — Read `.knowledge/corrections/index.yaml`.
    - If `total_corrections > 0` for the active dataset, set
      `{{CORRECTION_COUNT}}` so analysis agents check the correction log
      before writing SQL (e.g., known join pitfalls, filter requirements).
-   - **ONLY REPORT IF CORRECTIONS EXIST.** If index missing or count is 0, silent skip.
 
 4. **Dataset detection** — Before classifying, check whether the question
    references a dataset other than the currently active one.
    - Read `.knowledge/datasets/` to get all known dataset IDs and display names.
    - Scan the user's question for exact or fuzzy matches to any dataset name.
-   - **ONLY REPORT IF MISMATCH FOUND.** If no dataset reference or matches active, silent skip.
    - If a non-active dataset is referenced:
      - Inform the user: "It looks like you're asking about **{display_name}**, but
        the active dataset is **{active_display_name}**."
@@ -173,23 +156,15 @@ Extract:
 - **Scope:** Single metric, breakdown, multi-dimensional, or end-to-end?
 - **Output expectation:** Number, chart, findings, or deck?
 
-### Step 2: Score complexity signals
+### Step 2: Classify by the strongest signal
 
-| Signal | L1 | L2 | L3 | L4 | L5 |
-|--------|----|----|----|----|-----|
-| Asks for a single number | +3 | | | | |
-| Uses "compare" or "by {dimension}" | | +3 | | | |
-| Uses "why", "investigate", "root cause" | | | | +3 | |
-| Uses "analyze", "what's happening with" | | | +3 | | |
-| Mentions "deck", "presentation", "slides" | | | | | +3 |
-| Uses `/run-pipeline` | | | | | +5 |
-| Mentions sizing, opportunity, impact | | | | +2 | |
-| Mentions experiment, A/B test | | | | +2 | |
-| Question has multiple sub-questions | | | +2 | +1 | |
-| "Quick" or "just" qualifier | +2 | +1 | | | |
-
-Assign the level with the highest score. Ties break toward the lower level
-(prefer faster response).
+Classify by the strongest signal present, in this order: `/run-pipeline` or
+"deck / presentation / slides" → L5; "why / investigate / root cause", sizing or
+opportunity, experiment or A/B test → L4; "analyze / what's happening with", or a
+question with several sub-questions → L3; "compare / by {dimension} / breakdown /
+split" → L2; a single number → L1. A "quick" or "just" qualifier drops one
+level. When two levels are equally supported, take the lower one (prefer the
+faster response).
 
 ### Step 3: Adapt from user profile
 
@@ -215,23 +190,14 @@ user) or autopilot (hides the work). Narrated is the failure-safe middle ground.
 
 #### Auto-detection signals
 
-Score these from the user's message and session context. Highest score wins.
-Ties break to `narrated`.
-
-| Signal | guided | narrated | autopilot |
-|--------|:------:|:--------:|:---------:|
-| "walk me through", "teach me", "step by step", "explain as you go" | +3 | | |
-| "show me how you", "I want to learn" | +3 | | |
-| Long-form prompt with framing/context (>80 words, multi-paragraph) | +1 | +1 | |
-| Terse task-like prompt ("conversion by device last week") | | | +2 |
-| User has already run ≥3 analyses in this session | | | +1 |
-| Profile `technical_level: beginner` | +1 | | |
-| Profile `technical_level: advanced` | | | +1 |
-| User previously invoked `/pace X` this session | (persisted — see below) | | |
-| `/run-pipeline` invocation without other signals | | +2 | |
-| Mid-analysis follow-up ("now break by country") | | | +2 |
-| "just run it", "silent", "don't narrate" | | | +3 |
-| "slow down", "one step at a time", "pause between" | +3 | | |
+Read these from the user's message and session context. Pick **guided** on
+teaching or pacing language ("walk me through", "teach me", "step by step",
+"slow down", "one step at a time") or a `technical_level: beginner` profile.
+Pick **autopilot** on "just run it / silent / don't narrate", a terse task-like
+prompt ("conversion by device last week"), a mid-analysis follow-up ("now break
+by country"), or an advanced profile in a session that has already run several
+analyses. Otherwise, including a bare `/run-pipeline`, pick **narrated**. A
+`/pace` choice persisted this session overrides all of these (see below).
 
 #### Persisted mode (survives across phases and sessions)
 
@@ -277,8 +243,6 @@ I'd classify this as a **[Level] — [Label]**.
 1. [Phase name] — [one-line purpose]
 2. [Phase name] — [one-line purpose]
 ...
-
-Estimated time: ~[X] minutes.
 
 Reply to proceed, or:
 - `/pace {other_mode}` to change how I surface the work
@@ -406,13 +370,6 @@ of narrated and guided modes.
 | narrated | ✓ | ✓ | ✓ | no |
 | autopilot | — | ✓ | — | no |
 
-**Never in autopilot:** don't emit banners. Final deliverable only.
-
-**Never in guided or narrated:** don't skip banners. Silent execution in these
-modes is the specific failure that pace mode exists to prevent.
-
----
-
 ---
 
 ## Anti-Patterns
@@ -427,36 +384,3 @@ modes is the specific failure that pace mode exists to prevent.
    the question is more complex than initially classified, pause and ask.
 5. **Never include classification overhead in L1/L2 output.** The user asked
    "how many orders?" — give them the number, not a 3-page classification report.
-6. **Never skip phase banners in guided or narrated mode.** Silent execution
-   in these modes is the specific failure pace mode exists to prevent. If you
-   catch yourself running a skill without announcing it first, stop and emit
-   the banner retroactively before proceeding.
-7. **Never block indefinitely in guided mode.** Pause points wait for one
-   user turn. If the next message is a new analytical question, re-route —
-   don't hold the old one open forever.
-8. **Never let pace persistence failure block analysis.** If
-   `working/session_state.yaml` can't be written, warn and continue in memory.
-   The analysis always proceeds; persistence is best-effort.
-9. **Never pick guided or autopilot as the default.** When auto-detection
-   signals are mixed or absent, always default to `narrated`. Guided blocks;
-   autopilot hides. Narrated is the only safe default.
-
----
-
-## Why These Changes Matter
-
-**Fast-path for L1:** Testing showed the full classification workflow adds
-~40 seconds and ~9k tokens for simple lookups. The user who asks "how many
-orders last month?" doesn't need to see pre-flight checks, scoring tables,
-and skill adherence checklists — they need the answer. Fast-path detection
-identifies obvious L1 questions and shortcuts to execution.
-
-**Silent pre-flight:** Pre-flight enrichment (entity disambiguation, corrections
-check) adds value ONLY when it finds something. Reporting "no entity matches,
-no corrections, no dataset conflict" adds noise without insight. The improved
-version only surfaces findings when they exist.
-
-**Streamlined L1/L2 output:** The classification rationale matters for L3+
-where you're asking the user to commit 10-20 minutes. For L1/L2, the decision
-is already made — just execute and deliver. Save the process documentation for
-internal tracking.

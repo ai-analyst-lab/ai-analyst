@@ -42,7 +42,7 @@ Review generated chart images against the SWD (Storytelling with Data) checklist
 - {{STORYBOARD}}: (optional) Path to the storyboard from Story Architect (`working/storyboard_{{DATASET}}.md`). Provides context on the intended visual technique and purpose of each chart.
 - {{DATASET}}: Name of the dataset being analyzed (used for output file naming).
 - {{THEME}}: (optional) The presentation theme being used — e.g., "analytics", "analytics-dark". When "analytics-dark", enables slide-level dark mode checks.
-- {{DECK_FILE}}: (optional) Path to the Marp markdown deck file. When provided, enables slide-level design review (Step 7).
+- {{DECK_FILE}}: (optional) Path to the Marp markdown deck file. When provided, enables slide-level design review (Step 6).
 
 ## Workflow
 
@@ -264,7 +264,7 @@ Criteria for NEEDS REVISION (any is sufficient):
 
 ## Fix Report
 
-[All issues with full fix entries as specified in Step 6]
+[All issues with full fix entries as specified in Step 7]
 
 ## Verdict Rationale
 [1-2 sentences explaining why this verdict was assigned]

@@ -182,3 +182,8 @@ Analysis exported to Notion:
 
 5. **Chart URLs must work.** Test that the image URL returns a valid image before
    embedding. If upload fails, skip and note in the report.
+
+6. **Run to completion.** No one is watching this step; do not stop to ask whether to
+   apply a fix that the self-check already classifies as fixable. Only report a check as
+   PASS or a fix as applied after the Notion call that made it returned success; anything
+   unverified goes in the report as an issue remaining.

@@ -21,9 +21,9 @@ Collects codebase-specific context to help AI Analyst understand your developmen
 environment. This enables more accurate SQL generation, schema awareness, and
 integration with your existing data infrastructure.
 
-## CRITICAL: Follow This Exact Sequence
+## Sequence
 
-This skill has a strict execution flow. Do NOT skip steps or auto-fill values from the user's initial prompt. Each step serves a purpose.
+Run the steps in order: the interview confirms values before anything is written.
 
 ### Step 0: Check Prerequisites (ALWAYS FIRST)
 
@@ -48,9 +48,9 @@ If setup is complete, continue to Step 1.
 
 **Why this matters:** Dev context assumes a dataset already exists. Without Phase 1-2 setup, there's no dataset to configure conventions for. Checking prerequisites prevents configuration errors downstream.
 
-### Step 1: Run the Interview (ALWAYS ASK)
+### Step 1: Run the Interview
 
-Even if the user provided some details in their initial request, you MUST ask all 5 questions. Here's why: users often provide incomplete information or have assumptions you need to clarify. The interview ensures you capture everything correctly and the user confirms their choices.
+Ask all 5 questions even when the user supplied some answers, pre-filling what they said for confirmation — users often give partial or mistaken details (e.g. "Snowflake" meaning a Snowflake schema in Postgres).
 
 Present all 5 questions at once (not one-by-one):
 
@@ -98,8 +98,6 @@ I'll ask a few questions about your development environment to provide better su
    - Key tables location: (path to schema definitions, dbt models, etc.)
 ```
 
-But you MUST still ask for confirmation. Do not just assume and skip ahead.
-
 **Wait for the user's response before proceeding.**
 
 **Why this matters:** When you auto-fill, you risk getting details wrong (e.g., user says "Snowflake" but meant "Snowflake schema in Postgres"). The interview is a confirmation step, not a formality.
@@ -113,10 +111,10 @@ After collecting responses, create `.knowledge/user/dev-context.yaml`:
 mkdir -p .knowledge/user
 
 # Write configuration
-cat > .knowledge/user/dev-context.yaml <<'EOF'
+cat > .knowledge/user/dev-context.yaml <<EOF
 schema_version: 1
-created: "2026-04-03"
-last_updated: "2026-04-03"
+created: "$(date +%F)"
+last_updated: "$(date +%F)"
 
 codebase:
   type: analytics           # User's response from Q1
@@ -167,7 +165,7 @@ If `.knowledge/setup-state.yaml` doesn't exist, create it:
 
 ```yaml
 schema_version: 1
-created: "2026-04-03"
+created: "$(date +%F)"
 
 phase_1:
   status: complete
@@ -175,7 +173,7 @@ phase_2:
   status: complete
 dev_context:
   status: complete
-  completed_at: "2026-04-03T22:45:00Z"
+  completed_at: "$(date -u +%FT%TZ)"
 ```
 
 Verify:
@@ -212,8 +210,6 @@ You can update these settings anytime by running `/setup-dev-context` again.
 ❌ **Do NOT create helper scripts** (new modules under `helpers/`) — this skill only captures team conventions, not infrastructure
 
 ❌ **Do NOT write documentation files** (`SETUP_SNOWFLAKE.md`, integration guides) — keep the output minimal
-
-❌ **Do NOT auto-fill values without asking** — always run the interview, even if user provided context
 
 This skill creates exactly ONE file: `.knowledge/user/dev-context.yaml`. That's it.
 

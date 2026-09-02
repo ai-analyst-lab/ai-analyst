@@ -47,7 +47,7 @@ Takes a vague analytical hunch — the kind that arrives as a gut feeling, a Sla
    Key insight:         [1-line — the most important finding from sharpening]
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    ```
-2. **Tables: max 3 columns.** Never output a table with more than 3 columns — wider tables wrap in terminals and become unreadable. Keep cell text concise (~40 chars max). If you need to convey more detail, use bullets below the table.
+2. **Tables are read in a terminal.** Keep them narrow (few columns, short cells) and put detail in bullets under the table rather than in wide cells.
 3. **Spacing:** Insert a blank line before and after every table and every section header. Use `━━━` separator lines between major sections (Hunch Decomposition, Testable Hypothesis, Comparison Groups, Key Segments, Accept/Reject, Analysis Design Brief).
 4. **No time estimates** on investigation steps. Do not estimate how long steps will take.
 

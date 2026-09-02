@@ -76,7 +76,7 @@ When the user answers the Mode A opener with a specific analytical question (e.g
 
 4. **📊 Answer** — Only after the three blocks above, run the query and present the result table with a one-line source citation. Include any methodology caveats that the Data Quality Check surfaced.
 
-**Keep each block tight** — 2-5 lines. The goal is visible machinery, not a wall of text. The student should be able to point at each block and say "that's the Router," "that's the framing layer," "that's the quality check."
+**Keep each block short enough to see the layer at a glance** — visible machinery, not a wall of text. The student should be able to point at each block and say "that's the Router," "that's the framing layer," "that's the quality check."
 
 **Rationale:** Bare `/explore` is often used as a teaching surface for the AI Analyst architecture. Running queries silently hides the parts of the system that are most valuable to see. Narrating these three layers on every follow-up question inside `/explore` makes the copilot model legible.
 
@@ -122,7 +122,7 @@ Deliver:
 
 ### Step 3: Interactive Follow-Up
 
-After presenting results, ALWAYS offer 2-3 **specific, actionable** next steps.
+After presenting results, offer a few **specific, actionable** next steps.
 
 Good examples (use actual names from the data):
 - "Want to see how {column} varies by {dimension}?" (segmentation)
@@ -168,7 +168,7 @@ Include:
 
 2. **Narrate the stack on every follow-up inside `/explore`** — When the user steers with an analytical question after the Mode A opener, you MUST output the four labeled blocks (🧭 Question Router → 🎯 Framed Query → ✅ Data Quality Check → 📊 Answer) before presenting results. Do not run the aggregation and then retrofit the narration. These layers normally run silently across the system; inside `/explore` they are surfaced on purpose, because `/explore` is the teaching surface for the AI Analyst architecture. Skipping them defeats the point of using the command.
 
-3. **Keep it fast** — No more than 3-4 queries per exploration step. Users want speed, not exhaustive profiling.
+3. **Keep it fast** — favour a handful of targeted queries per step over exhaustive profiling; users want speed.
 
 2. **Always apply `swd_style()`** if generating any chart. Call it BEFORE creating the chart.
 
@@ -178,7 +178,7 @@ Include:
 
 5. **Mention data source explicitly** - Tell the user where data came from:
    - "Using data from {path} (local CSV files)"
-   - "Connected to MotherDuck database"
+   - "Connected to {warehouse type} ({database}.{schema})"
    - "Reading from {specific file path}"
 
 6. **Use actual data** - Never provide hypothetical/generic exploration. If data doesn't exist, say so clearly and stop.

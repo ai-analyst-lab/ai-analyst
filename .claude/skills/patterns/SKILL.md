@@ -70,7 +70,7 @@ After displaying patterns:
 - "This pattern was last seen {N} days ago — may need revalidation."
 
 **For empty state (0 patterns):**
-Keep the response concise (under 50 lines). Focus on:
+Keep the empty-state response short and practical. Cover:
 1. Why no patterns exist (need 2+ analyses with consistent findings)
 2. How many analyses are currently archived
 3. What happens after completing more analyses

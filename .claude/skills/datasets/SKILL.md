@@ -36,7 +36,7 @@ Read `.knowledge/active.yaml` to determine which dataset is currently active.
 
 For each discovered dataset (whether from registry or directory scan), read `.knowledge/datasets/{name}/manifest.yaml` to get:
 - `display_name` — human-readable name
-- `connection.type` — connection type (csv, local_duckdb, snowflake, postgres, bigquery, motherduck)
+- `connection.type` — connection type (csv, duckdb, postgres, snowflake, bigquery, databricks, redshift, mssql, mysql)
 - `connection.database` or other connection-specific fields
 - `summary.table_count` — number of tables
 - `summary.date_range` — temporal coverage (if available)

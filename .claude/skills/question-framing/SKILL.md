@@ -186,9 +186,11 @@ sentences per field and fits on one screen; a monitoring ask gets a medium spec;
 an exploration or deep dive gets full sections with sub-bullets. Never let the
 spec become a blocker for quick pulls.
 
-**Before analysis:** present the brief, STOP, and confirm with the user before
-running any queries. The spec often reveals data gaps, scope mismatches, or
-missing context; catching them upfront saves hours of rework.
+**Before analysis:** present the brief. If the decision was unstated or the spec
+exposed a gap, stop and confirm before running queries; if the request arrived
+clearly framed, confirm the framing in a sentence and proceed. The spec often
+reveals data gaps, scope mismatches, or missing context; catching them upfront
+saves hours of rework.
 
 **During analysis:** check the spec before each major step: are you still
 answering the stated question? If something more interesting appears, note it as

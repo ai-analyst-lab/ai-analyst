@@ -54,7 +54,7 @@ Invoke as `/resume-pipeline` when:
 4. **If match confirmed or user didn't specify a topic:**
    - Continue to Step 1 (locate pipeline state)
 
-**Why this matters:** In testing, when a user asked about "activation trends" but artifacts were for "checkout conversion analysis", proceeding with full state reconstruction wasted effort and buried the mismatch in technical detail. Surfacing mismatches early respects the user's time and prevents confusion.
+**Why this matters:** resuming the wrong analysis buries the mismatch under technical detail; surfacing it before reconstruction saves the user's time.
 
 ---
 
@@ -249,18 +249,3 @@ On confirmation:
 - **No partial step recovery:** If an agent was interrupted mid-execution, the entire agent must re-run.
 - **Pipeline state is authoritative:** If pipeline_state.json and artifacts disagree, trust pipeline_state.json.
 - **Topic validation depends on artifacts:** If question_brief or narrative files are missing, Step 0 validation may not catch mismatches.
-
----
-
-## Improvement Notes (Iteration 1 → 2)
-
-**Changes made:**
-1. **Added Step 0: Validate User Request** - Catches topic mismatches EARLY by comparing user's request to actual artifact topics before diving into full state reconstruction. Prevents wasted effort when user asks for "activation analysis" but artifacts are for "checkout conversion".
-
-2. **Artifact topic cross-checking in Step 1b** - When reconstructing state from artifacts (no pipeline_state.json), verify that question_brief, analysis_report, and narrative all describe the same topic. Flag inconsistencies that suggest mixed or stale artifacts.
-
-3. **Topic mismatch warnings in resume plan (Step 4)** - If user's request doesn't match the pipeline being resumed, re-surface the mismatch prominently before asking for confirmation to proceed.
-
-**Why these changes:** Testing revealed that when users mention a specific analysis topic but the actual artifacts are for something different (e.g., user says "activation trends" but found "checkout conversion" work), proceeding with full state reconstruction buried the mismatch in technical details. Users got confused. Surfacing mismatches upfront respects their time and prevents resuming the wrong analysis.
-
-**Preserved functionality:** All existing capabilities (V1-V2 migration, DAG-aware resumption, failed agent retry, data staleness warnings, smart chart resume) remain intact.

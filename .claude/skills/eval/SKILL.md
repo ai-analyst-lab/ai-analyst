@@ -21,7 +21,7 @@ Two honest properties:
 `/eval [train|test|all] [--slice N]` — default split `train`.
 - `train` — the working set you iterate on (error-analyze, add context, watch it climb). Default.
 - `test` — the held-out set. Run this ONCE at the end as the honest generalization number. Never
-  iterate against it (D8).
+  iterate against it.
 - `--slice N` — run only the first N cases (the in-room live slice). Omit for the full split.
 
 Examples: `/eval train` · `/eval train --slice 3` · `/eval test`
@@ -118,12 +118,12 @@ and writes a clusters page; in local mode do that error analysis yourself from t
 - For **train**: "this is your working number — the clustered failures show what to fix; add the
   missing definitions, re-run, watch it climb."
 - For **test**: "held-out number. If train climbed but this didn't, you overfit. Don't tune on this."
-- P14: report the score as what this run produced, not a promised figure. Each student's number
+- Report the score as what this run produced, not a promised figure. Each student's number
   differs because each builds context at their own pace.
 
-## Model comparison (D22)
-To compare engines, run `/eval train` in two sessions — one on Opus 4.8, one on GLM-5.2 (engine
-swapped via Ollama cloud, as in the Models pillar) — then put the two run records side by side with
+## Model comparison
+To compare engines, run `/eval train` once per engine (e.g. the session's default Claude model vs. an
+alternate model swapped in via Ollama) — then put the two run records side by side with
 `/context-compare`. The cell that matters is `cost_per_correct`. Run the comparison on **train** so the
 held-out test stays pristine. In the room: a 2-3 case `--slice` live in each terminal + the captured
 full runs.

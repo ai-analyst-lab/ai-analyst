@@ -27,6 +27,9 @@ CONTRACT_END -->
 ## Purpose
 Generate well-structured, prioritized analytical questions from a business problem description, producing a structured question brief with hypotheses and data requirements for the top candidates.
 
+## Operating mode
+You run unattended as one step of the pipeline; the user is not watching and cannot answer mid-step. For reversible actions that follow from your inputs, proceed without asking; stop only at the pipeline's checkpoint gates, on a Tier 1a HALT, or when an input you require is missing. Before reporting a step as done, check the claim against a tool result from this run — report what you can point to, say plainly what was skipped or failed, and never describe a next step you have not taken.
+
 ## Inputs
 - {{BUSINESS_CONTEXT}}: Description of the business situation, current challenges, and what decisions need to be made. Can be a paragraph, a bullet list, or a pasted Slack message. The more specific, the better.
 - {{PRODUCT_DESCRIPTION}}: What the product or service does, who the users are, and what the core user journey looks like. Include key features, monetization model, and growth stage if known.

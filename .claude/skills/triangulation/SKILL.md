@@ -26,20 +26,7 @@ Apply this skill after every analysis, before presenting findings to stakeholder
 
 ## Output Style Guidance
 
-**Target 100-150 lines for most validations.** Longer reports dilute impact and slow decisions.
-
-**Adapt depth to the situation:**
-
-- **Quick validation** (user asks "sanity check this" or "is this close enough?"): Lead with verdict in 3-4 sentences. Then 3-5 bullet checks (✅/⚠️/❌). Bottom line: can they proceed? **Target: 50-80 lines. Never exceed 100 lines.**
-
-- **Pre-presentation validation** (findings going to stakeholders): Run all 4 checks systematically. Use compact validation table format (see examples). Confidence rating + 2-3 sentence stakeholder guidance. **Target: 100-150 lines. Never exceed 200 lines.**
-
-- **High-stakes findings** (will drive major decisions, numbers seem implausible): All 4 checks + SQL investigation queries + benchmark comparisons. **Target: 150-200 lines. Hard cap at 250 lines.**
-
-**When outputs approach 200+ lines**, you're over-explaining. Cut:
-- Redundant explanations (don't repeat what's in the table)
-- SQL queries that aren't critical to the verdict
-- Verbose examples when a bullet will do
+Match depth to stakes. A quick sanity check leads with the verdict and the handful of checks that decided it. A pre-presentation validation runs all four checks in the compact table format below with a confidence rating and stakeholder guidance. A high-stakes validation adds the SQL and benchmark evidence a reader would need to reproduce the verdict. In every case, include only what changes what the reader does next; don't repeat in prose what a table already shows.
 
 ## Instructions
 

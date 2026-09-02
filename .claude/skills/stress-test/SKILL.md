@@ -1,7 +1,7 @@
 ---
 name: stress-test
 description: |
-  Pressure-test any analysis plan, investigation design, or analytical approach for hidden methodological flaws before execution. Acts as a "senior data scientist code review" for your analytical thinking, catching issues like wrong baselines, survivorship bias, missing segments, uncontrolled confounds, and absent kill criteria. Use this skill BEFORE committing time to executing an analysis — whether you've designed it via /analysis-design, written it yourself, received it from a stakeholder, or pulled it from a document. Apply this skill whenever someone says "stress test this plan", "review my analysis design", "check my approach", "is this analysis sound?", "can you review my investigation plan?", "does this approach make sense?", "gut-check this analysis", "what am I missing in this design?", "validate my analytical approach", or explicitly invokes `/stress-test`. This skill is critical when you're about to present an analysis design to stakeholders, when committing a week to executing a plan, when reviewing someone else's analytical approach, when an analysis came back with unexpected results and you're wondering if the design was flawed, when you want a methodological sanity check, when designing a high-stakes investigation, when a PM hands you an analysis brief to execute, or anytime you need rigorous validation of analytical thinking before work begins. The skill works standalone — it reviews ANY plan, regardless of how it was created. It produces a 7-point diagnostic with PASS/WARNING/FAIL verdicts, critical issues, warnings, recommended fixes, and an overall grade (A-F). This is your safety net against analytical mistakes that waste time, mislead stakeholders, or produce unreliable conclusions.
+  Pressure-test any analysis plan or investigation design for methodological flaws before execution — wrong baselines, survivorship bias, missing segments, uncontrolled confounds, absent kill criteria. Use on `/stress-test`, "review / gut-check / stress test my analysis plan", or before committing significant time to a plan from any source. Produces a 7-point PASS/WARNING/FAIL diagnostic with an A-F grade.
 ---
 
 # Skill: Stress Test
@@ -41,15 +41,11 @@ This skill is **standalone** — it works on any analysis plan, whether produced
 
 ## The 7-Point Stress Test
 
-**CRITICAL FIRST STEP: Check data availability BEFORE methodology review.**
-
-Before reviewing methodology quality, immediately verify that required data exists:
+**Check data availability first.** A methodologically perfect plan that needs data the dataset lacks is unexecutable, so this check precedes the seven checkpoints:
 1. Read the active dataset schema (`.knowledge/datasets/{active}/schema.md`)
 2. Check if the plan's required fields/tables/dimensions exist in the dataset
 3. If ANY required data is missing → HALT, skip checkpoints 1-6, jump straight to checkpoint 7, assign FAIL verdict with BLOCKER status, provide F grade, and stop
 4. If all required data exists → proceed with checkpoints 1-7 in order
-
-**Why this matters:** A methodologically perfect plan that requires non-existent data is useless. Data availability is a BLOCKER that makes all other issues irrelevant. Check it FIRST, not last.
 
 **Common data blockers to check for:**
 - Plan requires device/platform segmentation → check if device, platform, or user_agent fields exist
@@ -219,7 +215,7 @@ WARNINGS (address if time allows):
   - ...
 
 RECOMMENDED FIXES:
-  1. ... [Include estimated time impact for top 3 fixes: "~30 min", "~2 hours", etc.]
+  1. ... [state what the fix eliminates, not a time estimate]
   2. ...
   3. ...
 ```
@@ -265,5 +261,5 @@ Saves to: `working/stress_test_{{DATE}}.md`
 
 - Works independently of `/analysis-design` — use it on ANY plan
 - Can be chained: `/analysis-design` → `/stress-test` → fix → re-test
-- Complements the **Analysis Design Spec skill** (which helps you write the plan) by reviewing it after it's written
+- Complements the **question-framing skill** (which writes the Analysis Design Spec) by reviewing the plan after it's written
 - Pairs with **Confound Scanner agent** — the scanner finds threats proactively during planning; `/stress-test` reviews an existing plan retroactively

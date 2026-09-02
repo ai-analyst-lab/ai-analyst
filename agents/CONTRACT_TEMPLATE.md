@@ -164,6 +164,15 @@ When a non-critical agent (`critical: false`) fails:
 3. Downstream agents that depend on the degraded agent receive a `DEGRADED_UPSTREAM` flag in their context so they can adapt (e.g., skip optional sections).
 4. The pipeline continues -- it does **not** halt.
 
+## Required Body Section: Operating Mode
+
+Every pipeline agent body includes this section immediately after `## Purpose`. It is prompt text the agent reads at runtime (unlike the CONTRACT block):
+
+```markdown
+## Operating mode
+You run unattended as one step of the pipeline; the user is not watching and cannot answer mid-step. For reversible actions that follow from your inputs, proceed without asking; stop only at the pipeline's checkpoint gates, on a Tier 1a HALT, or when an input you require is missing. Before reporting a step as done, check the claim against a tool result from this run — report what you can point to, say plainly what was skipped or failed, and never describe a next step you have not taken.
+```
+
 ## Input Source Types
 
 ### `user`

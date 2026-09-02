@@ -27,7 +27,7 @@ machinery surfaces during L3+ analyses. Pace is orthogonal to complexity level
 |------|----------|
 | `guided` | Announce each phase, run it, **pause** and wait for `/continue` before the next phase |
 | `narrated` | Announce each phase, run it, announce the result, continue to the next phase without pausing (the safe default) |
-| `autopilot` | Silent end-to-end. No phase banners. Final output only. |
+| `autopilot` | Silent end-to-end. No phase banners. The final message is the user's first look at the work: open with the outcome, then findings, then what is next, written for a reader who saw none of the run. |
 
 ## Invocation
 

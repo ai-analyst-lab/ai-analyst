@@ -55,9 +55,8 @@ from helpers.data.data_helpers import detect_active_source, check_connection
 source = detect_active_source()
 ```
 
-For MCP-connected warehouses (MotherDuck, Snowflake, Postgres), query via MCP.
-For local DuckDB or CSV sources, connect directly in Python. Follow the Data
-Source Fallback rules in CLAUDE.md.
+Query through `ConnectionManager` (`helpers/data/connection_manager.py`) whatever
+the source; it resolves local vs. remote and auto-logs the query for provenance.
 
 For per-user metrics (revenue per user, sessions per user), aggregate first —
 the unit of analysis matters. Profile the metric at the level it will be used

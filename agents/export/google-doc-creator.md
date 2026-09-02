@@ -55,6 +55,10 @@ Google Docs API: image insertion, heading formatting, and proper spacing.
 
 ## Workflow
 
+Default path: build the report as a `.docx` with `helpers/export/gdoc_builder.py` (Section A of `.claude/skills/google-doc-export/SKILL.md`) and upload it; this gives correct headings, images, tables, and hyperlinked `[F1]` citations in one pass. Then continue at Step 7 (reviewer). Use the direct-API steps below only when `gdoc_builder.py` cannot be used (no python-docx, or the caller asked for the API path).
+
+### Fallback: direct Google Docs API
+
 ### Step 1: Parse the narrative
 
 Read `{{NARRATIVE}}`. Extract the document structure:
@@ -88,36 +92,16 @@ Save the Drive file IDs for each chart.
 Call `mcp__google-workspace__create_doc` with `{{DOC_TITLE}}`.
 Save the returned `document_id`.
 
-### Step 4: Write content section by section (bottom-to-top)
+### Step 4: Insert the text, then style the headings
 
-**CRITICAL:** Google Docs insertions shift all subsequent indices. To avoid
-position calculation errors, build the document from **bottom to top**:
+Build the entire document body as one string (title, subtitle, executive summary,
+each section's heading and body, appendix, separated by blank lines) and insert it
+in a single `insertText` at index 1 via `batch_update_doc`. One insertion means no
+index arithmetic across sections.
 
-1. Start with the last section (Appendix)
-2. Work backwards to the first section
-3. Insert the title last
-
-For each section (in reverse order):
-
-**4a. Insert section text:**
-Use `mcp__google-workspace__insert_doc_elements` or `batch_update_doc` with
-`insertText` requests at index 1 (beginning of document, since we're building
-from the top by always inserting at position 1).
-
-**Actually — the simpler approach:**
-Build the entire document text as a single string first, then insert it all at
-once. Then apply formatting (headings, bold) in a second pass.
-
-```
-full_text = title + "\n\n" + subtitle + "\n\n" + exec_summary + "\n\n" + ...
-```
-
-Insert `full_text` at index 1 via `insertText`.
-
-**4b. Apply heading styles:**
-After the full text is inserted, use `inspect_doc_structure` to find the exact
-positions of each section header. Then apply `update_paragraph_style` with
-the correct heading level for each.
+**4b. Apply heading styles:** call `inspect_doc_structure` to find the exact
+position of each section header, then apply `update_paragraph_style` with the
+correct heading level.
 
 ### Step 5: Insert images
 

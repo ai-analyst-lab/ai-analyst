@@ -1,6 +1,6 @@
 ---
 name: session-handoff
-description: Preserve critical state when a session approaches context limits so the next session can pick up seamlessly. Use this skill whenever you're in a long workflow (15+ tool calls), working with Google Workspace resources (Docs, Slides, Drive), creating external resources that have IDs you need to track, running multi-step pipelines that might need to be resumed, approaching context limits, or when the user says things like "save state", "let's pause", "I'll come back later", "save progress", "I need to stop for now", "bookmark this", "save my work", or when you detect that a workflow involves multiple phases and the user might return later. This skill is CRITICAL after creating Google Docs, Slides, or Drive files — those resource IDs are impossible to recover if lost. Also apply proactively during analysis pipelines after major phases complete (data exploration done, charts generated, narrative written, deck created) so users can resume at natural checkpoints. Write session state immediately after any external resource creation, not just at the end. If you're building a deck and it takes 10+ tool calls, save state halfway through. If context is getting long and you haven't saved state yet, do it now before you forget. This prevents lost work when context compaction occurs or users start new conversations.
+description: Preserve critical state when a session approaches context limits so the next session can pick up seamlessly. Use this skill whenever you're in a long, multi-step workflow, working with Google Workspace resources (Docs, Slides, Drive), creating external resources that have IDs you need to track, running multi-step pipelines that might need to be resumed, approaching context limits, or when the user says things like "save state", "let's pause", "I'll come back later", "save progress", "I need to stop for now", "bookmark this", "save my work", or when you detect that a workflow involves multiple phases and the user might return later. This skill is CRITICAL after creating Google Docs, Slides, or Drive files — those resource IDs are impossible to recover if lost. Also apply proactively during analysis pipelines after major phases complete (data exploration done, charts generated, narrative written, deck created) so users can resume at natural checkpoints. Write session state immediately after any external resource creation, not just at the end. If context is getting long and you haven't saved state yet, do it now before you forget. This prevents lost work when context compaction occurs or users start new conversations.
 ---
 
 # Skill: Session Handoff
@@ -14,7 +14,7 @@ context compaction occurs or the user starts a new conversation.
 ## When to Apply
 
 Automatically when:
-- Context is getting long (15+ tool calls in a single workflow)
+- A long multi-step workflow is in progress
 - A multi-step Google Workspace workflow is in progress
 - The pipeline involves external resource IDs (doc IDs, slide IDs, Drive folders)
 - Before any pause point where the user might come back later
@@ -41,7 +41,7 @@ This file MUST be comprehensive, regardless of how simple the handoff seems. Cap
 
 ## The Template (Use This Every Time)
 
-**Always use this complete template structure.** Even if the handoff seems simple (e.g., just one Google Doc ID), fill out ALL sections. A comprehensive state file is always better than a minimal one — it ensures the next session has full context.
+**Use the complete template.** Fill every section (an empty section is "None"), because the next session has no other context.
 
 **Template:**
 
@@ -116,8 +116,6 @@ resume:
     - "Continue from: {{pipeline.next_step}}"
 ```
 
-**Important:** Even if the handoff seems simple (e.g., just saving one Google Doc ID), fill out ALL sections of this template. A comprehensive state file is always better than a minimal one — it ensures the next session has full context.
-
 ---
 
 ## When to Write
@@ -125,7 +123,7 @@ resume:
 ### Proactive triggers (write automatically):
 - After creating any Google resource (doc, slides, Drive file)
 - After completing a major pipeline phase (analysis, charting, doc creation)
-- When conversation reaches ~20 tool calls
+- After any long stretch of tool calls in one workflow (the same trigger as "When to Apply" above)
 - Before any operation that might run long (batch chart generation, etc.)
 
 ### Reactive triggers (write when prompted):
@@ -166,8 +164,8 @@ Resuming from previous session:
 3. **Describe status in plain English.** "content complete, needs formatting
    review" is more useful than a boolean flag.
 
-4. **Keep the file small.** Only save what's needed to resume. Don't dump
-   entire analysis narratives — reference the file paths instead.
+4. **Reference, don't copy.** Point at file paths instead of pasting narratives
+   or data into the state file.
 
 5. **Overwrite, don't append.** Each write is a complete snapshot. The file
    should reflect current state, not a history log.
@@ -176,9 +174,3 @@ Resuming from previous session:
    Google Workspace MCP calls — this is the #1 source of auth failures. If the
    user hasn't mentioned their email, check for it in working files or previous
    MCP calls. If truly unknown, note "email unknown — verify at resume time".
-
-7. **Be comprehensive, not minimal.** Even if only one resource ID needs saving,
-   fill out the complete template. Include dataset, task description, pipeline
-   progress, and resume instructions. Future you (or the next session) will
-   thank you for the extra context. Think of this as a "save game" file — capture
-   everything needed to restore the exact state.

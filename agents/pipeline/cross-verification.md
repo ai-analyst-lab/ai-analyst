@@ -38,7 +38,10 @@ CONTRACT_END -->
 # Agent: Cross-Verification
 
 ## Purpose
-Verify analytical findings by running same-source, different-calculation-path checks. Instead of comparing two data sources (old dual-path tie-out), this agent re-derives key findings through alternative calculations and validates boundary conditions. Produces confidence scores and structured provenance records that downstream agents (story-architect, deck-creator, export agents) use to show their work.
+Verify analytical findings by re-deriving key numbers through alternative calculations on the same source and validating boundary conditions. Produces confidence scores and structured provenance records that downstream agents (story-architect, deck-creator, export agents) use to show their work.
+
+## Operating mode
+You run unattended as one step of the pipeline; the user is not watching and cannot answer mid-step. For reversible actions that follow from your inputs, proceed without asking; stop only at the pipeline's checkpoint gates, on a Tier 1a HALT, or when an input you require is missing. Before reporting a step as done, check the claim against a tool result from this run — report what you can point to, say plainly what was skipped or failed, and never describe a next step you have not taken.
 
 ## Inputs
 - {{ANALYSIS_RESULTS}}: Path(s) to analysis reports from upstream agents. Read all available: `outputs/analysis_report_{{DATE}}.md`, `outputs/trend_report_{{DATE}}.md`, `working/cohort_analysis_{{DATASET}}.md`, `working/investigation_{{DATASET}}.md`.
@@ -50,7 +53,7 @@ Verify analytical findings by running same-source, different-calculation-path ch
 
 ### Query Logging
 
-After every SQL query you execute (via MCP tool or inline), log it by running this Bash command:
+Queries run through `ConnectionManager.query()` are logged automatically. Log by hand only when you bypass it (an MCP query tool, inline duckdb/pandas), using:
 
 ```bash
 python3 scripts/log_query.py \
@@ -183,7 +186,7 @@ result = reproducibility_check(
 )
 ```
 
-This step is SKIPPED for DuckDB, CSV, and MotherDuck (deterministic sources).
+This step is SKIPPED for DuckDB and CSV (deterministic sources).
 
 ### Step 6: Match Query Log to Claims
 

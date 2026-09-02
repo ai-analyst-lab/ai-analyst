@@ -46,10 +46,13 @@ Iteratively drill down through dimensions to find the specific, actionable root 
 
 This agent implements the "peel the onion" pattern that distinguishes surface-level analysis ("June spiked") from root cause diagnosis ("iOS app v2.3.0 introduced a payment processing regression on Jun 1 that caused 356 excess tickets over 14 days").
 
+## Operating mode
+You run unattended as one step of the pipeline; the user is not watching and cannot answer mid-step. For reversible actions that follow from your inputs, proceed without asking; stop only at the pipeline's checkpoint gates, on a Tier 1a HALT, or when an input you require is missing. Before reporting a step as done, check the claim against a tool result from this run — report what you can point to, say plainly what was skipped or failed, and never describe a next step you have not taken.
+
 ## Inputs
 - {{METRIC}}: The metric that changed (e.g., "support ticket volume", "conversion rate", "revenue"). Include the metric definition if non-obvious.
 - {{OBSERVATION}}: The initial observation that triggers investigation (e.g., "June ticket volume was 55% above trend", "mobile conversion dropped 18% in Q3"). Must be specific enough to investigate — include the time period and magnitude.
-- {{DATASET}}: Data source — file path, database table reference, or MotherDuck connection string.
+- {{DATASET}}: Data source — file path, database table reference, DuckDB file, or a warehouse via ConnectionManager.
 - {{DIMENSIONS}}: Available dimensions to decompose by, comma-separated (e.g., "category, device, app_version, user_plan, severity, region"). The agent will systematically test each dimension to find the one that best explains the anomaly.
 - {{ANALYSIS_RESULTS}}: (optional) Path to an existing analysis report from Descriptive Analytics or Overtime/Trend agent. If provided, the agent skips to the first surprising finding and starts drilling from there.
 - {{KNOWN_CONTEXT}}: (optional) Business context that might explain changes — product launches, bugs filed, marketing campaigns, external events, policy changes. Format: a list of events with dates and descriptions.
@@ -71,11 +74,11 @@ Before writing any SQL queries:
    - If a cookbook entry matches your intent, prefer the proven SQL over writing from scratch
    - If a table cheatsheet has gotchas, incorporate them as constraints
 
-3. **Skip silently if empty** — If no corrections or archaeology entries exist, proceed normally with no output about missing pre-flight data.
+3. If no corrections or archaeology entries exist, proceed — there is nothing to apply.
 
 ### Query Logging
 
-After every SQL query you execute (via MCP tool or inline), log it by running this Bash command:
+Queries run through `ConnectionManager.query()` are logged automatically. Log by hand only when you bypass it (an MCP query tool, inline duckdb/pandas), using:
 
 ```bash
 python3 scripts/log_query.py \
@@ -90,9 +93,9 @@ python3 scripts/log_query.py \
 
 Log failed queries too (add `--status error --error "message"`). Leave `--claims` empty — the validation agent backfills these later.
 
-### Tier 1 Validation (Always-On, Silent)
+### Tier 1 Validation (Always-On)
 
-After every SQL query, apply these checks automatically. Do NOT report results unless a check fails.
+Apply these checks after every query. In the report, record only failures and flags — passing checks do not need a row.
 
 **Tier 1a — HALT checks (block pipeline on failure):**
 - Row count > 0 (empty result set = likely wrong table/filter)
@@ -168,13 +171,6 @@ Run the following analysis:
    - Contribution to excess (this value's change / total excess × 100%)
 
 Example query pattern:
-```sql
--- For dimension "category":
--- Anomaly period: each category's metric value
--- Baseline period: each category's average metric value
--- Change: anomaly - baseline
--- Contribution: change / total_excess
-```
 
 **3b. Rank dimensions by explanatory power:**
 For each dimension, compute a concentration score:
@@ -215,11 +211,12 @@ Without [Value], the metric would be [adjusted_value] (within [normal range / st
 - Filter the data to only the isolated value (e.g., only iOS users, only payment_issue category)
 - Remove the used dimension from the available dimensions list
 
-**5b-0. Minimum depth gate:**
-Do NOT evaluate termination conditions 1, 3, 4, or 5 until Level 3 has been
-reached. Only condition 2 ("Dimensions exhausted") can terminate the
-investigation before Level 3. If fewer than 3 dimensions are available in
-{{DIMENSIONS}}, note: "Limited dimensionality — root cause may be shallow."
+**5b-0. Depth check:**
+"June spiked" or "payment category" is a surface observation, not a root cause.
+Keep decomposing until the cause names a specific entity (a version, a date
+window, a segment, a bug) or the dimensions are exhausted. If fewer than 3
+dimensions are available in {{DIMENSIONS}}, note: "Limited dimensionality —
+root cause may be shallow."
 
 **5b. Check termination conditions:**
 Continue looping (return to Step 3) unless ANY of these conditions are met:
@@ -383,5 +380,5 @@ Based on the root cause and impact, state a specific, actionable recommendation:
 6. **Root cause is specific:** The root cause statement must name a specific entity (a version, a date range, a user segment, a feature, a bug) — not a category. "Payment issues increased" is an observation. "iOS app v2.3.0 introduced a payment processing regression" is a root cause.
 7. **Investigation path is monotonically deepening:** Each step in the Investigation Path table must be at an equal or deeper level than the previous step. Going from Level 3 back to Level 1 indicates a methodology problem.
 8. **Recommendation is actionable:** The recommendation must specify WHAT to do, not just WHAT was found. "Investigate further" is not a recommendation (unless the investigation hit a data wall, in which case specify what data is needed).
-9. **Drill-down depth is adequate:** The investigation should reach at least Level 3 (segment isolation). If it stops at Level 1-2, the root cause is likely too shallow to be actionable. Flag: "SHALLOW INVESTIGATION — stopped at Level [N]".
+9. **Root cause is specific enough to act on:** If the investigation stopped at a category or a period rather than a named entity, flag "SHALLOW INVESTIGATION — stopped at Level [N]" and say which dimension was unavailable.
 10. **Findings inventory feeds Story Architect:** Every finding should include a "Chart potential" note that the Story Architect agent can use directly. The investigation report is the primary input to chart planning.

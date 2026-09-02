@@ -46,8 +46,11 @@ CONTRACT_END -->
 ## Purpose
 Perform time-series analysis on a dataset to identify trends, detect anomalies, decompose seasonality, and produce annotated timeline charts that explain what changed and when.
 
+## Operating mode
+You run unattended as one step of the pipeline; the user is not watching and cannot answer mid-step. For reversible actions that follow from your inputs, proceed without asking; stop only at the pipeline's checkpoint gates, on a Tier 1a HALT, or when an input you require is missing. Before reporting a step as done, check the claim against a tool result from this run — report what you can point to, say plainly what was skipped or failed, and never describe a next step you have not taken.
+
 ## Inputs
-- {{DATASET}}: The data source to analyze. Can be a file path (CSV, Parquet), a database table reference, or a MotherDuck/DuckDB connection string. Must contain at least one time/date column and one numeric metric column.
+- {{DATASET}}: The data source to analyze. Can be a file path (CSV, Parquet), a database table reference, a DuckDB file, or a warehouse via ConnectionManager (Postgres, BigQuery, Snowflake, Databricks). Must contain at least one time/date column and one numeric metric column.
 - {{TIME_COLUMN}}: The name of the column containing the time dimension (e.g., `date`, `created_at`, `event_timestamp`). Must be a date, datetime, or timestamp type — or a string that can be parsed as one.
 - {{METRIC_COLUMNS}}: One or more metric columns to analyze over time. Comma-separated if multiple (e.g., `revenue, active_users, conversion_rate`). Each must be a numeric column or an aggregatable field.
 - {{GRANULARITY}}: (optional) The time granularity for analysis — one of: "daily", "weekly", "monthly", "quarterly". If not provided, the agent auto-selects based on the date range: <90 days = daily, 90-365 days = weekly, 1-3 years = monthly, >3 years = quarterly.
@@ -71,11 +74,11 @@ Before writing any SQL queries:
    - If a cookbook entry matches your intent, prefer the proven SQL over writing from scratch
    - If a table cheatsheet has gotchas, incorporate them as constraints
 
-3. **Skip silently if empty** — If no corrections or archaeology entries exist, proceed normally with no output about missing pre-flight data.
+3. If no corrections or archaeology entries exist, proceed — there is nothing to apply.
 
 ### Query Logging
 
-After every SQL query you execute (via MCP tool or inline), log it by running this Bash command:
+Queries run through `ConnectionManager.query()` are logged automatically. Log by hand only when you bypass it (an MCP query tool, inline duckdb/pandas), using:
 
 ```bash
 python3 scripts/log_query.py \
@@ -90,9 +93,9 @@ python3 scripts/log_query.py \
 
 Log failed queries too (add `--status error --error "message"`). Leave `--claims` empty — the validation agent backfills these later.
 
-### Tier 1 Validation (Always-On, Silent)
+### Tier 1 Validation (Always-On)
 
-After every SQL query, apply these checks automatically. Do NOT report results unless a check fails.
+Apply these checks after every query. In the report, record only failures and flags — passing checks do not need a row.
 
 **Tier 1a — HALT checks (block pipeline on failure):**
 - Row count > 0 (empty result set = likely wrong table/filter)
@@ -135,14 +138,6 @@ Write and execute SQL or Python to aggregate {{METRIC_COLUMNS}} at the selected 
 - For rate metrics: recompute the rate per period (numerator / denominator), do NOT average rates
 - For average metrics: compute weighted average where possible
 - If {{SEGMENTS}} is provided, aggregate per segment per period
-
-```python
-# Example: Monthly aggregation of revenue and active_users
-# Group by month (from TIME_COLUMN)
-# revenue: SUM per month
-# active_users: COUNT DISTINCT per month
-# If segmented by platform: group by (month, platform)
-```
 
 Save the prepared time-series dataset to `working/timeseries_prepared.csv`.
 

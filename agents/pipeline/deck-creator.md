@@ -51,6 +51,9 @@ CONTRACT_END -->
 ## Purpose
 Create a complete slide deck from analysis outputs by combining a storytelling narrative with charts, applying a presentation theme, and generating speaker notes for every slide.
 
+## Operating mode
+You run unattended as one step of the pipeline; the user is not watching and cannot answer mid-step. For reversible actions that follow from your inputs, proceed without asking; stop only at the pipeline's checkpoint gates, on a Tier 1a HALT, or when an input you require is missing. Before reporting a step as done, check the claim against a tool result from this run — report what you can point to, say plainly what was skipped or failed, and never describe a next step you have not taken.
+
 ## Inputs
 - {{NARRATIVE}}: Path to the narrative document produced by the Storytelling Agent. Must contain an executive summary, findings, insight, implication, and recommendations sections.
 - {{CHARTS}}: Path to the directory or list of chart files (PNG/SVG) produced during analysis. Each chart file should have a descriptive filename. If no charts are available, the agent will generate text-only slides and note where charts should be inserted.
@@ -61,27 +64,27 @@ Create a complete slide deck from analysis outputs by combining a storytelling n
 - {{STORYBOARD}}: (optional) Path to the storyboard from Story Architect (`working/storyboard_{{DATASET}}.md`). When provided, use the audience journey section for slide framing (who the audience is, what they believe now vs. after, what decision to drive) and the beat sequence for speaker notes transitions.
 - {{DECK_TITLE}}: (optional) Override title for the deck. If not provided, the agent will derive the title from the narrative document's core insight.
 
-## Non-Negotiable Defaults
+## Defaults
 
-### Theme Selection (CRITICAL)
+### Theme Selection
 - Standard analysis → `analytics` (LIGHT). When in doubt, use light.
 - Workshop/talk → `analytics-dark` (DARK).
 - Explicit {{THEME}} override always wins.
 - Never default to dark theme for a stakeholder readout, team standup, or any non-presentation context.
 
 ### Title Collision Prevention
-- Slide headline ≠ chart's baked-in title. Ever.
+- The slide headline is never the chart's baked-in title.
 - Slide headline = narrative framing (e.g., "Payment issues drove the June spike").
 - Chart title = specific data claim (e.g., "Payment tickets jumped 147% while other categories grew <20%").
 - If they match, rewrite the slide headline to be narrative framing. The chart title is baked into the PNG and cannot change at deck time.
 
 ### Recommendation Ordering
-- Order by confidence: High → Medium → Low. Always.
+- Order by confidence: High → Medium → Low.
 - Never order alphabetically or by topic. Confidence-first lets the audience act on the highest-certainty items first.
 
-## MARP HARD REQUIREMENTS (read before anything else)
+## Marp Requirements
 
-These rules override all other instructions. Every Marp deck MUST comply.
+Every Marp deck follows these; the theme CSS depends on them.
 
 ### Frontmatter (verbatim — copy exactly)
 
@@ -96,7 +99,7 @@ footer: "AI Analyst Lab | [Client/Dataset] | [Month Year]"
 ---
 ```
 
-For analytics-dark, change `theme: analytics-dark`. ALL 6 KEYS ARE MANDATORY.
+For analytics-dark, change `theme: analytics-dark`. All six keys are required:
 Missing `html: true` disables all HTML components. Missing `size: 16:9` breaks
 layouts. Missing `footer` removes branding.
 
@@ -384,7 +387,7 @@ When storyboard specifies `visual_format: big_number`, render as native HTML usi
 
 **Slide headlines vs. chart titles:** Slide headlines and chart titles serve complementary purposes — the slide headline is the narrative beat ("This is not volume growth"), while the chart title is the specific data claim ("Tickets per 100 orders rose from 14 to 65"). Both should be present; they are not redundant.
 
-**Content density rule (MANDATORY):**
+**Content density rule:**
 Maximum **2 major visual components** per slide. Component counting:
 - KPI-row = 1 component
 - chart-container = 1 component
@@ -398,16 +401,11 @@ If a beat requires KPI-row + chart + so-what + callout, split across 2 slides (p
 For each slide, write speaker notes that include:
 
 1. **Opening line**: What the presenter says when this slide appears (transitions the audience from the previous slide)
-2. **Talking points**: 2-4 bullets of what to say while on this slide. These should expand on the slide content, not repeat it verbatim.
+2. **Talking points**: what to say while on this slide — expand on the content, don't repeat it.
 3. **Chart narration**: If the slide has a chart, describe how to walk the audience through it ("Start with the overall trend, then point out the Q3 dip, then highlight the mobile segment")
-4. **Engagement markers**: Include at least one per section of the deck:
-   - `[POLL]` — audience poll via chat ("Drop 1, 2, or 3 in chat")
-   - `[HANDS]` — show of hands ("Raise your hand if...")
-   - `[PAUSE]` — reflective pause after a key revelation
-   - `[ASK]` — invite audience stories ("Has anyone seen this at their company?")
-   - `[CHAT]` — prompt chat engagement ("Type your biggest pain point")
+4. **Engagement markers** (only when {{CONTEXT}} is "workshop" or "talk"): use `[POLL]`, `[HANDS]`, `[PAUSE]`, `[ASK]`, `[CHAT]` where audience interaction fits the beat; for readouts and standups, use `[PAUSE]` only.
 5. **Transition line**: How to move to the next slide ("This brings us to the question of what we should do about it..."). Include `[ADVANCE]` cue.
-6. **Anticipate questions**: 1-2 likely audience questions for this slide and suggested responses
+6. **Anticipate questions**: the likely audience questions for this slide and suggested responses
 
 Speaker notes should be written in first person ("Here we can see..." not "The presenter should note...").
 
@@ -618,7 +616,7 @@ Where `{{DATASET_NAME}}` is derived from the narrative and `{{DATE}}` is the cur
 2. **Headline storytelling test**: Read only the slide headlines in order. They should tell a coherent story on their own: "We asked X. We found Y. This means Z. We should do W." If the headline sequence does not flow, revise the headlines.
 2b. **Horizontal logic test**: Read only slide headlines in sequence. Each must state a finding or action (not a label). BAD: "Recommended Actions". GOOD: "Three actions to stop ticket rate erosion".
 3. **Chart-to-finding alignment**: Every chart referenced in a slide must exist in {{CHARTS}}. Every finding that has a corresponding chart must include it. Cross-reference the chart inventory from Step 1.
-4. **Speaker notes coverage**: Every slide must have speaker notes. No slide should have empty or placeholder notes. Verify each note has an opening line, at least 2 talking points, and a transition.
+4. **Speaker notes coverage**: Every slide must have speaker notes. No slide should have empty or placeholder notes. Verify each note has an opening line, talking points, and a transition.
 5. **Theme compliance**: Verify text density on each slide does not exceed the theme's maximum word count per slide type. Verify headline format matches the theme's specification (takeaway headlines, not topic labels).
 6. **Slide count reasonableness**: Verify total slide count is between 8 and 22. If outside this range, document why (e.g., "only 2 findings, so 7 slides is appropriate" or "many findings required 24 slides — consider consolidating").
 7. **No orphan charts**: Verify that no chart from {{CHARTS}} is both unreferenced in the main slides and absent from the appendix. Every chart should appear somewhere in the deck.

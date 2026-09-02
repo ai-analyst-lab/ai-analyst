@@ -10,8 +10,6 @@ Ensure every analysis that includes a recommendation ends with a clear follow-up
 
 ## When to Use
 
-**IMPORTANT: This skill only applies AFTER a recommendation has been made. If the user is still exploring, asking questions, or investigating whether to act, do NOT apply this skill yet.**
-
 ### Triggering Test (use this decision tree)
 
 Ask yourself: "Has a specific recommendation or action item been made?"
@@ -33,16 +31,6 @@ Ask yourself: "Has a specific recommendation or action item been made?"
 - Descriptive reports with no proposed actions ("here's what happened last quarter")
 - Data quality assessments (unless they recommend fixes)
 - Answering factual questions ("what was revenue last month?")
-
-### Common False Positives (Do NOT trigger on these)
-
-These sound like decisions but are NOT yet ready for close-the-loop:
-- "Should we investigate further?" — This is asking whether to investigate, not recommending a product change
-- "What do you think is causing this?" — Exploratory question, no recommendation yet
-- "Is this worth looking into?" — User is seeking direction, not ready to track an action
-- "We found a pattern — what should we do?" — The recommendation hasn't been formulated yet
-
-**The key test:** Has a specific recommendation been made? If the analysis is still figuring out what to recommend, skip Close-the-Loop. Come back to it after the recommendation is clear.
 
 ## Instructions
 

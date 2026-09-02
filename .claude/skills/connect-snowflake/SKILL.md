@@ -16,8 +16,9 @@ DuckDB practice copy. This is the runbook for "actually go remote." Credentials
 and config already exist; this skill is about *opting into remote and verifying
 you landed there*.
 
-This is distinct from `/setup-snowflake` (the first-time MCP wizard that installs
-`uvx` + `snowflake-labs-mcp` and writes credentials). Use **this** skill when the
+This is distinct from `/setup-snowflake` (the first-time wizard that collects the
+connection fields, writes the password to `.env`, and verifies the native
+ConnectionManager session). Use **this** skill when the
 warehouse is already configured and you just want to query the live data through
 `ConnectionManager`.
 
@@ -77,9 +78,9 @@ Before trusting any number, confirm:
   config** (`.env` / `connection_templates/`) — compare against what you expect,
   never assume.
 
-Always tell the user which source is live (Rule 9).
+Always tell the user which source is live.
 
-### Step 3 — Log every query (Rule 17)
+### Step 3 — Log every query
 `ConnectionManager.query()` **auto-logs** at execution by default — that covers
 the requirement. If you query some other way (raw connector, MCP), log manually:
 ```bash
@@ -90,15 +91,13 @@ python3 scripts/log_query.py --dataset {active} --agent ad-hoc \
 ## Gotchas
 - `export AAP_USE_REMOTE=1` and the `python3` call **must share one Bash
   command** (`&&`), or the flag is lost and you silently get DuckDB.
-- **Do not trust `sessions.had_purchase` for Nov–Dec 2024** — derive purchases
-  from `events.event_type = 'purchase_complete'` or by joining `orders` on
-  `session_id`. See `.knowledge/datasets/{active}/quirks.md`.
+- Read `.knowledge/datasets/{active}/quirks.md` before trusting edge columns.
 - Ignore the LibreSSL / urllib3 / NotOpenSSL warnings — harmless. Suppress with
   `-W ignore` + `warnings.filterwarnings('ignore')` as shown.
-- Requires `snowflake-connector-python` (installed on this machine).
-- Credentials live in `.env` (6 keys: `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USER`,
-  `SNOWFLAKE_PASSWORD`, `SNOWFLAKE_WAREHOUSE`, `SNOWFLAKE_DATABASE`,
-  `SNOWFLAKE_ROLE`). Gitignored. Never echo/cat them (Rule 16).
+- Requires `snowflake-connector-python` (`pip install -e ".[warehouses]"`; see the
+  /setup-snowflake prerequisite).
+- The password lives in `.env` as `SNOWFLAKE_PASSWORD`; account, user, warehouse,
+  database, schema, and role live in the dataset manifest. Never echo or cat `.env`.
 
 ## To go back to local DuckDB
 Unset the opt-in: `unset AAP_USE_REMOTE` for the shell, and/or set

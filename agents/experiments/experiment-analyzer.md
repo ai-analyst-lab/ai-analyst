@@ -201,7 +201,7 @@ for col in segment_columns:
         ctrl = segment_data[segment_data[treatment_col] == control_label]
         treat = segment_data[segment_data[treatment_col] == treatment_label]
         # Run the appropriate statistical test
-        result = two_sample_mean_test(ctrl[primary_metric], treat[primary_metric])
+        result = welch_test(ctrl[primary_metric], treat[primary_metric])  # proportion_test for binary metrics
 ```
 
 **Critical checks:**
@@ -267,9 +267,9 @@ Translate statistical results into business language:
 | Users affected | [N] | | |
 ```
 
-### Step 7: Should We Ship It?
+### Step 7: Evidence for the decision
 
-Synthesize all evidence into a holistic recommendation. This is NOT a simple "significant → ship" decision. Consider:
+Synthesize all evidence so the Experiment Interpreter can walk the pre-registered decision rules. This is NOT a simple "significant → ship" summary. Cover:
 
 1. **Overall effect:** Positive, meaningful, and reliable?
 2. **Guardrails:** All clean, or are there trade-offs?
@@ -277,20 +277,18 @@ Synthesize all evidence into a holistic recommendation. This is NOT a simple "si
 4. **Duration:** Stable effect, or novelty-driven?
 5. **Business case:** Positive ROI after accounting for costs?
 
-**Recommendation must be per-segment if segments differ:**
+**Evidence must be per-segment if segments differ.** The ship/abort verdict itself is owned by the Experiment Interpreter (`agents/experiments/experiment-interpreter.md`); the ramp plan by the Experiment Readout.
 
 ```markdown
-## Q7: Recommendation
+## Q7: Evidence for the Decision
 
-### [Segment 1]: [SHIP / DO NOT SHIP / ITERATE]
-- **Evidence:** [summary of what the data shows for this segment]
-- **Ramp plan:** [if shipping: 5% → 25% → 50% → 100%, with monitoring cadence]
-- **Holdout:** [keep X% in control for Y weeks post-ship]
-- **Conditions:** [what must remain true for this to stay shipped]
+### [Segment 1]: evidence summary
+- **Evidence:** [what the data shows for this segment — effect, guardrails, duration, business case]
+- **Conditions:** [what would have to remain true for a ship to stay justified]
 
-### [Segment 2]: [SHIP / DO NOT SHIP / ITERATE]
+### [Segment 2]: evidence summary
 - **Evidence:** [summary]
-- **Next step:** [if not shipping: what to test next]
+- **Open question:** [what a follow-up would need to resolve]
 ```
 
 ### Step 8: What Follow-Up Experiments Would You Run?
@@ -321,7 +319,7 @@ Compile all 8 questions into a single, structured report. Begin with an executiv
 
 ## Executive Summary
 **Headline:** [One sentence — e.g., "Regional playlists increase streams for existing users but hurt new user retention"]
-**Recommendation:** [Ship with conditions / Do not ship / Iterate]
+**Recommendation:** [from the Experiment Interpreter's verdict: SHIP / SHIP WITH MONITORING / ABORT / LEARN / INVALID]
 **Confidence:** [HIGH / MEDIUM / LOW] (from validation)
 **Key finding:** [The most important insight — often from the segment analysis]
 
@@ -345,5 +343,5 @@ Before presenting the analysis:
 2. **SRM checked first** — Step 1 must complete before any treatment effect calculations.
 3. **Segments checked** — Step 4 must run on ALL categorical dimensions, not just the obvious ones.
 4. **Guardrails checked per segment** — not just overall. A clean overall guardrail can mask a segment-level problem.
-5. **Recommendation matches evidence** — a "ship" recommendation with degraded guardrails or reversed segments is wrong. The recommendation must account for ALL findings.
+5. **Evidence is complete for the decision** — degraded guardrails, reversed segments, and novelty fades must all appear in Q7 so the Interpreter's verdict accounts for ALL findings.
 6. **Follow-up experiments proposed** — every analysis should identify what it didn't answer.

@@ -6,6 +6,10 @@ inputs:
     type: file
     source: agent:experiment-analyzer
     required: true
+  - name: INTERPRETATION
+    type: file
+    source: agent:experiment-interpreter
+    required: true
   - name: AUDIENCE
     type: str
     source: user
@@ -21,6 +25,7 @@ outputs:
     type: marp
 depends_on:
   - experiment-analyzer
+  - experiment-interpreter
 knowledge_context:
   - .knowledge/datasets/{active}/schema.md
 pipeline_step: null
@@ -33,6 +38,7 @@ Transform raw experiment analysis into a stakeholder-ready readout. This agent t
 
 ## Inputs
 - {{ANALYSIS_RESULTS}}: Path to the Experiment Analyzer output (`working/experiment_analysis_*.md`). Must contain all 8 questions answered.
+- {{INTERPRETATION}}: Path to the Experiment Interpreter output (`working/experiment_interpretation_*.md`). Carries the verdict (SHIP / SHIP WITH MONITORING / ABORT / LEARN / INVALID) anchored to the pre-registered rules.
 - {{AUDIENCE}}: (optional) Who will read this readout. One of:
   - `executive` — C-suite or VP. Lead with business impact, minimize methodology. (default)
   - `technical` — Data science or engineering team. Include statistical details and methodology.
@@ -73,21 +79,16 @@ Use the Story Architect agent pattern (Context → Tension → Resolution):
 - The hypothesis, the north star metric, and the business motivation
 - Keep it to 2-3 sentences. The audience knows their product.
 
-**Beat 2: The Headline** — What happened?
-- The overall treatment effect: direction, magnitude, significance
-- Present it as good news initially (if the overall is positive). This sets up the twist.
+**Beat 2: The Headline** — What happened? The overall treatment effect: direction, magnitude, significance.
 
-**Beat 3: The Twist** — But wait...
-- The segment analysis or guardrail finding that complicates the story
-- This is the emotional peak of the readout. The audience should feel: "Good thing we checked."
-- Include a visualization showing the segment-level divergence
+**Beat 3: What complicates it (if anything)** — A segment reversal, a guardrail hit, or a novelty fade that changes the decision. Include the chart that shows the divergence. If the checks were clean, say so in one sentence and move on; do not invent a twist.
 
 **Beat 4: The Full Picture** — What does this mean for each segment?
 - Per-segment results with guardrail checks
 - Clear WIN / TRADE-OFF / DEGRADED labels per segment
 
 **Beat 5: The Recommendation** — What should we do?
-- Ship / Do Not Ship / Iterate — per segment
+- SHIP / SHIP WITH MONITORING / ABORT / LEARN / INVALID — per segment, from {{INTERPRETATION}}
 - Ramp plan with specific percentages and monitoring cadence
 - Holdout design
 
@@ -118,19 +119,19 @@ Use the Storytelling agent pattern. Adapt to {{AUDIENCE}}:
 - Lead with the decision: "Ship regional playlists to existing users. Do not ship to new users."
 - Business impact in dollars/users
 - Skip methodology details. Include a "Methodology appendix" link at the bottom.
-- Total length: 1 page + charts
+- Length: what an executive reads before a decision meeting; every paragraph must change what they decide.
 
 **For `technical`:**
 - Lead with the finding: "Simpson's paradox detected — overall +14% masks segment-level divergence"
 - Include all statistical details: test type, assumptions, power, effect sizes
 - Include code references and reproducibility notes
-- Total length: 3-5 pages + charts
+- Length: complete enough to reproduce the analysis.
 
 **For `cross-functional`:**
 - Lead with the story: "We tested regional playlists. The headline looked great — until we checked the segments."
 - Balance business impact with just enough methodology to build trust
 - Include the key chart that shows the divergence
-- Total length: 2-3 pages + charts
+- Length: the story plus the one chart and the one method note that earn trust.
 
 ### Step 5: Build the Ramp Plan
 
@@ -168,7 +169,7 @@ Assemble all components into the final deliverable(s).
 # Experiment Readout: [Experiment Name]
 **Date:** {{DATE}}
 **Audience:** {{AUDIENCE}}
-**Status:** [Ship with conditions / Do not ship / Iterate]
+**Status:** [SHIP / SHIP WITH MONITORING / ABORT / LEARN / INVALID]
 
 ---
 
@@ -178,7 +179,7 @@ Assemble all components into the final deliverable(s).
 ## Decision
 | Segment | Decision | Key Evidence |
 |---------|----------|-------------|
-| [segment] | SHIP / DO NOT SHIP / ITERATE | [one line] |
+| [segment] | SHIP / SHIP WITH MONITORING / ABORT / LEARN / INVALID | [one line] |
 
 ---
 
@@ -188,7 +189,7 @@ Assemble all components into the final deliverable(s).
 [Beat 1: Context — 2-3 sentences]
 
 ### What We Found
-[Beat 2: Headline result + Beat 3: The twist]
+[Beat 2: Headline result + Beat 3: complications, if any]
 [Key visualization: segment breakdown chart]
 
 ### What It Means
@@ -234,9 +235,9 @@ Slide structure:
 
 ## Validation
 Before presenting the readout:
-1. **Decision matches analysis** — the recommendation in the readout must match the Experiment Analyzer's Q7 output. If they differ, reconcile.
+1. **Decision matches the interpreter's verdict** — the readout's decision table uses the interpreter's SHIP / ABORT / LEARN / INVALID classification (with SHIP WITH MONITORING where the interpreter says so). If the analyzer's evidence and the interpreter's verdict differ, the verdict wins and the readout says why.
 2. **All segments covered** — if the Analyzer found segment-level differences, the readout must address EACH segment with a specific decision. "Ship to everyone" when segments diverge is wrong.
 3. **Ramp plan exists** — if shipping, a ramp plan with stages and stop criteria must be included. "Just ship it" is not a plan.
 4. **Visualizations support the narrative** — every key claim should have a supporting chart. Don't make the audience take your word for it.
 5. **Follow-up experiments listed** — what's left to learn? An analysis that claims to have answered everything is suspicious.
-6. **Audience-appropriate** — executive readouts should be under 1 page (plus charts). Technical readouts should include methodology. Check that the detail level matches {{AUDIENCE}}.
+6. **Audience-appropriate** — executives get the decision and its evidence, not methodology; technical readers get methodology. Check that the detail level matches {{AUDIENCE}}.

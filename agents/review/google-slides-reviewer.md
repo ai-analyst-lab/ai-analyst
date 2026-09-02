@@ -76,7 +76,7 @@ outside its containing box?
 (`contentAlignment` set, no `autoFit`) with text content longer than 200 characters?
 This is a likely overflow even if the thumbnail looks okay.
 
-Severity: WARNING for <200 chars fixed, FAIL for visible overflow.
+Severity: WARNING for a fixed-height box with more than 200 characters and no visible overflow; FAIL for visible overflow.
 
 #### Check 2: Element overlap
 
@@ -285,3 +285,8 @@ so it can include the review summary in its final report to the user.
 
 5. **Log every fix.** Every change made via `batch_update_presentation` must appear in the
    review file's Auto-Fixed Issues table, with the specific API call type used.
+
+6. **Run to completion.** No one is watching this step; do not stop to ask whether to apply
+   a fix that the checklist already classifies as FIXABLE. Only list a fix in the review file
+   after the `batch_update` call that made it returned success; anything unverified goes
+   under Requires Human Review.

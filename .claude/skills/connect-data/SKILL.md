@@ -1,7 +1,7 @@
 ---
 name: connect-data
 description: |
-  Guided wizard to connect a new dataset to the AI Analyst system. Use this skill whenever the user wants to add a new data source, connect a database, set up data access, or configure a new dataset for analysis. This skill handles the full connection workflow: choosing connection type (CSV, DuckDB, PostgreSQL, Snowflake, BigQuery, Databricks), collecting credentials, validating connectivity, profiling schema, and setting up the knowledge brain. Trigger this skill when users say things like "/connect-data", "connect my database", "add a new dataset", "set up my data", "I have a database I want to analyze", "can you connect to my Postgres/BigQuery/Snowflake", "I need to add CSV files", "how do I get my data into this system", or "connect to my warehouse". Also trigger after first-run welcome when users need to set up their first dataset, or after /switch-dataset when the target dataset doesn't exist yet. This is the primary entry point for all new data connections — always offer this when users mention having data they want to analyze but haven't connected yet.
+  Guided wizard to connect a new dataset to the AI Analyst system. Use this skill whenever the user wants to add a new data source, connect a database, set up data access, or configure a new dataset for analysis. This skill handles the full connection workflow: choosing connection type (CSV, DuckDB, PostgreSQL, Snowflake, BigQuery, Databricks, Redshift, SQL Server, MySQL), collecting credentials, validating connectivity, profiling schema, and setting up the knowledge brain. Trigger this skill when users say things like "/connect-data", "connect my database", "add a new dataset", "set up my data", "I have a database I want to analyze", "can you connect to my Postgres/BigQuery/Snowflake", "I need to add CSV files", "how do I get my data into this system", or "connect to my warehouse". Also trigger after first-run welcome when users need to set up their first dataset, or after /switch-dataset when the target dataset doesn't exist yet. This is the primary entry point for all new data connections — always offer this when users mention having data they want to analyze but haven't connected yet.
 ---
 > Once a CSV folder is registered, it is SQL-queryable through `ConnectionManager().query(sql)`:
 > each file becomes a table named after its file stem (`orders.csv` -> `orders`), and the
@@ -102,7 +102,7 @@ Use `ConnectionManager` from `helpers/data/connection_manager.py`:
 3. If fails: show error, offer to retry or edit config
 4. If passes: proceed to schema profiling
 
-**Why ConnectionManager?** It handles connection pooling, error handling, and provides a consistent interface across all warehouse types (CSV, DuckDB, Postgres, BigQuery, Snowflake). Do not bypass it with psycopg2, pandas, or warehouse-specific clients.
+**Why ConnectionManager?** It handles connection pooling, error handling, and provides a consistent interface across every supported source type. Do not bypass it with psycopg2, pandas, or warehouse-specific clients.
 
 ### Step 5: Profile Schema
 **Use ConnectionManager methods — do not write raw SQL for schema introspection.**

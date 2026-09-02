@@ -187,11 +187,6 @@ mcp__google-slides__authorize()
 
 5. **After you see "Authentication successful" in browser**, tell me "done" and I'll verify
 
-**Common pitfalls to avoid:**
-- Don't click the URL directly (use copy-paste)
-- Don't skip adding yourself as a test user (causes "app not verified" error)
-- Don't expect instant auth (OAuth redirect can take 5-10 seconds)
-
 ### Step 5: Verify After Re-auth
 
 After user confirms auth completed, repeat Step 3 (create test document/presentation).
@@ -295,128 +290,8 @@ This is non-critical; the test resource causes no harm.
 
 ## Rules
 
-1. **Detect configuration before checking credentials.** Read `.mcp.json` first to know which MCP type you're working with. Don't assume.
+1. **Always use CREATE for test calls, never READ.** Creating a resource only requires valid auth. Reading requires auth + permissions on that specific resource.
 
-2. **Check ALL possible credential locations.** Different installations use different paths. Try the standard location first, then alternatives.
+2. **Extract email from credential filename for workspace-mcp.** Don't ask the user for their email. The exact string in the filename is what must be passed to API calls.
 
-3. **Always use CREATE for test calls, never READ.** Creating a resource only requires valid auth. Reading requires auth + permissions on that specific resource.
-
-4. **Extract email from credential filename for workspace-mcp.** Don't ask the user for their email. The exact string in the filename is what must be passed to API calls.
-
-5. **Run preflight BEFORE any substantive work.** Catch auth issues in 30 seconds, not after 5 minutes of chart generation.
-
-6. **One auth attempt, then clear explanation.** If re-auth fails, provide diagnostics and actionable next steps. Don't retry repeatedly.
-
-7. **Report auth status clearly.** End every preflight with one of:
-   - `Auth: OK ({server_type})` → proceed
-   - `Auth: FAILED — {specific_reason}` → block with clear remediation steps
-
-8. **Clean up test resources if trivial.** Delete test documents if a delete API exists, but don't block if cleanup fails.
-
-9. **Distinguish auth errors from other errors.** 403 on a specific document ≠ auth failure. 401 = auth failure. Quota exceeded = API config issue, not auth issue.
-
-10. **Prefer restart over complex troubleshooting.** Most issues (stale tokens, port conflicts, cached credentials) resolve with a Claude Code restart.
-
----
-
-## Example Workflows
-
-### Example 1: google-docs MCP, auth valid (fast path)
-
-```
-User: "Export my analysis to a Google Doc"
-
-Step 1: Detect config
-→ cat .mcp.json | grep -A3 google
-→ Found "google-docs" server
-
-Step 2: Check credentials
-→ ls ~/.claude/mcp-servers/google-docs-mcp-server/
-→ Found token.json (784 bytes, modified today)
-
-Step 3: Test API
-→ mcp__google-docs__create_document(title="Auth Preflight Test")
-→ Success! Document created: 1XYZ...
-
-Result: Auth: OK (google-docs), proceeding with Google Doc export
-Duration: 15 seconds
-```
-
-### Example 2: Missing credentials (slow path, re-auth required)
-
-```
-User: "Create a Google Slides deck"
-
-Step 1: Detect config
-→ .mcp.json shows "google-slides" server
-
-Step 2: Check credentials
-→ ls ~/.claude/mcp-servers/google-slides-mcp-server/
-→ Directory exists but no token.json found
-
-Step 4: Re-authenticate
-→ mcp__google-slides__authorize()
-→ Display auth URL with copy-paste instructions
-User: [completes OAuth flow in browser]
-User: "done"
-
-Step 5: Verify
-→ mcp__google-slides__create_presentation(title="Auth Preflight Test")
-→ Success! Presentation created: 1ABC...
-
-Result: Auth: OK (google-slides), proceeding with deck creation
-Duration: 2 minutes (includes user auth time)
-```
-
-### Example 3: workspace-mcp with email extraction
-
-```
-User: "Upload my charts to Google Drive"
-
-Step 1: Detect config
-→ .mcp.json shows "google-workspace" server
-
-Step 2: Check credentials
-→ ls ~/.google_workspace_mcp/credentials/
-→ Found john.doe@gmail.com.json
-→ Extract email: john.doe@gmail.com (exact string including dots)
-
-Step 3: Test API
-→ mcp__google-workspace__create_doc(
-    user_google_email="john.doe@gmail.com",
-    title="Auth Preflight Test"
-  )
-→ Success! Doc created
-
-Result: Auth: OK (google-workspace, john.doe@gmail.com)
-Duration: 20 seconds
-```
-
----
-
-## Why This Skill Matters
-
-**Without auth preflight (common failure mode):**
-1. User: "Create a Google Slides deck for my analysis"
-2. You: Parse findings, generate 5 charts, write narrative (5 minutes)
-3. You: Attempt mcp__google-slides__create_presentation()
-4. Error: "Authentication needed"
-5. User: Completes auth (2 minutes)
-6. You: Start over, re-generate everything (5 more minutes)
-7. Total: 12 minutes, poor UX
-
-**With auth preflight (this skill):**
-1. User: "Create a Google Slides deck for my analysis"
-2. You: Run auth preflight (30 seconds)
-3. Detect: No valid auth
-4. User: Completes auth (2 minutes)
-5. You: Generate charts + deck smoothly (5 minutes)
-6. Total: 7.5 minutes, excellent UX
-
-**Value proposition:**
-- Saves 5+ minutes per task by avoiding rework
-- Provides clear, actionable error messages instead of cryptic API errors
-- Lets user handle auth upfront while context is fresh
-- Prevents frustration of wasted work
-
-The 30-second preflight investment protects hours of cumulative time across all Google-dependent workflows.
+3. **One auth attempt, then clear explanation.** If re-auth fails, provide diagnostics and actionable next steps. Don't retry repeatedly.

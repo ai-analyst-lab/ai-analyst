@@ -18,7 +18,7 @@ AI Analyst uses for every query, so every result is traced and logged. This wiza
 connection details, writes credentials safely, registers the dataset, and then **proves the session
 is actually on the warehouse** (not the local practice copy) before it will report success.
 
-This is deliberately native-first. The old MCP server (`snowflake-labs-mcp` via `uvx`) is a separate,
+This is deliberately native-first. The MCP server (`snowflake-labs-mcp` via `uvx`) is a separate,
 optional tool for interactive ad-hoc queries and is kept in the Appendix. The analyst does not query
 through the MCP, so setting up only the MCP leaves the analyst unconnected. Set up the native path
 first.
@@ -84,7 +84,7 @@ use_remote: true
 ```
 
 ## Step 4: Verify you are LIVE on Snowflake (hard gate)
-This is the step the old flow was missing. Connect through `ConnectionManager` and confirm the session
+Connect through `ConnectionManager` and confirm the session
 is really on the warehouse, not the local DuckDB fallback. Run:
 ```bash
 AAP_USE_REMOTE=1 python3 - <<'PY'

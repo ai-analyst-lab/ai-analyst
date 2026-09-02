@@ -16,9 +16,9 @@ Apply this skill after the Data Explorer agent inventories available data, when 
 
 ### Gap Detection Process
 
-**IMPORTANT: Always follow this exact sequence. Never skip Step 1.**
+Define requirements (Step 1) before inventorying what exists; starting from "what we have" is how gaps get missed.
 
-#### Step 1: Define Data Requirements (ALWAYS START HERE)
+#### Step 1: Define Data Requirements
 
 Before checking what data exists, list every data point the analysis NEEDS. This ensures you don't miss gaps.
 

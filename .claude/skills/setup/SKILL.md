@@ -10,7 +10,7 @@ Run a 4-phase conversational interview that populates the knowledge system
 from the user's real context. Turns a blank `.knowledge/` directory into a
 fully configured analytical environment.
 
-This skill is about DOING, not describing. Every "Outputs" section contains tool-use instructions you must execute immediately, not descriptions of what should happen later.
+Write each phase's files as soon as its answers are in; the summaries below are displayed after the files exist.
 
 ## Parameters
 
@@ -96,7 +96,7 @@ Summarize the report in three lines (what is configured, what is missing, what i
 helper import fails, stop and fix the environment (`pip install -e ".[dev]"`) before continuing.
 If setup state shows a partial previous run, offer to resume it instead of starting over.
 
-**IMPORTANT**: Ask Group 1 questions (below). STOP after asking them. Wait for the user's response. Do NOT ask Group 2 questions yet.
+Ask Group 1, then wait for the answer before Group 2.
 
 **Group 1 (ask these now, then wait):**
 1. "What's your role? (e.g., Product Manager, Data Scientist, Engineer,
@@ -215,8 +215,6 @@ Then proceed to Phase 2.
    - **Cloud warehouse** (Snowflake, BigQuery, Postgres, Databricks)
    - **Nothing yet** — I want to use a sample dataset"
 
-STOP. Wait for response before continuing.
-
 ### Branch Logic
 
 The user's answer to Group 1 determines what happens next.
@@ -290,15 +288,11 @@ just numbers.
 2. "What are the 2-3 metrics your team cares about most? (e.g., conversion
    rate, MRR, DAU, retention, NPS)"
 
-Wait for response.
-
 **Group 2 (ask after Group 1 response, optional):**
 3. "What business question or problem are you trying to answer right now?
    This helps me prioritize what to explore first." _(optional — user can skip)_
 4. "Are there any current OKRs or goals I should know about?"
    _(optional)_
-
-Wait for response.
 
 **Group 3 (ask only if domain warrants it, optional):**
 5. "Any key segments I should know about? (e.g., free vs paid users,
@@ -401,8 +395,6 @@ match what the user actually wants.
    - **Minimal** — text-first, charts only when essential
    - **Standard** — a chart for each key finding
    - **Chart-heavy** — visualize everything possible"
-
-Wait for response.
 
 **Group 2 (ask after Group 1 response, optional):**
 3. "How do you usually share results? (helps me format exports)
@@ -672,20 +664,15 @@ Wait for user response. If "finish", invoke Connect Data skill. If "continue", p
 
 ## Anti-Patterns
 
-1. **Never dump all questions at once.** Ask 2-3, then STOP and await response.
-2. **Never block on optional fields.** If the user says "skip" or "later",
-   record `null` and move on.
-3. **Never overwrite existing files silently.** If profile.md exists when
+1. **Never overwrite existing files silently.** If profile.md exists when
    starting Phase 1, warn: "You already have a profile. Running setup will
    overwrite it. Continue? (yes/no)" Wait for confirmation.
-4. **Never store credentials in setup-state.yaml.** Credentials go through
+2. **Never store credentials in setup-state.yaml.** Credentials go through
    `/connect-data` and are stored in manifest.yaml or environment variables only.
-5. **Never skip file writes.** Every "File Creation" section is mandatory. Use
-   Write/Edit tools immediately after collecting the required information.
-6. **Never skip checkpoints.** After creating files, verify them with Read tool
+3. **Never skip checkpoints.** After creating files, verify them with Read tool
    before proceeding to the next phase.
-7. **Never run Phase 3+ without Phase 1 first** (unless resuming from partial state).
-8. **Never combine reset tiers.** `/setup reset` is always Tier 1. Tier 2
+4. **Never run Phase 3+ without Phase 1 first** (unless resuming from partial state).
+5. **Never combine reset tiers.** `/setup reset` is always Tier 1. Tier 2
    requires the exact phrase "reset everything".
 
 ---

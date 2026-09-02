@@ -38,7 +38,7 @@ The 18-step pipeline is grouped into five phases for summary purposes:
 - **Analysis design:** [confirmed / pending]
 - **Files:**
   - `outputs/question_brief_{{DATE}}.md`
-  - `working/hypotheses_{{DATASET_NAME}}.md`
+  - `outputs/hypothesis_doc_{{DATE}}.md`
   - `working/analysis_design_spec.md`
 
 ---
@@ -70,10 +70,10 @@ The 18-step pipeline is grouped into five phases for summary purposes:
 - **Opportunity size:** [dollar or percentage impact if sized, or "N/A"]
 - **Validation:** PASS / FAIL / PASS WITH CAVEATS
 - **Files:**
-  - `working/descriptive_{{DATASET_NAME}}.md`
-  - `working/root_cause_{{DATASET_NAME}}.md`
-  - `working/validation_{{DATASET_NAME}}.md`
-  - `working/opportunity_sizing_{{DATASET_NAME}}.md`
+  - `outputs/analysis_report_{{DATE}}.md`
+  - `working/investigation_{{DATASET_NAME}}.md`
+  - `outputs/validation_{{DATASET_NAME}}_{{DATE}}.md`
+  - `working/sizing_{{OPPORTUNITY_SLUG}}.md`
 
 ---
 
@@ -83,7 +83,7 @@ The 18-step pipeline is grouped into five phases for summary purposes:
 - **Story arc:** [Context-Tension-Resolution summary in one sentence]
 - **Story beats:** [count] beats
 - **Narrative coherence review:** APPROVED / APPROVED WITH FIXES / NEEDS REVISION
-- **Charts generated:** [count] charts ([count] base + [count] slide variants)
+- **Charts generated:** [count] charts
 - **Design review:** APPROVED / APPROVED WITH FIXES / NEEDS REVISION
 - **Charts revised:** [count] charts re-generated after design review
 - **Files:**

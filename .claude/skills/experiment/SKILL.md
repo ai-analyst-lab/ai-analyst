@@ -96,7 +96,7 @@ Invoke as `/experiment [mode]` or trigger on experiment-related intents:
 
 ### `/experiment report`
 **Purpose:** Generate markdown report from analysis results.
-**Agent:** `agents/experiments/experiment-readout.md` (upgraded)
+**Agent:** `agents/experiments/experiment-readout.md`
 **Flow:**
 1. Read analysis results (structured JSON, not re-computing)
 2. Read experiment.yaml for context
