@@ -172,3 +172,117 @@ class TestSafeCheckOutliers:
         series = pd.Series(range(100))
         result = safe_check_outliers(series, method="zscore")
         assert result["method"] == "zscore"
+
+
+# ---------------------------------------------------------------------------
+# sanity_check / anomaly_scan / freshness_check (moved from the
+# data-quality-check skill)
+# ---------------------------------------------------------------------------
+
+from datetime import date
+
+from helpers.validation.data_quality_extras import (  # noqa: E402
+    anomaly_scan,
+    freshness_check,
+    sanity_check,
+)
+
+
+class TestSanityCheck:
+    def test_normal_column_has_stats_and_no_issues(self):
+        df = pd.DataFrame({"revenue": [10.0, 12.0, 11.0, 13.0, 12.5, 11.5]})
+        stats, issues = sanity_check(df, "revenue")
+        assert set(stats) == {"mean", "median", "std", "min", "max", "p1", "p99", "skew"}
+        assert stats["min"] == 10.0 and stats["max"] == 13.0
+        assert issues == []
+
+    def test_bounded_rate_outside_unit_interval_is_blocker(self):
+        df = pd.DataFrame({"conversion_rate": [0.1, 0.5, 1.4, 0.3]})
+        _, issues = sanity_check(df, "conversion_rate")
+        assert issues and issues[0][0] == "BLOCKER"
+        assert "outside [0,1]" in issues[0][1]
+
+    def test_highly_skewed_column_is_warning(self):
+        df = pd.DataFrame({"amount": [1.0] * 30 + [10_000.0]})
+        _, issues = sanity_check(df, "amount")
+        assert ("WARNING" in {s for s, _ in issues})
+        assert any("skewed" in m for _, m in issues)
+
+    def test_empty_column_returns_nan_stats_and_warning(self):
+        df = pd.DataFrame({"x": [None, None]})
+        stats, issues = sanity_check(df, "x")
+        assert all(np.isnan(v) for v in stats.values())
+        assert issues == [("WARNING", "x has no numeric values to check")]
+
+
+class TestAnomalyScan:
+    @staticmethod
+    def _series(values):
+        return pd.DataFrame({
+            "date": pd.date_range("2025-01-01", periods=len(values), freq="D"),
+            "orders": values,
+        })
+
+    def test_flat_series_has_no_anomalies(self):
+        df = self._series([100 + (i % 3) for i in range(30)])
+        result = anomaly_scan(df, "date", "orders", window=7)
+        assert result["anomalies"] == []
+        assert result["summary"] == "0 anomalies in orders"
+
+    def test_spike_beyond_threshold_is_detected_with_direction(self):
+        values = [100 + (i % 3) for i in range(30)]
+        values[20] = 400
+        result = anomaly_scan(self._series(values), "date", "orders", window=7, threshold=2.0)
+        spikes = [a for a in result["anomalies"] if a["direction"] == "spike"]
+        assert len(spikes) == 1
+        assert spikes[0]["value"] == 400
+        assert spikes[0]["pct_above_normal"] > 100
+
+    def test_threshold_controls_sensitivity(self):
+        values = [100 + (i % 3) for i in range(30)]
+        values[15] = 106  # mild bump: ~2.5 std above the tiny rolling std
+        df = self._series(values)
+        loose = anomaly_scan(df, "date", "orders", window=7, threshold=6.0)
+        tight = anomaly_scan(df, "date", "orders", window=7, threshold=1.0)
+        assert len(loose["anomalies"]) <= len(tight["anomalies"])
+        assert len(loose["anomalies"]) == 0
+
+    def test_empty_frame(self):
+        df = pd.DataFrame({"date": pd.to_datetime([]), "orders": []})
+        result = anomaly_scan(df, "date", "orders")
+        assert result["anomalies"] == []
+        assert "no rows" in result["summary"]
+
+
+class TestFreshnessCheck:
+    def test_daily_data_refreshed_yesterday_is_ok(self):
+        df = pd.DataFrame({"d": pd.date_range("2026-01-01", periods=20, freq="D")})
+        out = freshness_check(df, "d", current_date=date(2026, 1, 21))
+        assert out["cadence"] == "daily"
+        assert out["status"] == "OK"
+        assert out["days_ago"] == 1
+
+    def test_daily_data_five_days_old_is_stale(self):
+        df = pd.DataFrame({"d": pd.date_range("2026-01-01", periods=20, freq="D")})
+        out = freshness_check(df, "d", current_date=date(2026, 1, 25))
+        assert out["status"] == "WARNING"
+        assert "expected daily refresh" in out["note"]
+
+    def test_weekly_cadence_inferred(self):
+        df = pd.DataFrame({"d": pd.date_range("2026-01-05", periods=8, freq="7D")})
+        out = freshness_check(df, "d", current_date=date(2026, 3, 1))
+        assert out["cadence"] == "weekly"
+        assert out["status"] == "OK"
+
+    def test_old_data_is_historical_not_stale(self):
+        df = pd.DataFrame({"d": pd.date_range("2024-01-01", periods=30, freq="D")})
+        out = freshness_check(df, "d", current_date=date(2026, 1, 1))
+        assert out["cadence"] == "static/historical"
+        assert out["status"] == "OK"
+        assert out["max_date"] == "2024-01-30"
+
+    def test_no_parseable_dates(self):
+        df = pd.DataFrame({"d": ["not a date", None]})
+        out = freshness_check(df, "d", current_date=date(2026, 1, 1))
+        assert out["status"] == "WARNING"
+        assert out["max_date"] is None

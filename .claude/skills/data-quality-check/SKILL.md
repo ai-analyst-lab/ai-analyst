@@ -203,26 +203,9 @@ for col in numeric_columns:
 For domain-specific sanity checks (impossible values, suspicious distributions):
 
 ```python
-def sanity_check(df, column):
-    """Run statistical sanity checks on a numeric column."""
-    stats = {
-        "mean": df[column].mean(),
-        "median": df[column].median(),
-        "std": df[column].std(),
-        "min": df[column].min(),
-        "max": df[column].max(),
-        "p1": df[column].quantile(0.01),
-        "p99": df[column].quantile(0.99),
-        "skew": df[column].skew(),
-    }
+from helpers.validation.data_quality_extras import sanity_check
 
-    issues = []
-    if column in ["conversion_rate", "percentage"] and (stats["max"] > 1 or stats["min"] < 0):
-        issues.append(("BLOCKER", f"{column} has values outside [0,1] range"))
-    if abs(stats["skew"]) > 3:
-        issues.append(("WARNING", f"{column} is highly skewed (skew={stats['skew']:.1f})"))
-
-    return stats, issues
+stats, issues = sanity_check(df, "conversion_rate")   # issues: [(severity, message), ...]
 ```
 
 **Severity rules:**
@@ -235,49 +218,12 @@ def sanity_check(df, column):
 For each date-indexed metric column in the dataset:
 
 ```python
-import pandas as pd
-import numpy as np
+from helpers.validation.data_quality_extras import anomaly_scan
 
-def anomaly_scan(df, date_col, metric_col, window=14, threshold=2.0):
-    """Detect time-series anomalies using rolling mean +/- std bands.
-
-    IMPORTANT: Aggregate to daily/weekly granularity FIRST.
-    Do NOT run on raw event rows.
-
-    Args:
-        df: DataFrame with date and metric columns (pre-aggregated).
-        date_col: Name of the date column.
-        metric_col: Name of the metric column.
-        window: Rolling window size in periods. Default: 14.
-        threshold: Number of standard deviations for anomaly band. Default: 2.0.
-
-    Returns:
-        Dict with 'anomalies' (list of dicts) and 'summary' (str).
-    """
-    ts = df.sort_values(date_col).copy()
-    ts["rolling_mean"] = ts[metric_col].rolling(window, min_periods=3).mean()
-    ts["rolling_std"] = ts[metric_col].rolling(window, min_periods=3).std()
-    ts["upper"] = ts["rolling_mean"] + threshold * ts["rolling_std"]
-    ts["lower"] = ts["rolling_mean"] - threshold * ts["rolling_std"]
-
-    anomalies = []
-    for _, row in ts.iterrows():
-        if pd.notna(row["upper"]) and row[metric_col] > row["upper"]:
-            pct = ((row[metric_col] - row["rolling_mean"]) / row["rolling_mean"]) * 100
-            anomalies.append({
-                "date": row[date_col], "value": row[metric_col],
-                "direction": "spike", "pct_above_normal": round(pct, 1)
-            })
-        elif pd.notna(row["lower"]) and row[metric_col] < row["lower"]:
-            pct = ((row["rolling_mean"] - row[metric_col]) / row["rolling_mean"]) * 100
-            anomalies.append({
-                "date": row[date_col], "value": row[metric_col],
-                "direction": "drop", "pct_below_normal": round(pct, 1)
-            })
-    return {"anomalies": anomalies, "summary": f"{len(anomalies)} anomalies in {metric_col}"}
+result = anomaly_scan(daily_df, "date", "orders", window=14, threshold=2.0)   # result["anomalies"], result["summary"]
 ```
 
-**Sequencing:** Run AFTER basic data profiling in the Data Explorer step, not before. Requires aggregated data.
+**Sequencing:** Run after basic data profiling in the Data Explorer step, on data already aggregated to daily or weekly granularity (rolling bands on raw event rows are meaningless).
 
 **Severity rules:**
 - **WARNING**: Any anomaly detected — present as starting point for investigation
@@ -297,61 +243,9 @@ These are observations, not conclusions — present as starting points for inves
 For each table with a date/timestamp column:
 
 ```python
-import pandas as pd
-from datetime import datetime, timedelta
+from helpers.validation.data_quality_extras import freshness_check
 
-def freshness_check(df, date_col, current_date=None):
-    """Check data freshness and infer data cadence.
-
-    Args:
-        df: DataFrame with a date column.
-        date_col: Name of the date/timestamp column.
-        current_date: Override for current date (for testing). Default: today.
-
-    Returns:
-        Dict with 'max_date', 'days_ago', 'cadence', 'status'.
-    """
-    current_date = current_date or datetime.now().date()
-    dates = pd.to_datetime(df[date_col]).dt.date
-    max_date = dates.max()
-    days_ago = (current_date - max_date).days
-
-    # Infer cadence from median gap between consecutive distinct dates
-    distinct_dates = sorted(dates.dropna().unique())
-    if len(distinct_dates) >= 2:
-        gaps = [(distinct_dates[i+1] - distinct_dates[i]).days
-                for i in range(len(distinct_dates) - 1)]
-        median_gap = sorted(gaps)[len(gaps) // 2]
-
-        if median_gap <= 1.5:
-            cadence = "daily"
-            stale_threshold = 2
-        elif median_gap <= 8:
-            cadence = "weekly"
-            stale_threshold = 10
-        else:
-            cadence = "static/historical"
-            stale_threshold = None
-    else:
-        cadence = "unknown"
-        stale_threshold = None
-
-    # Determine status
-    if days_ago > 90:
-        cadence = "static/historical"
-        status = "OK"
-        note = f"Historical dataset, date range ends {max_date}"
-    elif stale_threshold and days_ago > stale_threshold:
-        status = "WARNING"
-        note = f"Data is {days_ago} days old (expected {cadence} refresh)"
-    else:
-        status = "OK"
-        note = f"Data is {days_ago} days old"
-
-    return {
-        "max_date": str(max_date), "days_ago": days_ago,
-        "cadence": cadence, "status": status, "note": note
-    }
+fresh = freshness_check(df, "order_date")   # fresh["max_date"], fresh["days_ago"], fresh["cadence"], fresh["status"], fresh["note"]
 ```
 
 **Output format:**

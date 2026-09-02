@@ -19,7 +19,7 @@ Eight packages. Import as `from helpers.<package>.<module> import ...`.
 | Module | What it provides |
 |---|---|
 | `helpers/validation/cross_verification.py` | Cross-verification (Types A-D): `run_boundary_checks()`, `run_parts_to_whole()`, `run_ratio_recompute()`, `run_algebraic_identity()`, `score_cross_verification()`, `score_reproducibility()`, `build_raw_provenance()`, `format_verification_table()`, `safe_run_verification()` |
-| `helpers/validation/data_quality_extras.py` | Data quality utilities: `check_null_concentration()`, `check_outliers()`, `safe_check_outliers()` |
+| `helpers/validation/data_quality_extras.py` | Data quality utilities: `check_null_concentration()`, `check_outliers()`, `safe_check_outliers()`, `sanity_check()`, `anomaly_scan()`, `freshness_check()` |
 | `helpers/validation/tolerance_config.py` | Warehouse-specific tolerance adjustments: `ToleranceConfig` dataclass, `merge_with_base()`, `for_connection_type()` factory, `detect_cost_sensitivity()`, `get_query_budget()` |
 | `helpers/validation/reproducibility.py` | Reproducibility checks: `reproducibility_check()` (runs query N times, compares checksums), `diagnose_variance()` (per-warehouse variance detection) |
 | `helpers/validation/structural_validator.py` | Schema/PK/completeness checks for validation layer 1 |
@@ -88,3 +88,9 @@ Eight packages. Import as `from helpers.<package>.<module> import ...`.
 | `helpers/pipeline/health_check.py` | System health: setup state, knowledge integrity, data connectivity, imports |
 | `helpers/pipeline/pipeline_state.py` | V1→V2 pipeline state migration: `detect_schema_version()`, `migrate_v1_to_v2()` |
 | `helpers/pipeline/schema_migration.py` | Schema migration framework (inert in V2): `migrate_if_needed()` |
+
+## Scripts
+
+| Script | What it does |
+|--------|-------------|
+| `scripts/token_report.py` | Per-skill and per-session token usage and estimated cost from Claude Code session transcripts (`--since`, `--json`, `--rates`); counts only, never prompt content |
