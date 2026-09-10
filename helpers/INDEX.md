@@ -1,6 +1,24 @@
 # Helpers Index
 
-Eight packages. Import as `from helpers.<package>.<module> import ...`.
+Nine packages. Import as `from helpers.<package>.<module> import ...`.
+
+## helpers/evals/ - Evaluation control plane, records, graders, isolation, and reporting
+
+| Module | What it provides |
+|---|---|
+| `helpers/evals/schema.py` | Versioned case, trial, grade, and run-manifest contracts |
+| `helpers/evals/controller.py` | Runs public tasks, locks trial outputs, and permits grading only afterward |
+| `helpers/evals/workspace.py` | Sanitized child workspaces and the restricted Claude Code adapter |
+| `helpers/evals/normalization.py` | Unit-aware numeric parsing and explicit absolute or relative tolerance checks |
+| `helpers/evals/reliability.py` | Exact agreement, tolerance agreement, failures, blocks, and parse failures kept separate |
+| `helpers/evals/trace.py` | Receipt completeness and initial query-risk inspection |
+| `helpers/evals/triangulation.py` | Method-diverse grids and two-round disagreement analysis |
+| `helpers/evals/scorecard.py` | Non-flattening decision rule for act, investigate, abstain, or incomplete |
+| `helpers/evals/judges.py` | Human-label alignment tables and repeated judge stability |
+| `helpers/evals/comparison.py` | Compatibility gate for controlled system comparisons |
+| `helpers/evals/monitoring.py` | Evaluation history and system, data, suite, or evaluator change classification |
+| `helpers/evals/remote.py` | Narrow client contract for a course-controlled heldout grader |
+| `helpers/evals/cli.py` | Deterministic interface used by the evaluation skills |
 
 ## helpers/data/ — Connections, SQL dialects, schema and deep profiling, freshness, schema guard
 
@@ -35,7 +53,7 @@ Eight packages. Import as `from helpers.<package>.<module> import ...`.
 | Module | What it provides |
 |---|---|
 | `helpers/stats/analytics_helpers.py` | Higher-level analytics: `rfm_analysis()`, `concentration_analysis()`, `compare_segments()`, `score_findings()`, `control_chart()`, `synthesize_insights()` |
-| `helpers/stats/reliability_stats.py` | Deterministic reliability stats from N independent analysis runs (backs the `/reliability` skill): `parse_number()`, `compute()` (distinct values, range, CV, agreement rate, STABLE/DRIFT verdict), `write_report()`. CLI: `python3 helpers/stats/reliability_stats.py <run_dir>` → writes `stats.json` + `report.md`, appends to `.knowledge/reliability/log.jsonl` |
+| `helpers/stats/reliability_stats.py` | Compatibility wrapper around `helpers/evals/reliability.py`. It now reports successful trials, exact agreement, and tolerance agreement separately. |
 | `helpers/stats/forecast_helpers.py` | Time-series forecasting: `naive_forecast()`, `detect_seasonality()`, `exponential_smoothing()` |
 | `helpers/stats/stats_helpers.py` | Statistical tests: `two_sample_proportion_test()`, `two_sample_mean_test()`, `mann_whitney_test()`, `confidence_interval()`, `chi_squared_test()`, `bootstrap_ci()`, `format_significance()`, `interpret_effect_size()` |
 
@@ -82,6 +100,8 @@ Eight packages. Import as `from helpers.<package>.<module> import ...`.
 
 | Module | What it provides |
 |---|---|
+| `helpers/pipeline/controller.py` | Version-3 execution: explicit inputs, sequential isolated CLI workers, run-local artifacts, bounded retry, status, approvals and integrity-aware resume. Not an OS sandbox. |
+| `helpers/pipeline/compile_plan.py` | Compile named plans with explicit input bindings and output paths. Missing required producer inputs must have verified external bindings. Compilation is not analytical execution. |
 | `helpers/pipeline/dag.py` | Pipeline DAG resolver: `load_registry()`, `load_plans()`, `validate_registry()`, `resolve_plan()` (Kahn's algorithm, AND/OR gates), `ready_set()`, `init_run()`, `record_metrics()` |
 | `helpers/pipeline/error_helpers.py` | User-friendly errors: `friendly_error()`, `safe_query()`, `check_empty_dataframe()`, `suggest_column()` |
 | `helpers/pipeline/file_helpers.py` | Atomic writes, content hashing, YAML helpers: `atomic_write()`, `safe_read_yaml()`, `content_hash()`, `has_content_changed()` |

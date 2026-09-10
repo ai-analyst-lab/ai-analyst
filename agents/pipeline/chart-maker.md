@@ -28,6 +28,8 @@ outputs:
   - path: outputs/charts/{{OUTPUT_NAME}}.svg
     type: chart
 depends_on:
+  - story-architect
+optional_dependencies:
   - narrative-coherence-reviewer
 knowledge_context:
   - .knowledge/datasets/{active}/manifest.yaml

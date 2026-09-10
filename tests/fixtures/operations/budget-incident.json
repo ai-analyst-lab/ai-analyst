@@ -1,0 +1,1 @@
+{"incident":"budget_exceeded","run_status":"blocked","error_category":"budget_exceeded","policy_action":"stop","user_message":"The approved run budget was reached.","final_disposition":"human review before additional spend"}

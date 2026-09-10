@@ -1,14 +1,14 @@
 ---
 name: knowledge-bootstrap
-description: Load session context — active dataset, user profile, corrections, learnings, query archaeology, analysis history — into working memory. Run at the start of every session before answering any analytical question (even a one-line "what's our conversion rate?" needs the active dataset and logged corrections), and again after /connect-data or /switch-dataset. Handles missing files gracefully, so running it when unsure is harmless.
+description: Initialize session context, resolve the active dataset and context source, load resident instructions, and inventory the context available for question-specific selection. Run at the start of every session and again after /connect-data or /switch-dataset. Handles missing files gracefully, so running it when unsure is harmless.
 ---
 
 # Skill: Knowledge Bootstrap
 
 ## Purpose
-Initialize the knowledge subsystems for a new session. Loads setup state,
-dataset, user profile, integrations, org context, corrections, learnings,
-query archaeology, and analysis archive into working memory.
+Initialize the knowledge subsystems for a new session. Resolve the active context
+source, load the small resident layer, and inventory the selected and compiled
+context that can be supplied after the user asks a question.
 
 ## When to Use
 - At the start of any session
@@ -36,7 +36,11 @@ Read `.knowledge/active.yaml`.
   returns the in-repo `.knowledge/datasets/{active}/`. Load the dataset knowledge (semantic/, metrics/,
   schema.md, quirks.md) from `ctx_dir` either way - the same loader, the source just differs. Report the
   source ("context: local" or "context: team repo @ {ref}") in the readiness summary.
-- Load from `ctx_dir`:
+- Inventory from `ctx_dir`. Load `context-policy.yaml` and `custom_instructions.md`
+  as the resident layer. Do not load every metric, relationship, query, and correction
+  into the prompt by default.
+
+- Confirm these components are available:
 
 | File | Required | If Missing |
 |------|----------|------------|
@@ -68,17 +72,19 @@ fallback for it). It is DISTINCT from the per-session correction log at `.knowle
 loaded in Step 6 — that one is the local session log, this one is the communal store file. Load both;
 they are different subsystems.
 
-**Semantic layer (load before writing any SQL).** The `semantic/` files are the agent's map of the data,
-and the metric definitions are defined by MEANING, not by a stored number. Always load `entities.yaml`
-(authoritative source table + keys + grain + caveats per concept), `relationships.yaml` (verified joins +
-cardinality), and `custom_instructions.md` (cross-cutting business rules and gotchas — resolved root-first
-then `semantic/` per the layout rule above), they are small and always relevant. Consult `dimensions.yaml`
-(synonyms + real sample values), `measures.yaml`, `filters.yaml` (named filters), and `verified_queries.yaml`
-(blessed question -> SQL exemplars, likewise root-first then `semantic/`) when writing a query.
-Before writing SQL: resolve the question's metric against `metrics/index.yaml`, pick the authoritative
-table(s) and join(s) from `entities`/`relationships`, use real `sample_values` for filter literals (never
-invent them), reuse a named filter or a verified query when one matches, and apply the custom instructions
-and any standing corrections from `corrections.md`.
+**Question-specific context before SQL.** Once the exact analytical question is known, run
+`/context-trace`, or call `helpers.knowledge.context_manifest` directly. Load the selected items
+from that manifest, not the whole context store. Stop on a blocking conflict. Name stale or
+missing review evidence before relying on it. Resolve the question's metric, authoritative
+entities and relationships, real filter values, relevant verified queries, and applicable
+corrections from the selected bundle. A manifest proves what was supplied. It does not prove
+the worker used it. Reconcile cited items and SQL-use evidence after the analysis.
+
+The context store separates three delivery modes:
+
+- resident context is small and broadly applicable;
+- selected context is chosen for the question and worker;
+- compiled context is executable, deterministic context such as a metric compile block.
 
 **Schema generation if `schema.md` is missing (REQUIRED):**
 

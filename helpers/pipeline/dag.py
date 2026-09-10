@@ -19,9 +19,12 @@ Gate semantics (shared by ``resolve_plan`` and ``ready_set``):
   plan must be complete.
 - Only ``complete`` / ``completed`` / ``completed_legacy`` satisfy a gate.
   ``skipped``, ``degraded`` and ``failed`` do not.
+- ``optional_dependencies`` wait for a selected contribution to finish, but allow
+  failed/degraded/skipped contributions. They never satisfy required input bindings.
 - Dependencies on agents outside the plan are dropped (the pipeline warns and
   relies on pre-existing context); an OR-gate with no member in the plan is
-  vacuous.
+  vacuous. This is structural/legacy behavior only. The execution compiler requires
+  explicit external input bindings before it will allow omitted producers.
 """
 
 from __future__ import annotations
@@ -29,6 +32,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -39,6 +43,7 @@ from helpers.pipeline.file_helpers import atomic_write
 DEFAULT_REGISTRY = Path("agents/registry.yaml")
 DEFAULT_PLANS = Path(".claude/skills/run-pipeline/plans.md")
 COMPLETE_STATUSES = frozenset({"complete", "completed", "completed_legacy"})
+TERMINAL_STATUSES = COMPLETE_STATUSES | {"failed", "skipped", "degraded"}
 DEFAULT_PLAN = "full_presentation"
 
 
@@ -61,10 +66,13 @@ def load_registry(path: str | Path = DEFAULT_REGISTRY) -> dict[str, dict]:
     for entry in data.get("agents", []):
         name = entry.get("name")
         if not name:
-            continue
+            raise DagError("Registry entry is missing a name")
+        if name in registry:
+            raise DagError(f"Duplicate agent name: {name}")
         agent = dict(entry)
         agent["depends_on"] = list(agent.get("depends_on") or [])
         agent["depends_on_any"] = list(agent.get("depends_on_any") or [])
+        agent["optional_dependencies"] = list(agent.get("optional_dependencies") or [])
         if agent.get("critical") is None:
             agent["critical"] = True
         registry[name] = agent
@@ -90,7 +98,11 @@ def load_plans(path: str | Path = DEFAULT_PLANS) -> dict[str, dict]:
         if not heading or not fence:
             continue
         plan = yaml.safe_load(fence.group(1)) or {}
+        if heading.group(1) in plans:
+            raise DagError(f"Duplicate plan name: {heading.group(1)}")
         plan["agents"] = list(plan.get("agents") or [])
+        if len(plan["agents"]) != len(set(plan["agents"])):
+            raise DagError(f"Duplicate workers in plan: {heading.group(1)}")
         plans[heading.group(1)] = plan
     return plans
 
@@ -110,7 +122,7 @@ def validate_registry(registry: dict[str, dict], root: str | Path = ".") -> list
         file = agent.get("file")
         if not file or not (root / file).exists():
             errors.append(f"Agent file not found: {file or '<missing file field>'} ({name})")
-        for dep in agent["depends_on"] + agent["depends_on_any"]:
+        for dep in agent["depends_on"] + agent["depends_on_any"] + agent.get("optional_dependencies", []):
             if dep not in registry:
                 errors.append(f"Unknown dependency: {name} depends on {dep}")
     return errors
@@ -184,7 +196,7 @@ def resolve_plan(
     edges: dict[str, set[str]] = {}
     for name in agents:
         and_deps, or_deps = _in_plan_gates(registry[name], plan_set)
-        edges[name] = set(and_deps) | set(or_deps)
+        edges[name] = set(and_deps) | set(or_deps) | (set(registry[name].get("optional_dependencies", [])) & plan_set)
 
     def sort_key(name: str) -> tuple[float, str]:
         step = registry[name].get("pipeline_step")
@@ -215,6 +227,10 @@ def gates_satisfied(registry: dict[str, dict], plan_agents: list[str], state: di
         return False
     if or_deps and not any(_is_complete(state, d) for d in or_deps):
         return False
+    # Optional contributions must finish if selected, but need not succeed.
+    for dep in registry[name].get("optional_dependencies", []):
+        if dep in plan_agents and state.get("agents", {}).get(dep, {}).get("status") not in TERMINAL_STATUSES:
+            return False
     return True
 
 
@@ -294,8 +310,18 @@ def init_run(
 
     base = Path(base)
     date = date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", dataset) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date):
+        raise DagError("Dataset and date must be safe path components")
     run_id = f"{date}_{dataset}_{slugify(question)}"
     run_dir = base / run_id
+    base.mkdir(parents=True, exist_ok=True)
+    while True:
+        try:
+            run_dir.mkdir(exist_ok=False)
+            break
+        except FileExistsError:
+            run_id = f"{date}_{dataset}_{slugify(question)}_{uuid.uuid4().hex[:12]}"
+            run_dir = base / run_id
     (run_dir / "working").mkdir(parents=True, exist_ok=True)
     (run_dir / "outputs").mkdir(parents=True, exist_ok=True)
 
@@ -329,12 +355,19 @@ def init_run(
         root = base.parent.parent if base.name == "runs" and base.parent.name == "working" else base.parent
     latest = Path(root) / "working" / "latest"
     latest.parent.mkdir(parents=True, exist_ok=True)
-    if latest.is_symlink() or latest.exists():
-        if latest.is_dir() and not latest.is_symlink():
-            raise DagError(f"{latest} is a real directory, not a symlink; move it aside first")
-        latest.unlink()
+    if latest.exists() and not latest.is_symlink():
+        raise DagError(f"{latest} exists and is not a symlink; move it aside first")
     target = os.path.relpath(run_dir.resolve(), latest.parent.resolve())
-    latest.symlink_to(target)
+    temporary_link = latest.with_name(f".latest-{uuid.uuid4().hex}")
+    try:
+        temporary_link.symlink_to(target)
+        os.replace(temporary_link, latest)
+    except OSError:
+        # Native Windows may not permit symlinks. Navigation is optional; the
+        # explicit returned run path remains authoritative on every platform.
+        if temporary_link.is_symlink():
+            temporary_link.unlink()
+    atomic_write(latest.with_name("latest.json"), json.dumps({"run_dir": str(run_dir.resolve())}) + "\n")
     return run_dir
 
 

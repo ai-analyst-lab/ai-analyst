@@ -29,6 +29,8 @@ outputs:
     type: chart
   - path: working/data_readiness_check.md
     type: markdown
+  - path: working/analysis_code_{{DATE}}.py
+    type: python
 depends_on:
   - data-explorer
 knowledge_context:
@@ -50,9 +52,41 @@ You run unattended as one step of the pipeline; the user is not watching and can
 - {{QUESTION_BRIEF}}: (provide one of QUESTION_BRIEF or HYPOTHESIS_DOC) The structured question brief from the Question Framing Agent, specifying what questions to answer.
 - {{HYPOTHESIS_DOC}}: (provide one of QUESTION_BRIEF or HYPOTHESIS_DOC) The hypothesis document from the Hypothesis Forming Agent, specifying testable hypotheses with expected outcomes and test plans.
 - {{DATA_INVENTORY}}: (optional) The data inventory report from the Data Explorer Agent. If provided, use it to understand available columns, quality issues, and join relationships. Avoids redundant data profiling.
-- {{FOCUS_AREA}}: (optional) A specific analytical focus if not running the full suite — one of: "segmentation", "funnel", "drivers", or "all" (default: "all").
+- {{FOCUS_AREA}}: (optional) A specific analytical focus: summary, segmentation, funnel, drivers, or all. Follow the supplied question's scope when omitted; do not default a bounded request to every method.
 
 ## Workflow
+
+### Respect the requested analytical scope
+
+The supplied question and `FOCUS_AREA` determine scope. The general workflow below
+is a menu of methods, not a requirement to perform every method for every question.
+For `FOCUS_AREA: summary`, calculate only the requested measures and comparisons.
+Do not add a drivers investigation, promotional analysis, extra segments or earlier
+time windows unless the request calls for them. Report the result and limitations
+concisely. A descriptive request does not authorize explaining what caused a change.
+
+Apply this boundary to the report, chart title, annotations and final response.
+Words such as "drove", "caused" or "sustained" can assert causation even if a later
+paragraph says the analysis is only descriptive. An unsupported explanation is not
+made acceptable by adding that disclaimer. Keep the observed comparison and explain
+that this analysis does not establish its cause.
+
+### Preserve executable analysis for the review handoff
+
+Save the Python code, including the SQL it executes, as the declared analysis-code
+output. It must reproduce the material numerical results in the report from the
+supplied dataset. Accept the data path as a command-line argument, open it read-only,
+and print the computed results without modifying the data. Include the filters,
+date boundaries, grouping and comparisons used in the report. Do not substitute a
+description of the code, cached answers, or invented output for executable analysis.
+
+The review worker receives this file separately from the report. This lets it inspect
+and rerun the calculation rather than infer the method from prose. If the calculation
+requires credentials or additional inputs, declare that limitation and stop rather
+than embed credentials or silently use a different data source.
+
+When the controller supplies exact output paths, use those paths for all declared
+outputs. Its analysis-code output is `artifact_4` in the current registry order.
 
 ### Pre-flight Checks
 

@@ -1,139 +1,40 @@
 ---
 name: eval
-description: Run the held-out ground-truth set live against the analyst and score it. Use when the user types "/eval", or asks to "run the eval suite", "score the system", "run the train split", "check the test split", "what's our accuracy on the ground-truth cases", or wants the system-level eval number (accuracy + query-similarity + cost). This DRIVES the analyst on each question (it does not grade hand-supplied answers), keeps the ground truth blind, and writes a self-describing run record. Pairs with /reliability (stability, no key) and /context-compare (two configs or two models).
+description: Evaluate a named AI Analyst configuration across a frozen suite. Use when the user asks to run an eval suite, compare a change, inspect system accuracy, or run working, heldout, capability, or regression cases.
 ---
 
-# Skill: Eval (live ground-truth runner)
+# Evaluate the system
 
-## Purpose
-Run the analyst on every question in the held-out ground-truth set, then score the answers against the
-blind ground truth: accuracy (the analyst's number vs the recomputed ground truth), query-similarity (its SQL vs the
-approved query), and cost/latency. This is the system-level eval — the climb the Context pillar moves
-and the number the model comparison turns on.
+## Before running
 
-Two honest properties:
-- **Blind by construction.** The analyst runs see the **question only** — never the ground truth sql or value.
-  The ground truth is read only at grading, after the answers are locked.
-- **Real, not staged.** Each answer is produced by actually running the analyst now. Nothing is
-  pre-filled.
+Name the exact system under test. Record its model, instructions, skills, agents, helpers, knowledge, workflow, tools, connector configuration, and data snapshot.
 
-## Invocation
-`/eval [train|test|all] [--slice N]` — default split `train`.
-- `train` — the working set you iterate on (error-analyze, add context, watch it climb). Default.
-- `test` — the held-out set. Run this ONCE at the end as the honest generalization number. Never
-  iterate against it.
-- `--slice N` — run only the first N cases (the in-room live slice). Omit for the full split.
+Use one of these modes honestly:
 
-Examples: `/eval train` · `/eval train --slice 3` · `/eval test`
+- Working mode supports iteration. Its references may be visible to the evaluator, but never to the child trial before its output is locked.
+- Course heldout mode sends locked outputs to the course-controlled grader. The expected results do not live in the student clone.
+- A local visible answer file is development material. Do not call it a secret heldout evaluation.
 
-## How to run it
+## Run
 
-### Step 0 — pick the mode
-Two modes; local is the default and needs nothing beyond this repo.
+1. Load the question-only manifest from `data/evals/public/`.
+2. Select the split and any named slice before the run starts.
+3. Use `helpers.evals.controller.EvaluationController` to launch and record the trials.
+4. Give each trial only its public task, permitted system files, permitted data, and permitted tools.
+5. Lock every trial output before grading begins.
+6. Grade deterministic criteria first. Keep model-based grades separate.
+7. Preserve pass, fail, blocked, error, invalid, and unknown as different results.
+8. Report every case and slice before discussing the aggregate.
 
-- **Local.** Ground truth is a `ground_truth.yaml` you provide for your dataset (the repo ships none;
-  a worked S&P 500 example lives in `ai-analyst-plus/course-examples/`). Grading is a relative-tolerance
-  rule and runs entirely on your machine. Use this to learn the loop, to check the analyst after
-  you change a skill, and to benchmark models.
-- **External harness (optional).** Set `AIEVALS_REPO=<path>` to a harness repo that exposes
-  `aievals.run_eval` and a live-warehouse ground-truth set. Preflight is fail-loud Snowflake with no
-  local fallback. This is how the maintainers run course-grade evals over private ground truth; nothing
-  in the public workflow requires it.
+The local controller is available through `python3 -m helpers.evals.cli run-suite`. Use `--model claude-opus-4-6`. General code access is not required for routing or contract cases. When local data analysis requires `--allow-code`, state that local process isolation is not the same as course-heldout answer isolation.
 
-External mode only:
-```python
-from helpers.provenance.eval_driver import preflight
-conn = preflight()   # raises clearly if Snowflake isn't live — there is NO DuckDB fallback
-```
-If it raises, stop and surface the message. Do not grade against any other engine.
+For a reviewed working suite with local references, lock the trial outputs first, then grade them
+with `python3 -m helpers.evals.cli grade-suite`. Pass the run ID, public manifest, and reviewed
+reference file. Never copy the reference file into the trial workspace.
 
-### Step 1 — get the questions (blind)
-Load the question set for the split. This returns **questions only** — no answers — so you cannot
-leak the key:
-```python
-from helpers.provenance.eval_driver import load_questions
-questions = load_questions(split="train", truth_path=YOUR_TRUTH)   # [{id, split, question, unit}]
-```
-(External mode: `load_questions` from the harness's `aievals.data.gold` module instead.)
-If `--slice N` was given, take the first N.
+## Compare a change
 
-### Step 2 — run the analyst once per question
-Launch one **fresh sub-agent per question** with the Task/Agent tool (run them concurrently in
-reasonable batches). Each sub-agent gets a fresh context and sees ONLY its question. Time each run
-(wall-clock) for latency. Give each sub-agent exactly this brief:
+Hold the suite, data snapshot, model, evaluator, tools, and trial count fixed. Name one intended system change. If more than one material input changed, label the comparison confounded rather than attributing the score movement.
 
-> You are answering one analytics question against the active dataset. Load the normal session
-> context first (knowledge-bootstrap: `.knowledge/active.yaml`, then the active dataset's `schema.md`,
-> `quirks.md`, and manifest from the local datasets dir). For the metric dictionary and semantic
-> context, first resolve the context dir with `from helpers.knowledge.context_sync import resolve_context_dir`
-> (`helpers/knowledge/context_sync.py`) and read `metrics/index.yaml`, `semantic/`, and the verified queries (`verified_queries.yaml`, at the dataset root or under `semantic/` in older layouts) from the RESOLVED dir, not
-> from the local copy. Do not read `.knowledge/reliability/` history before answering. If the metric
-> you're asked about is defined in the dictionary, use that definition exactly. If it is NOT defined,
-> decide for yourself how best to define and measure it. Query the active dataset through the repo connection (`ConnectionManager().query(sql)`); this works for CSV folders as well as warehouses and is what produces the provenance log. Do not hand-roll DuckDB over the CSVs
-> (`from helpers.data.connection_manager import ConnectionManager`). Answer the question: "<QUESTION>".
-> Return ONLY this block:
-> `analyst_value: <the single number you'd report, digits only>`
-> `analyst_query: <the exact SQL you ran to get it, one line>`
-> `definition_source: <"metric dictionary" if you used a defined metric, else "my own choice">`
-
-The undefined-metric cases are the ones that drift and fail at baseline; they flip to pass once the
-definition is added (the C0-C2 climb). That is the point — do not hand the sub-agents definitions
-they don't have in the dictionary.
-
-### Step 3 — assemble the per-case results
-Build one record per question:
-`{"id", "answer" (the analyst's number as a float), "sql", "latency_ms"}`. Keep `id` exactly as
-returned by `load_questions`. Add `tokens`/`cost` per case only if you can measure them honestly;
-otherwise capture run-level cost in Step 4.
-
-### Step 4 — grade against the blind ground truth + write the run record
-Local mode:
-```python
-from helpers.provenance.eval_driver import grade_local
-record = grade_local(per_case_results, split="train", out_dir=".knowledge/eval/runs",
-                     model="<model name>",
-                     extra_meta={"changelog": "<one line: what changed since last run>",
-                                 "total_cost": <run-level $ if per-case cost wasn't captured>})
-```
-`grade_local` reads the ground truth only now, applies the tolerance rule (correct when the answer is
-within `tolerance_pct` of the ground truth; exact for 0), and writes `eval_run_<timestamp>.json` with
-`git_sha`, `split`, `context_state` (which metrics are defined), accuracy, and per-case detail.
-
-External mode: `from helpers.provenance.eval_driver import grade` and pass `conn=conn`; the harness scores
-accuracy + query-similarity + cost and writes its own `<run_id>.json` + `.html`.
-
-Capturing run-level cost: run `npx ccusage@latest session` (or a fixed window) around the run and
-pass the total as `total_cost`.
-
-### Step 5 — report
-Show the headline from the record: `accuracy = passed/total`, `avg_query_similarity`, and (when
-present) `total_cost` / `cost_per_correct` / `avg_latency_ms`. In external mode the harness also
-ranks failures by mode (undefined-metric-drift, fan-out, wrong-filter, wrong-grain, wrong-source)
-and writes a clusters page; in local mode do that error analysis yourself from the per-case detail
-(which cases missed, and why). Then:
-- Name the **context_state** (how many metrics are defined). The climb is this growing run over run.
-- Show the ranked **failure modes**, then **diagnose** them — that's the student's job, not the tool's:
-  what does the dominant mode mean, and what's the fix? (Usually the definitional failures are missing
-  definitions → add them in the Context pillar; a fan-out cluster → a join convention.)
-- For **train**: "this is your working number — the clustered failures show what to fix; add the
-  missing definitions, re-run, watch it climb."
-- For **test**: "held-out number. If train climbed but this didn't, you overfit. Don't tune on this."
-- Report the score as what this run produced, not a promised figure. Each student's number
-  differs because each builds context at their own pace.
-
-## Model comparison
-To compare engines, run `/eval train` once per engine (e.g. the session's default Claude model vs. an
-alternate model swapped in via Ollama) — then put the two run records side by side with
-`/context-compare`. The cell that matters is `cost_per_correct`. Run the comparison on **train** so the
-held-out test stays pristine. In the room: a 2-3 case `--slice` live in each terminal + the captured
-full runs.
-
-## Notes
-- Every run record carries `git_sha` + `changelog` + `context_state`, so a sequence of runs is a
-  trend line: plot `accuracy` over runs to see whether your context changes moved the number.
-- Author ground-truth cases in a `ground_truth.yaml` (id, split, question, answer, unit,
-  tolerance_pct, verified_method). Every answer must be computed, not remembered; keep the
-  generator script next to it so anyone can re-derive the key.
-- Blind discipline: never paste ground-truth SQL/values into a sub-agent's context. If you need to debug a
-  failure, read the run record's per-case detail (it shows ground truth next to analyst for the human), not
-  the sub-agent.
+Use `--intended-change context` for a candidate context run. Do not expose expected values,
+reference queries, private grader prompts, or a heldout answer key in the report.

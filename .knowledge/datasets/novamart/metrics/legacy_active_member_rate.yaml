@@ -1,0 +1,18 @@
+id: legacy_active_member_rate
+name: Legacy active member rate
+aliases:
+  - old member retention
+means: Share of membership records whose status field is active
+grain: membership
+numerator: Membership records where status is active
+denominator: All membership records
+window: Point in time represented by the end of the dataset
+status: reviewed
+owner: membership-analytics
+source: Archived membership dashboard
+last_reviewed: 2025-12-01
+usage_checks:
+  sql_requires_all:
+    - memberships
+    - status
+    - active

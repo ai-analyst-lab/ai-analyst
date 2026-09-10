@@ -1,0 +1,59 @@
+schema_version: 1
+dataset: novamart
+entities:
+  - entity: user
+    table: users
+    primary_key: user_id
+    grain: one row per registered user
+    status: trusted
+    owner: data-platform
+    last_reviewed: 2026-08-28
+  - entity: order
+    table: orders
+    primary_key: order_id
+    grain: one row per order at any status
+    status: trusted
+    owner: data-platform
+    last_reviewed: 2026-08-28
+  - entity: order_item
+    table: order_items
+    primary_key: order_item_id
+    grain: one row per line item within an order
+    status: trusted
+    owner: data-platform
+    last_reviewed: 2026-08-28
+  - entity: membership
+    table: memberships
+    primary_key: membership_id
+    grain: one row per membership record
+    status: trusted
+    owner: data-platform
+    last_reviewed: 2026-08-28
+  - entity: session
+    table: sessions
+    primary_key: session_id
+    grain: one row per browsing session
+    status: trusted
+    owner: data-platform
+    last_reviewed: 2026-08-28
+  - entity: event
+    table: events
+    primary_key: event_id
+    grain: one row per user interaction
+    status: trusted
+    owner: data-platform
+    last_reviewed: 2026-08-28
+  - entity: experiment_assignment
+    table: experiment_assignments
+    primary_key: assignment_id
+    grain: one row per user assignment to an experiment variant
+    status: trusted
+    owner: experimentation
+    last_reviewed: 2026-08-28
+  - entity: experiment
+    table: experiments
+    primary_key: experiment_id
+    grain: one row per experiment
+    status: trusted
+    owner: experimentation
+    last_reviewed: 2026-08-28

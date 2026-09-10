@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """repo_lint.py: public-repo hardening lint.
 
-Checks (fail on any violation, allowlist in scripts/repo_lint_allow.txt as "path-suffix:term"):
+Checks (fail on any violation, allowlist in scripts/repo_lint_allow.txt as "path-suffix:term"
+or "directory-prefix/:term"):
   1. Every .claude/skills/*/SKILL.md (git-stored case) has parseable YAML frontmatter
      with name matching its directory and a non-empty description.
   2. No lowercase skill.md stored in git.
@@ -45,7 +46,9 @@ def allowed(rel, term):
         if not line or ':' not in line:
             continue
         f, tm = line.split(':', 1)
-        if rel.endswith(f.strip()) and tm.strip().lower() == term.lower():
+        pattern = f.strip()
+        path_matches = rel.startswith(pattern) if pattern.endswith('/') else rel.endswith(pattern)
+        if path_matches and tm.strip().lower() == term.lower():
             return True
     return False
 

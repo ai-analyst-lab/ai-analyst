@@ -95,7 +95,7 @@ def load_table_definitions(context_dir: Union[str, Path]) -> List[Dict[str, str]
     if entities_path.exists():
         data = yaml.safe_load(entities_path.read_text()) or {}
         for e in data.get("entities", []):
-            table = e.get("base_table") or e.get("logical_table")
+            table = e.get("base_table") or e.get("table") or e.get("logical_table")
             if table:
                 defs.append({"name": e.get("entity"), "table": table})
     return defs

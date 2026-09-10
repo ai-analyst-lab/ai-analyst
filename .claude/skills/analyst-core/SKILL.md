@@ -182,14 +182,17 @@ Every reported number carries a provenance mode, shown once per number in the
 Checks section, on chart footnotes, and next to the `/trace` badge. This is a
 trust surface: the reader always knows which of three regimes produced a number.
 
-- `contract`: computed by the metric compiler from a defined metric
+- `compiled`: computed by the metric compiler from a defined metric
   (deterministic). Cite the metric id.
 - `external:<source>`: computed by a connected semantic layer (dbt, Cube,
   Snowflake, Looker).
+- `contract-guided`: generated SQL followed a defined metric, but the definition
+  did not have an executable binding. Cite the metric id and show the validation.
 - `generated`: SQL you wrote, which passed validation (grade C or better).
 - `generated-unverified`: SQL you wrote that could not be validated; show it
   with the warning and offer to define the metric (`/metric-spec`), which
-  promotes it to `contract` next time.
+  can promote it to `compiled` or `contract-guided` next time.
 
 The values live in `helpers/data/metric_router.py`. A defined-metric answer is
-`contract`; everything else is `generated` unless validation fails.
+`compiled`, `external:<source>`, or `contract-guided`; an unresolved metric is
+`generated` unless validation fails.

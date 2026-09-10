@@ -1,0 +1,12 @@
+{
+  "question": "What is NovaMart's retention rate?",
+  "decision_tolerance": {"absolute": 0.01, "unit": "rate"},
+  "runs": [
+    {"trial": 1, "status": "completed", "headline": "31.2%", "measured": "users with any event 30 days after signup", "definition_source": "my own choice"},
+    {"trial": 2, "status": "completed", "headline": "18.7%", "measured": "users with a second session within 30 days", "definition_source": "my own choice"},
+    {"trial": 3, "status": "completed", "headline": "9.4%", "measured": "users with a repeat completed purchase within 30 days", "definition_source": "my own choice"},
+    {"trial": 4, "status": "completed", "headline": "18.7%", "measured": "users with a second session within 30 days", "definition_source": "my own choice"},
+    {"trial": 5, "status": "unparseable", "headline": "It depends", "measured": "no single definition selected", "definition_source": "my own choice"}
+  ],
+  "capture_status": "illustrative fallback pending replacement by a verified live capture"
+}

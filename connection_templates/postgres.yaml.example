@@ -15,7 +15,7 @@ connection:
   database: "{database}"
   schema: "public"
   user: "{username}"
-  password: "{password}"   # Consider using env vars: $PG_PASSWORD
+  password: "$PG_PASSWORD"   # Secret belongs in .env, never in this manifest
 
 summary:
   table_count: null

@@ -109,8 +109,15 @@ def _load_definitions(context_dir: Union[str, Path]) -> List[Tuple[str, DateLike
     metrics_path = context_dir / "metrics" / "index.yaml"
     if metrics_path.exists():
         data = yaml.safe_load(metrics_path.read_text()) or {}
-        for m in data.get("metrics", []):
-            defs.append((m.get("metric"), m.get("last_verified")))
+        rows = data if isinstance(data, list) else data.get("metrics", [])
+        for m in rows:
+            name = m.get("id") or m.get("metric") or m.get("name")
+            reviewed = m.get("last_reviewed") or m.get("last_verified")
+            metric_path = context_dir / "metrics" / str(m.get("path") or f"{name}.yaml")
+            if metric_path.exists():
+                metric = yaml.safe_load(metric_path.read_text()) or {}
+                reviewed = metric.get("last_reviewed") or metric.get("last_verified") or reviewed
+            defs.append((name, reviewed))
 
     # verified_queries.yaml: root-first (reconciled flat layout), then semantic/ (legacy nested).
     vq_path = context_dir / "verified_queries.yaml"
@@ -119,7 +126,12 @@ def _load_definitions(context_dir: Union[str, Path]) -> List[Tuple[str, DateLike
     if vq_path.exists():
         data = yaml.safe_load(vq_path.read_text()) or {}
         for q in data.get("verified_queries", []):
-            defs.append((q.get("name"), q.get("last_verified")))
+            defs.append(
+                (
+                    q.get("id") or q.get("name"),
+                    q.get("last_reviewed") or q.get("last_verified"),
+                )
+            )
 
     return defs
 

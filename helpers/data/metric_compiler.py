@@ -50,12 +50,32 @@ class MetricCompileError(ValueError):
     """A metric cannot be compiled or a request violates its contract."""
 
 
-def metric_path(dataset: str, metric_id: str, project_root: str | Path = ".") -> Path:
-    return Path(project_root) / ".knowledge" / "datasets" / dataset / "metrics" / f"{metric_id}.yaml"
+def metric_path(
+    dataset: str,
+    metric_id: str,
+    project_root: str | Path = ".",
+    context_dir: str | Path | None = None,
+) -> Path:
+    """Return the metric file from the resolved context source when supplied.
+
+    ``context_dir`` is the dataset directory returned by
+    ``helpers.knowledge.context_sync.resolve_context_dir``. Accepting it here keeps the
+    compiler from silently reading a different local definition when the analyst is using
+    shared or otherwise resolved context.
+    """
+    base = Path(context_dir) if context_dir is not None else (
+        Path(project_root) / ".knowledge" / "datasets" / dataset
+    )
+    return base / "metrics" / f"{metric_id}.yaml"
 
 
-def load_metric(dataset: str, metric_id: str, project_root: str | Path = ".") -> dict[str, Any]:
-    p = metric_path(dataset, metric_id, project_root)
+def load_metric(
+    dataset: str,
+    metric_id: str,
+    project_root: str | Path = ".",
+    context_dir: str | Path | None = None,
+) -> dict[str, Any]:
+    p = metric_path(dataset, metric_id, project_root, context_dir=context_dir)
     if not p.exists():
         raise MetricCompileError(f"no metric file: {p}")
     return yaml.safe_load(p.read_text()) or {}

@@ -1,4 +1,4 @@
-# path-suffix : term — reviewed 2026-08-27, each an accepted legitimate use
+# Reviewed public exceptions. A path ending in / matches a directory prefix.
 .claude/skills/auth-preflight/SKILL.md:@gmail.com          # generic credential-filename example (user@gmail.com.json)
 .github/SECURITY.md:aianalystlab                            # real security contact for this org
 pyproject.toml:aianalystlab                                 # project homepage URL
@@ -12,3 +12,18 @@ scripts/test_postgres_connection.py:assigned secret         # getpass prompt str
 README.md:aianalystlab                                     # author link to our own site
 tests/test_data_helpers_v2.py:novamart          # guardrail test that asserts novamart is ABSENT
 CHANGELOG.md:novamart          # historical entry documenting removal of the bundled dataset
+.knowledge/active.yaml:novamart                         # default synthetic course context
+.knowledge/datasets/novamart/:novamart                  # reviewed public synthetic context
+data/context-examples/:novamart                         # public context exercises
+data/evals/examples/:novamart                           # public evaluation examples
+data/evals/public/:novamart                             # public task manifests
+data/evals/working-references/:novamart                 # visible development references, not held-out truth
+docs/PIPELINE-VERIFICATION.md:novamart                   # public rehearsal description
+examples/analyst-v1/:novamart                           # bounded public operating example
+helpers/evals/context_runner.py:novamart                # default for the public context exercise
+helpers/knowledge/context_workshop.py:novamart           # public course scaffold
+scripts/rehearse_pipeline.py:novamart                    # public course rehearsal
+tests/fixtures/operations/:novamart                     # synthetic test fixture
+tests/test_context_manifest.py:novamart                 # synthetic test fixture
+tests/test_context_sync.py:novamart                     # synthetic test fixture
+README.md:novamart                                      # public example and setup documentation

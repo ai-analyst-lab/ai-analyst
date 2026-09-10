@@ -1,0 +1,1 @@
+{"incident":"stale_context","run_status":"blocked","error_category":"context_quarantined","policy_action":"stop","user_message":"Required context is stale or quarantined.","final_disposition":"context owner review and regression evaluation"}

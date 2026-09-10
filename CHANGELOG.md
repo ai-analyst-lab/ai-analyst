@@ -2,6 +2,44 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.1.0] - 2026-09-10
+
+This release makes the analytical system more inspectable and gives the Agentic Analytics course
+a complete public runtime without publishing private data or held-out answers.
+
+### Added
+
+- Executable pipeline controller with compiled plans, explicit input bindings, artifact checks,
+  collision-safe run directories, retries, resume behavior, and recorded state transitions
+- Evaluation control plane for reliability, traces, triangulation, frozen suites, deterministic
+  and model graders, grader alignment, controlled comparisons, and production monitoring
+- Context manifests, selection policies, context-change receipts, ablation support, and a guided
+  context-store workshop
+- Engine configuration, capability preflight, routing, fingerprints, and Claude CLI plus disabled
+  OpenAI-compatible adapters
+- Operating-handoff example with autonomy, release, recovery, routing, ownership, and value records
+- Public NovaMart context and evaluation examples used by the course, without the database or
+  private held-out references
+- Setup guides for BigQuery, Databricks, Google Workspace MCP, and the Slack Web API
+
+### Changed
+
+- Pipeline mechanics moved from long model instructions into deterministic Python where practical
+- Agent contracts, registry metadata, plan compilation, and runtime artifacts are validated before
+  execution
+- Data connections now cover DuckDB, Postgres, BigQuery, Snowflake, Databricks, Redshift, SQL
+  Server, and MySQL
+- Evaluation statuses preserve completed, failed, blocked, error, invalid, and unknown outcomes
+  instead of collapsing them into one accuracy number
+- README and setup documentation now distinguish public examples from external data, credentials,
+  and private evaluation references
+
+### Verification
+
+- 1,137 tests pass and one provider-dependent test is skipped in the clean release candidate
+- Repository lint and secret scanning pass
+- Live-provider behavior and native Windows remain separately documented verification boundaries
+
 ## [3.0.0] - 2026-08-27
 
 Major release. The internal "AI Analyst Plus" line becomes the public AI Analyst: 63 skills,

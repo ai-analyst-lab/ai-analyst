@@ -58,12 +58,20 @@ Present options:
   details" panel), catalog, schema
 - Store the personal access token in `.env` as `$DATABRICKS_TOKEN` (never inline)
 
-**For PostgreSQL / Redshift / SQL Server / MySQL / BigQuery:**
+**For BigQuery:**
+- Copy `connection_templates/bigquery.yaml.example`
+- Ask for the GCP project id and BigQuery dataset name
+- Use Application Default Credentials for local development. Ask the user to complete
+  `gcloud auth application-default login` themselves if ADC is not already available.
+- Never ask for a service-account JSON key in chat and never copy one into the repository.
+- After writing the manifest, verify with
+  `ConnectionManager(dataset_id=...).verify_remote()` before declaring success.
+
+**For PostgreSQL / Redshift / SQL Server / MySQL:**
 - Copy the matching template from `connection_templates/` (`postgres`, `redshift`,
-  `mssql`, `mysql`, `bigquery`)
-- Ask the user to fill in host/database/schema (Redshift/SQL Server/MySQL are DBAPI
-  connections that share the Postgres query path; MySQL keys `information_schema` by
-  database, SQL Server defaults to the `dbo` schema)
+  `mssql`, `mysql`)
+- Ask the user to fill in host, port, database, schema, and username. MySQL keys
+  `information_schema` by database and SQL Server defaults to the `dbo` schema.
 - **IMPORTANT:** Never ask for or store passwords directly. Put the password in `.env`
   as an env var (e.g., `$REDSHIFT_PASSWORD`, `$MSSQL_PASSWORD`, `$MYSQL_PASSWORD`) and
   reference it from the manifest.
@@ -100,7 +108,9 @@ Use `ConnectionManager` from `helpers/data/connection_manager.py`:
    result = mgr.test_connection()
    ```
 3. If fails: show error, offer to retry or edit config
-4. If passes: proceed to schema profiling
+4. If it passes, call `verify_remote()` and show the remote identity before proceeding.
+5. If the selected source resolves to DuckDB, CSV, or another fallback, stop. Do not
+   describe the remote connection as successful.
 
 **Why ConnectionManager?** It handles connection pooling, error handling, and provides a consistent interface across every supported source type. Do not bypass it with psycopg2, pandas, or warehouse-specific clients.
 

@@ -1,0 +1,1 @@
+{"incident":"malformed_output","run_status":"failed","error_category":"output_contract","policy_action":"retry_once_then_review","user_message":"The result did not meet the output contract and was not released.","final_disposition":"preserve failure and inspect adapter or worker"}

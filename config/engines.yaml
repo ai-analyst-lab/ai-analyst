@@ -1,0 +1,30 @@
+version: 1
+default: claude
+
+engines:
+  claude:
+    type: claude_cli
+    model: claude-opus-4-6
+    timeout: 600
+    metadata:
+      endpoint_label: local-claude-code
+      capability_version: 1
+      rate_card_version: unknown
+      runtime_version: ai-analyst-3
+      permitted_data_classification: company-approved
+      intended_use: primary interactive and pipeline execution
+
+  openai_compatible:
+    type: openai_compatible
+    enabled: false
+    endpoint: http://localhost:11434/v1
+    model: replace-with-installed-model
+    api_key_env: AI_ANALYST_OPENAI_API_KEY
+    timeout: 600
+    metadata:
+      endpoint_label: local-openai-compatible
+      capability_version: 1
+      rate_card_version: unknown
+      runtime_version: ai-analyst-3
+      permitted_data_classification: public-or-synthetic
+      intended_use: comparison and approved fallback

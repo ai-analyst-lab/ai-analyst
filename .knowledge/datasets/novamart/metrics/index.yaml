@@ -1,0 +1,28 @@
+- id: total_revenue
+  name: Total revenue
+  category: revenue
+  status: trusted
+  owner: finance-analytics
+  last_reviewed: 2026-08-28
+  path: total_revenue.yaml
+- id: gross_revenue
+  name: Gross revenue
+  category: revenue
+  status: trusted
+  owner: finance-analytics
+  last_reviewed: 2026-08-28
+  path: gross_revenue.yaml
+- id: membership_retention
+  name: Membership retention
+  category: membership
+  status: reviewed
+  owner: membership-analytics
+  last_reviewed: 2026-08-28
+  path: membership_retention.yaml
+- id: legacy_active_member_rate
+  name: Legacy active member rate
+  category: membership
+  status: reviewed
+  owner: membership-analytics
+  last_reviewed: 2025-12-01
+  path: legacy_active_member_rate.yaml

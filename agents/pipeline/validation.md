@@ -18,6 +18,14 @@ inputs:
     type: str
     source: user
     required: false
+  - name: QUESTION_BRIEF
+    type: file
+    source: user
+    required: false
+  - name: CHART
+    type: file
+    source: system
+    required: false
   - name: CROSS_VERIFICATION_REPORT
     type: file
     source: agent:cross-verification
@@ -25,7 +33,9 @@ inputs:
 outputs:
   - path: outputs/validation_{{DATASET_NAME}}_{{DATE}}.md
     type: markdown
-depends_on:
+  - path: outputs/validation_status_{{DATASET_NAME}}_{{DATE}}.json
+    type: json
+optional_dependencies:
   - cross-verification
 knowledge_context:
   - .knowledge/datasets/{active}/schema.md
@@ -48,6 +58,66 @@ You run unattended as one step of the pipeline; the user is not watching and can
 - {{VALIDATION_SCOPE}}: (optional) Which findings to validate — "all" (default), or a comma-separated list of finding numbers (e.g., "1,3,5") for targeted validation. Use targeted validation when the full analysis is large and only specific findings need checking.
 
 ## Workflow
+
+### Review the requested deliverable, not only its numbers
+
+When `QUESTION_BRIEF` is supplied, read it before reviewing the result. Evaluate
+whether the final report answers that question and respects its exclusions. When
+`CHART` is supplied, open the actual image and inspect its title, axes, labels and
+claims alongside the report. A correct numerical table does not validate a different
+claim in a chart headline.
+
+Record `request_adherence` and `chart_review` in the status JSON as pass, fail,
+blocked, or not_assessed. Use not_assessed only when that review is outside the
+assigned scope and its input was not supplied. A requested review that cannot be
+performed is blocked, not pass. If either requested review fails, set the overall
+verdict to fail even when the numbers match.
+
+Inspect the actual wording for causal assertions, including "drove", "caused" and
+"sustained". A later disclaimer does not cancel an earlier causal claim. Temporal
+coincidence or a promotional breakdown does not by itself establish incremental
+impact. Reject such claims when the work supplies only descriptive evidence.
+
+Do not invent numerical grades or explain numerical mismatches as rounding without
+calculating the discrepancy. If the confidence-scoring helper was not run with
+recorded inputs, report the score as not calculated. A grade is not a probability
+that the analysis is correct. Not running a statistical test that the question does
+not require is not grounds for an arbitrary score deduction.
+
+When the helper returns a capped grade, report that returned grade consistently
+in the headline, badge, table and conclusion. Do not infer a higher letter grade
+from the numeric score and present both as interchangeable. Explain missing inputs
+and any limitations of the rubric without overriding its result. A rubric grade
+and a scoped analytical verdict answer different questions; report them separately.
+
+Domain plausibility is a reasonableness observation, not independent corroboration.
+For example, a seasonal pattern that sounds plausible does not verify a holiday
+effect. In your own review, do not introduce causal explanations that the analysis
+did not establish. Mark unperformed or inapplicable checks as such, not as successful
+checks. Specify the actual independent calculation or evidence behind triangulation.
+
+Do not claim a helper is unavailable without attempting to locate or import it and
+recording the actual error. The assigned project_root contains the source snapshot.
+Changing the shell directory to an attempt folder does not remove that source.
+If you choose direct SQL instead, say which checks you actually performed and that
+the helper was not used, rather than claiming it was missing.
+
+### Machine-readable completion verdict
+
+In addition to the full report, write the declared status JSON output. Use the
+exact runtime output path when provided. Its format is:
+
+```json
+{"verdict": "pass", "reason": "All scoped material claims were supported", "report": "exact report path", "limitations": []}
+```
+
+This is a format example, not a preset result. Set `verdict` to `fail` if a material
+claim fails verification, or `blocked` if the necessary evidence cannot be checked.
+Do not write `pass` merely because a report exists. Explain limitations and reference
+the report. The controller stops dependent work on any verdict other than `pass`.
+It does not keep retrying the review to obtain a passing result. Analytical repair
+must be separately reviewed and rerun. The controller enforces the declared verdict;
+it does not prove that the review itself is correct.
 
 ### Step 1: Inventory the claims
 Read {{ANALYSIS_RESULTS}} end to end. Extract every quantitative claim into a numbered list. A "claim" is any statement that includes a specific number, percentage, ratio, trend direction, comparison, or ranking. For each claim, record:

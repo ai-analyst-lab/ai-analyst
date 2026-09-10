@@ -1,0 +1,1 @@
+{"incident":"engine_unavailable","run_status":"blocked","error_category":"unavailable","policy_action":"fallback_if_preflighted","user_message":"The primary engine is unavailable. No answer has been released.","final_disposition":"await approved fallback or human review"}

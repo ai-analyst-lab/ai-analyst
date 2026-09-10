@@ -1,0 +1,113 @@
+suite_id: session7-context-build
+suite_version: '1'
+data_snapshot: novamart-course-context-workshop-2026-09-06
+purpose: Working cases for the Session 7 context-package build
+visibility: public-task-manifest
+cases:
+- case_id: context-package-structure
+  task: Validate the disposable Session 7 context package and report whether its files and references are structurally usable.
+  split: working
+  case_version: '1'
+  status: verified
+  truth_basis: computed
+  data_scope:
+    workspace_dirs: [working/session-7-context-store]
+    context_policy_test:
+      type: context-structure
+      dataset: novamart
+      context_dir: working/session-7-context-store
+  success_criteria:
+  - type: exact
+    description: The context package passes the deterministic structure validator.
+  allowed_tools: [read_data]
+  required_behavior: [Use the context package validator.]
+  forbidden_behavior: []
+  tolerance: {}
+  graders:
+  - id: context-structure
+    type: exact
+    field: structure_status
+    allowed_values: [pass, fail]
+  slices: {role: target, mechanism: structure}
+  data_snapshot: novamart-course-context-workshop-2026-09-06
+  truth_evidence: Deterministic validation of the reviewed context package schema.
+  author: AI Analyst Lab
+  reviewed_by: Shane Butler
+  verified_at: '2026-09-06T00:00:00+00:00'
+  has_private_reference: true
+- case_id: membership-retention-selection
+  task: Build a context trace for the membership retention question and report whether the current contract is selected.
+  split: working
+  case_version: '1'
+  status: verified
+  truth_basis: expert
+  data_scope:
+    workspace_dirs: [working/session-7-context-store]
+    context_policy_test:
+      type: selection
+      dataset: novamart
+      context_dir: working/session-7-context-store
+      question: What is our membership retention rate?
+      current_item: metric:membership_retention
+      legacy_item: metric:legacy_active_member_rate
+      today: '2026-09-06'
+  success_criteria:
+  - type: exact
+    description: The reviewed membership-retention contract is supplied for the question.
+  allowed_tools: [read_data]
+  required_behavior: [Use the deterministic context manifest.]
+  forbidden_behavior: []
+  tolerance: {}
+  graders:
+  - id: retention-selection
+    type: exact
+    field: selection_status
+    allowed_values: [current_only, current_and_legacy, legacy_only, neither]
+  slices: {role: target, mechanism: delivery}
+  data_snapshot: novamart-course-context-workshop-2026-09-06
+  truth_evidence: Reviewed Session 7 delivery requirement.
+  author: AI Analyst Lab
+  reviewed_by: Shane Butler
+  verified_at: '2026-09-06T00:00:00+00:00'
+  has_private_reference: true
+- case_id: membership-retention-meaning
+  task: Check the membership-retention contract against the reviewed course brief.
+  split: working
+  case_version: '1'
+  status: verified
+  truth_basis: expert
+  data_scope:
+    workspace_dirs: [working/session-7-context-store]
+    context_policy_test:
+      type: metric-contract
+      dataset: novamart
+      context_dir: working/session-7-context-store
+      metric: membership_retention
+      expected_fields:
+        grain: membership
+        numerator: is_current
+        denominator: all membership records
+        window: end of the available period
+        rejected:
+          - active users
+          - converted trials
+          - trailing activity window
+  success_criteria:
+  - type: exact
+    description: The contract preserves the reviewed meaning and rejected alternatives.
+  allowed_tools: [read_data]
+  required_behavior: [Compare the contract fields with the reviewed course brief.]
+  forbidden_behavior: []
+  tolerance: {}
+  graders:
+  - id: retention-meaning
+    type: exact
+    field: contract_status
+    allowed_values: [pass, fail]
+  slices: {role: target, mechanism: meaning}
+  data_snapshot: novamart-course-context-workshop-2026-09-06
+  truth_evidence: Reviewed NovaMart membership policy in the Session 7 case brief.
+  author: AI Analyst Lab
+  reviewed_by: Shane Butler
+  verified_at: '2026-09-06T00:00:00+00:00'
+  has_private_reference: true

@@ -41,7 +41,8 @@ def test_defined_compilable_metric_is_tier_a(ds):
 def test_defined_but_uncompilable_falls_to_tier_c(ds):
     root, dataset = ds
     r = mr.route(dataset, "note", project_root=root)
-    assert r["tier"] == "C" and r["mode"] == mr.MODE_GENERATED
+    assert r["tier"] == "C" and r["mode"] == mr.MODE_CONTRACT_GUIDED
+    assert r["metric_id"] == "note"
 
 
 def test_external_binding_is_tier_b(ds):
@@ -69,3 +70,19 @@ def test_list_metrics(ds):
 
 def test_list_metrics_empty_when_none_defined(tmp_path):
     assert mr.list_metrics("nothing", project_root=tmp_path) == []
+
+
+def test_router_reads_the_resolved_context_directory(tmp_path):
+    local = tmp_path / ".knowledge" / "datasets" / "acme" / "metrics"
+    local.mkdir(parents=True)
+    resolved = tmp_path / "shared" / "datasets" / "acme"
+    (resolved / "metrics").mkdir(parents=True)
+    (resolved / "metrics" / "revenue.yaml").write_text(
+        "name: Revenue\ncompile:\n  measure: SUM(amount)\n  table: orders\n"
+    )
+    (resolved / "metrics" / "index.yaml").write_text(
+        "- id: revenue\n  name: Revenue\n"
+    )
+    result = mr.route("acme", "revenue", project_root=tmp_path, context_dir=resolved)
+    assert result["tier"] == "A"
+    assert [row["id"] for row in mr.list_metrics("acme", context_dir=resolved)] == ["revenue"]

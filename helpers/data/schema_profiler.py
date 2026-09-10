@@ -20,7 +20,7 @@ Usage:
     rels = discover_relationships(schema)
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -398,7 +398,7 @@ def _profile_source_inner(connection_info=None):
 
     return {
         "dataset": connection_info.get("schema_prefix", "unknown") or "local",
-        "profiled_at": datetime.utcnow().isoformat() + "Z",
+        "profiled_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "tables": profiled_tables,
     }
 
@@ -957,7 +957,7 @@ def profile_external_warehouse(connection_config):
     dataset_label = connection_config.get("schema", "") or connection_config.get("database", "external")
     return {
         "dataset": dataset_label,
-        "profiled_at": datetime.utcnow().isoformat() + "Z",
+        "profiled_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "tables": profiled_tables,
     }
 

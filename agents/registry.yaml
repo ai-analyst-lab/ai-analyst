@@ -75,6 +75,7 @@ agents:
   - outputs/analysis_report_{{DATE}}.md
   - outputs/charts/*.png
   - working/data_readiness_check.md
+  - working/analysis_code_{{DATE}}.py
   knowledge_context:
   - .knowledge/datasets/{active}/schema.md
   - .knowledge/datasets/{active}/quirks.md
@@ -141,15 +142,22 @@ agents:
   file: agents/pipeline/validation.md
   pipeline_step: 7
   critical: true
-  depends_on:
+  optional_dependencies:
   - cross-verification
   inputs:
   - ANALYSIS_CODE
   - ANALYSIS_RESULTS
   - DATA_SOURCE
   - VALIDATION_SCOPE
+  - QUESTION_BRIEF
+  - CHART
   outputs:
   - outputs/validation_{{DATASET_NAME}}_{{DATE}}.md
+  - outputs/validation_status_{{DATASET_NAME}}_{{DATE}}.json
+  output_checks:
+    artifact_2:
+      equals:
+        verdict: pass
   knowledge_context:
   - .knowledge/datasets/{active}/schema.md
   - .knowledge/datasets/{active}/quirks.md
@@ -175,8 +183,10 @@ agents:
   pipeline_step: 9
   critical: true
   depends_on:
-  - opportunity-sizer
+  - validation
   - cross-verification
+  optional_dependencies:
+  - opportunity-sizer
   inputs:
   - ANALYSIS_RESULTS
   - QUESTION_BRIEF
@@ -205,6 +215,8 @@ agents:
   pipeline_step: 12
   critical: true
   depends_on:
+  - story-architect
+  optional_dependencies:
   - narrative-coherence-reviewer
   inputs:
   - DATA
@@ -254,6 +266,9 @@ agents:
   pipeline_step: 15
   critical: true
   depends_on:
+  - chart-maker
+  - story-architect
+  optional_dependencies:
   - visual-design-critic
   inputs:
   - ANALYSIS_RESULTS
@@ -308,6 +323,8 @@ agents:
   pipeline_step: 18
   critical: true
   depends_on:
+  - deck-creator
+  optional_dependencies:
   - visual-design-critic-slides
   inputs:
   - ANALYSIS_RESULTS

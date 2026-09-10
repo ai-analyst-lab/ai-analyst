@@ -1,0 +1,21 @@
+version: 1
+
+default_engine: claude
+fallback_engine: openai_compatible
+fallback_on:
+  - rate_limit
+  - timeout
+  - unavailable
+  - model_unavailable
+max_retries: 1
+timeout_action: fallback
+budget_usd: 5.0
+independent_review_on:
+  - analytical_disagreement
+human_review_on:
+  - analytical_disagreement
+  - permission
+  - budget_exceeded
+stop_on:
+  - permission
+  - budget_exceeded

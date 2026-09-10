@@ -1,596 +1,103 @@
 ---
 name: run-pipeline
-description: |
-  Run the complete end-to-end analysis pipeline: from data and a business question to a validated Marp deck with charts, via the DAG of agents in agents/registry.yaml. Use for `/run-pipeline`, "run the full pipeline", "build me a deck", "do the full analytical treatment", or any L4-L5 request that needs hypothesis generation, root cause, sizing, storyboarding, charting and deck creation orchestrated together.
+description: Plan and run coordinated analysis using explicit input bindings, isolated workers, run-local artifacts, and the Python workflow controller.
 ---
 
-# Skill: Run Pipeline
+# Run an analytical workflow
 
-## Purpose
-Single entry point for end-to-end analysis — from raw data to finished slide deck. Uses a DAG-based execution engine that reads agent dependencies from `agents/registry.yaml`, resolves execution order automatically, and supports parallel agent execution, resume from failure, and execution plan pruning.
+Choose the amount of work that serves the request. A chart, investigation,
+validation report, and presentation have different completion conditions.
+Do not add presentation work to an analysis-only or validation-only request.
 
-## When to Use
-Invoke with: `/run-pipeline`, "run the full pipeline", "analyze end-to-end", or "take this data through the full workflow".
+## Inspect and propose
 
-## Completion
+Read `plans.md`, `agents/registry.yaml`, and the selected worker contracts.
+The registry declares coordination; contracts declare input requirements.
+Do not infer required inputs from whatever happens to exist in global outputs.
 
-The pipeline's deliverable is a presentation-ready deck; validation, checkpoints and metrics serve that. You are operating autonomously: the user is not watching in real time, so for reversible steps that follow from the request, proceed without asking. Before ending your turn, check your last paragraph — if it is a plan, a question, or a promise about work not yet done, do that work now. End only when the deck exists or you are blocked on input only the user can provide.
+Prepare a request JSON under `working/requests/` with:
 
-**If you cannot complete the full DAG**, produce the best deck the reached phase supports (data profile → 5-slide profile deck; analysis → findings deck with charts; storyboard → draft deck from beats), mark `pipeline_state.json` as `degraded` with the skipped phases, save every completed artifact to `outputs/`, and tell the user what `/resume-pipeline` would add.
+- `plan`: an existing named plan.
+- `variables`: concrete filename placeholder values.
+- `bindings`: each worker's input values or explicit producer references.
+- `output_paths`: exact paths replacing wildcard/dynamic output declarations.
+- `external_dependencies`: input names replacing omitted producers.
+- `approval_gates`: required approvals with `id`, `after`, and `before`.
+- `context`: the exact analytical `question`, plus optional `worker_questions` when a worker needs
+  a narrower framing.
 
-## Fast Path Guidance
+For produced inputs use `{"from": "worker.result"}`. The first registered output
+is `result`; later outputs are `artifact_2`, etc. Inspect the registry before
+selecting one. For existing files supply an exact `path`, computed `sha256`,
+and a `purpose` explaining why the file suits this question. Evaluate dataset,
+scope and age as well: a hash establishes identity, not analytical suitability.
 
-The full DAG with all 11 rules is designed for complex L4-L5 analyses. For simpler cases, you can streamline:
+Never invent missing data, credentials, meaning, or approval. Ask only for inputs
+that cannot be safely supplied from the request and verified context.
 
-**When to use the simplified path:**
-- User provides ALL required arguments inline (`/run-pipeline data_path=... question=... theme=...`)
-- The question is focused and doesn't require hypothesis generation (e.g., "compare conversion rates")
-- Time or context constraints make full execution challenging
+When `context.question` is present, the controller builds a deterministic manifest and bounded
+bundle for each worker from the frozen run snapshot. It attaches both as explicit inputs and blocks
+on trusted-definition conflicts. The bundle records supply. Workers must cite relevant context item
+IDs, and downstream validation still checks whether the work applied them.
 
-**Fast path workflow:**
-1. Skip or abbreviate framing (use question as-is)
-2. Run data exploration + basic analysis inline (no separate agents)
-3. Generate 2-3 key charts directly
-4. Create a short deck (5-10 slides) with findings
-5. Export to PDF/HTML if Marp CLI available
+## Compile before executing
 
-**Still required on fast path:**
-- R1 (theme handling), R2 (chart ≠ headline), R3 (chart background), R7 (figsize)
-- At least one chart
-- A Marp deck (even if short)
-- HTML components (can be minimal - just `.so-what` + `.chart-container`)
-
-The fast path prioritizes **delivery over perfection** - a 7-slide deck with 2 charts beats stopping partway through a 20-slide masterpiece.
-
-## Accepted Arguments
-
-| Argument | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `data_path` | Yes | — | Path to CSV, parquet, or directory of data files |
-| `question` | Yes | — | The business question to answer |
-| `context` | No | `"stakeholder readout"` | Presentation context: "stakeholder readout", "workshop", "talk", "team standup" |
-| `theme` | No | `analytics` (light) | Theme override: "analytics" (light) or "analytics-dark" (dark) |
-| `audience` | No | `"senior stakeholders"` | Who will see the deck — controls content density |
-| `dataset_name` | No | Derived from data_path | Short name for file naming (e.g., "hawaii", "my_dataset") |
-| `plan` | No | `full_presentation` | Execution plan: `full_presentation`, `deep_dive`, `quick_chart`, `refresh_deck`, `validate_only`, or inline agent list |
-| `dry-run` | No | `false` | If `true`, print execution plan without running agents |
-| `agents` | No | — | Inline agent allow-list (e.g., `agents=question-framing,hypothesis,data-explorer`) |
-
-Arguments can be passed inline or prompted interactively:
-```
-/run-pipeline data_path=data/your_dataset/ question="What's driving the decline in revenue?" plan=deep_dive
-/run-pipeline dry-run=true
-/run-pipeline plan=refresh_deck
-```
-
-If required arguments are missing, prompt the user before proceeding.
-
----
-
-## Pipeline rules (checked at checkpoints)
-
-### R1: Theme Default is Light
-Standard analysis → `analytics` (light theme). Dark theme (`analytics-dark`) only when `context` is "workshop" or "talk", OR when the user explicitly passes `theme=analytics-dark`. When in doubt, use light.
-
-### R2: Chart Title ≠ Slide Headline
-The chart's baked-in `title` (the SWD action title) MUST differ from the slide headline. The chart title is a specific data claim with numbers. The slide headline is narrative framing.
-
-| Slide Headline | Chart Title | Verdict |
-|---------------|-------------|---------|
-| "Payment issues drove the June spike" | "Payment issues drove the June spike" | **BAD** — identical |
-| "Payment issues drove the June spike" | "Payment tickets jumped 147% while other categories grew <20%" | **GOOD** |
-
-### R3: Chart Background is #F7F6F2
-All charts use warm off-white background (#F7F6F2), never pure white (#FFFFFF). This is set by `swd_style()` — verify it was called before every chart.
-
-### R4: Recommendations Ordered by Confidence
-Recommendations are always ordered High → Medium → Low confidence. Never alphabetical, never by topic.
-
-### R5: Voice — Banned Words
-Headlines, transitions, and breathing slides must never use: **surgical, devastating, exploded, ticking time bomb, smoking gun, alarm/fire metaphors, unprecedented** (unless literally true), **unleash, supercharge, game-changing, skyrocketed**.
-
-### R6: Breathing Slides Every 3-4 Insight Slides
-Never more than 4 consecutive chart/insight slides without a pacing break. Pacing classes: `impact`, `dark-impact`, `section-opener`, `takeaway`.
-
-### R7: Charts at Standard Figsize
-Every chart is generated at (10, 6) figsize / 150 DPI (~1500x900px) and used directly on slides. CSS `object-fit: contain` handles all containment. No slide variants needed.
-
-### R8: Agent Files Must Be Read from Disk
-At each phase, read the agent file from its path on disk. Do NOT rely on cached knowledge or memory.
-
-### R9: Cross-Verification After Analysis
-After analysis agents complete and before storytelling, run the Cross-Verification agent (step 6.5) to verify analytical findings via same-source, different-calculation-path checks. The data-explorer sanity gate (step 2.5, always-on) handles pre-analysis boundary checks. HALT if cross-verification confidence score is 0-7.
-
-### R10: All Marp Decks Must Use HTML Components
-Every Marp deck must use at least 3 different HTML component types from the theme (e.g., `.kpi-row`, `.so-what`, `.finding`, `.rec-row`, `.chart-container`). Valid slide classes include `chart-full`, `kpi`, `takeaway`, `recommendation`, `appendix` (new one-job-per-slide classes) and all existing classes (`insight`, `impact`, `chart-left`, `chart-right`, `two-col`, `diagram`, `section-opener`, `title`). Plain-markdown-only insight slides are a pipeline failure. The deck-creator agent must read `templates/marp_components.md` for the snippet library and `templates/deck_skeleton.marp.md` for the skeleton template. Frontmatter must include all 6 required keys: `marp`, `theme`, `size`, `paginate`, `html`, `footer`. Run `helpers/export/marp_linter.py` to validate.
-
-### R11: Pipeline Exports Both PDF and HTML
-After deck creation and Checkpoint 4, the pipeline must export the deck to both PDF and HTML using `helpers/export/marp_export.py`. Export paths are recorded in `pipeline_state.json`. If Marp CLI is not available, log a warning and skip export (do not HALT). The exported files go alongside the deck: `outputs/deck_{{DATASET_NAME}}_{{DATE}}.pdf` and `outputs/deck_{{DATASET_NAME}}_{{DATE}}.html`.
-
-### R12: Query Log — Every SQL Query Gets Logged
-Every data-touching agent must log every SQL query using `append_entry()` from `helpers/provenance/query_log.py`. The log file is `working/query_log_{dataset}_{date}.jsonl`. Required fields: agent name, pipeline step, purpose (analytical reason, not SQL content), SQL text, tables accessed, result summary, row count. Failed queries are logged with `status="error"`. The query log feeds the validation agent (claim matching) and the receipt generator (audit trail). Agents that do not run SQL (question-framing, hypothesis, story-architect, deck-creator) are exempt.
-
-### R13: Tier 1 Validation is Always-On
-All analysis agents must run Tier 1 checks before writing findings. Tier 1a (hard boundaries: negative revenue, % > 100, future dates, zero denominators) → HALT on failure. Tier 1b (soft: SQL sanity, arithmetic consistency, source citation) → FLAG only. Zero additional queries. Results logged to `working/tier1_checks_{{DATASET_NAME}}.md`.
-
-### R14: Data Stamps on Every Finding
-Every finding presented to the user — in terminal, slides, Google Docs, Notion, or Slack — must include a data stamp. The storytelling agent calls `build_provenance_blocks()` from `helpers/provenance/provenance_assembler.py` and embeds `data_stamp.one_liner` per finding. Format: `[{row_count} rows | {date_range} | {primary_table} | Confidence: {grade} ({score}/100)]`. Data stamps are assembled from provenance blocks if available, or from analysis metadata if not. Data stamps are never gated on validation tier — they appear at all tiers, all export formats.
-
----
-
-## DAG EXECUTION ENGINE
-
-The pipeline runs on a DAG (directed acyclic graph) derived from `agents/registry.yaml`. Instead of hardcoded steps, the engine resolves execution order from agent dependencies.
-
-### Step 0: Pre-execution Cleanup (Crash Recovery)
-
-Before validation, detect and clean up artifacts from a previous crashed run.
-
-1. **Detect stale runs:** Check if `working/pipeline_state.json` (or `working/latest/pipeline_state.json`) exists with `status: running`.
-   - Parse `updated_at` and compute elapsed time. If > 30 minutes ago, treat as stale.
-   - Print: `"Found stale pipeline state from {updated_at}. Previous run may have crashed."`
-   - Ask: `"Archive stale state and start fresh? (Y/n)"`
-   - **If yes:** Rename `working/pipeline_state.json` to `working/crashed_{run_id}_state.json`. Continue to Phase 0.
-   - **If no:** Redirect to `/resume-pipeline` to attempt resuming the previous run. Stop here.
-   - If `updated_at` is within 30 minutes, assume another run is active. HALT with: `"Pipeline state shows an active run from {updated_at}. Use /resume-pipeline or wait for it to finish."`
-
-2. **Clean temp files:** Delete any `working/*.tmp.json` files (partial atomic writes from a crashed run).
-
-3. **Validate per-run directory:** If prior run left an orphaned `working/latest` symlink:
-   - Remove the stale symlink (the new run will create its own in Phase 1).
-   - Create `working/runs/{run_id}/` directory structure with `working/`, `outputs/` subdirectories.
-
-4. **Initialize fresh state:** The actual `pipeline_state.json` creation happens in Phase 1 with `schema_version: 2` and all agents set to `pending`. Step 0 only ensures the workspace is clean.
-
-After cleanup completes (or is skipped if no stale state found), proceed to Phase 0.
-
----
-
-### Phase 0: Pre-flight Validation
-
-The registry parse, file-existence and dangling-dependency checks, cycle detection, tier computation, and plan filtering are all in `helpers/pipeline/dag.py`. Run them once:
+Use the active project Python environment:
 
 ```python
-from helpers.pipeline.dag import load_registry, load_plans, validate_registry, resolve_plan, plan_warnings
+import json
+from pathlib import Path
+from helpers.pipeline.compile_plan import compile_named_plan
+from helpers.pipeline.controller import Controller
 
-registry = load_registry()                      # agents/registry.yaml, keyed by name
-plans = load_plans()                            # .claude/skills/run-pipeline/plans.md
-plan = pipeline_args.get("plan", "full_presentation")   # a plan name, or the inline agents= list
-plan_agents = plans[plan]["agents"] if isinstance(plan, str) else plan
-
-errors = validate_registry(registry)            # missing agent files, unknown dependencies
-if errors:
-    raise SystemExit("Pre-flight failed:\n" + "\n".join(errors))   # HALT
-
-tiers = resolve_plan(registry, plan_agents)     # raises DagError on a cycle or unknown agent
-for w in plan_warnings(registry, plan_agents):  # plan agents whose dependencies are skipped
-    print("WARNING:", w)
+root = Path.cwd()
+request = json.loads(Path("working/requests/request.json").read_text())
+definition, inputs = compile_named_plan(root, request)
+print(json.dumps(definition, indent=2))
 ```
 
-`tiers` is the execution order: `tiers[0]` has no in-plan dependencies, each later tier depends only on earlier ones. Agents not in `plan_agents` are skipped.
+Replace the request path with the actual file. Review jobs, input bindings,
+handoffs, deliverables and stopping conditions before execution.
+`dry-run=true` ends here without creating a run or launching workers. Compilation
+is not model execution or proof of analytical correctness.
 
-### Phase 1: Initialize Run Directory & Pipeline State
+For custom workflows use the explicit definition format in
+`docs/PIPELINE-CONTROLLER.md`. A list of worker names alone is not a complete
+workflow contract.
 
-Every run gets an isolated directory under `working/runs/`. `init_run` creates it, writes the initial `pipeline_state.json` (schema in `agents/pipeline_state_schema.md`, every plan agent `pending`, other pipeline agents `skipped`, `tiers` recorded), creates the empty query log, and points `working/latest` at the run:
+## Execute through the controller
+
+After the proposed scope is authorized:
 
 ```python
-from helpers.pipeline.dag import init_run
-
-RUN_DIR = init_run(DATASET_NAME, question, plan_agents, registry=registry)
-# RUN_DIR = working/runs/{YYYY-MM-DD}_{DATASET_NAME}_{question-slug}/
-#   working/   outputs/   pipeline_state.json   working/query_log_{DATASET_NAME}_{DATE}.jsonl
-QUERY_LOG = RUN_DIR / "working" / f"query_log_{DATASET_NAME}_{DATE}.jsonl"
+run = Controller.create(root, definition, inputs)
+print(run.directory)
 ```
 
-Agents keep writing to the top-level `working/` and `outputs/` as before; also keep a copy of the query log at `working/query_log_{DATASET_NAME}_{DATE}.jsonl` for the agents that expect it there, and set `{{QUERY_LOG}}` in every agent's context. At pipeline end the final artifacts are copied into `{RUN_DIR}/working/` and `{RUN_DIR}/outputs/` so the run directory is self-contained.
-
-If **resuming** (`working/latest/pipeline_state.json`, else `working/pipeline_state.json`, exists with `status: paused` or `failed`): leave `completed` agents alone, reset `failed` agents to `pending`, then compute the ready set and skip to Phase 2:
-
-```python
-from helpers.pipeline.dag import ready_set
-READY = ready_set(registry, state["plan_agents"], state)
-print(f"Resuming from {completed_count} completed agents. Next: {READY}")
-```
-
-### Phase 2: Walk the DAG
-
-Execute agents tier by tier:
-
-```
-FOR each tier in execution_tiers:
-  1. READY_SET = ready_set(registry, plan_agents, state) ∩ this tier
-     (AND-gate on `depends_on`, OR-gate on `depends_on_any`; only completed
-     agents satisfy a gate, skipped ones do not — the helper applies both rules)
-
-  2. If is_deadlocked(registry, plan_agents, state) → HALT
-
-  3. FOR each agent in READY_SET:
-     a. Mark agent status: running in pipeline_state.json
-     b. Record started_at timestamp
-     c. Assemble dynamic context (see Context Assembly below)
-     d. Read agent file from disk (R8)
-
-  4. LAUNCH agents:
-     - If a sub-agent tool is available and READY_SET has 2+ agents: launch them
-       in parallel, each with agent file + context, and keep working while they run
-     - Else: Execute sequentially inline
-
-  5. WAIT for completion (see Agent Failure Handling)
-
-  6. FOR each completed agent:
-     a. Record completed_at, output_files in pipeline_state.json
-     b. Record timing in pipeline_metrics
-     c. If FAILED and agent.critical is true (default): increment failure counter
-     d. If FAILED and agent.critical is false (warn_on_failure):
-        - Log warning: "⚠ Non-critical agent {name} failed: {error}. Continuing."
-        - Write stub output to agent's first output path:
-          `# {name} — SKIPPED (failure)\nReason: {error}\nTimestamp: {iso_now}`
-        - Mark status as `degraded` in pipeline_state.json
-        - Queue warning for display at next checkpoint
-        - Do NOT increment tier failure counter
-
-  7. CIRCUIT BREAKER: If 3+ critical agents failed in this tier → HALT pipeline
-     Report: "Circuit breaker tripped: {N} failures in tier {T}. Failed: {names}"
-
-  8. CHECKPOINT: If a checkpoint fires after this tier, run it (see Checkpoints)
-
-  9. Update working/pipeline_summary.md with phase results
-
-  10. ADVANCE to next tier
-```
-
-### Dynamic Context Assembly
-
-Before launching each agent, resolve its runtime context:
-
-1. **System variables:**
-   - `{{DATE}}` → current date YYYY-MM-DD
-   - `{{DATASET_NAME}}` → from `dataset_name` argument or derived from data_path
-   - `{{ACTIVE_DATASET}}` → from `.knowledge/active.yaml`
-   - `{{BUSINESS_CONTEXT_TITLE}}` → derived from question
-
-2. **Knowledge context:** For each path in the agent's `knowledge_context` from registry:
-   - Replace `{active}` with the active dataset name
-   - Read the file and include its content as context for the agent
-
-3. **Dependency outputs:** For each completed dependency agent, gather its `output_files` from pipeline_state.json. These become available inputs for the current agent.
-
-4. **Pipeline arguments:** Pass through `context`, `theme`, `audience`, `data_path` as relevant to the agent's `inputs` list.
-
-### Dry-Run Mode
-
-When `dry-run=true`:
-
-1. Run Phase 0 (pre-flight validation) — detect any issues
-2. Print `tiers` from `resolve_plan` with the checkpoint that fires after each tier:
-   ```
-   Execution Plan (dry-run):
-   Plan: {plan_name}
-   Agents: {count} active, {count} skipped
-
-   Tier 0: [agent-a, agent-b]           (parallel)
-   Tier 1: [agent-c]                    (sequential)
-     Checkpoint 1: Frame Verification
-   Tier 2: [agent-d, agent-e]           (parallel)
-     Checkpoint 2: Analysis Verification
-   ...
-
-   Estimated steps: {count}
-   Checkpoints: {list}
-   ```
-3. Do NOT execute any agents. Return after printing.
-
----
-
-## CHECKPOINTS
-
-Checkpoints are gates between pipeline phases. They verify quality before advancing. Checkpoints fire based on which agents just completed, not on hardcoded step numbers.
-
-### Checkpoint 1 — Frame Verification (after hypothesis completes)
-
-**Type:** B (user-facing). **Plans:** full_presentation, deep_dive.
-
-Self-checks:
-- [ ] Business question is specific and decision-oriented
-- [ ] Analysis design spec names specific tables/columns
-- [ ] At least 3 hypotheses span multiple cause categories
-- [ ] Agent files were read from disk
-
-Present summary:
-> "Questions framed. Design spec ready.
-> - Business question: [summary]
-> - Tables: [list]
-> - Hypotheses: [count] across [N] categories
->
-> Proceed to analysis?"
-
-**Skip if:** User said "just do it" or provided all params.
-
-### Checkpoint 2 — Analysis Verification (after cross-verification completes)
-
-**Type:** A (automated). **Plans:** full_presentation, deep_dive.
-
-Verify:
-- [ ] Cross-verification confidence score >= 8 (from `working/cross_verification_{{DATASET_NAME}}_{{DATE}}.md`)
-- [ ] No Tier 1a boundary check failures (HALT if any)
-- [ ] Root cause is specific and actionable
-- [ ] Findings are validated via Type B-D checks
-- [ ] Query log coverage >= 80%
-- [ ] Data quality issues documented
-- [ ] Opportunity sizing includes sensitivity analysis
-
-If cross-verification score is 0-7, HALT. If root cause is vague, re-run root-cause-investigator.
-
-### Checkpoint 2.1 — Validation Menu (after validation completes)
-
-**Type:** B (user-facing). **Plans:** full_presentation, deep_dive.
-
-Offer the user a validation menu based on the question level:
-
-**L3 (Guided Analysis) — Compact offer:**
-```
-Validation passed (score: {score}/100, grade {grade}).
-Run deeper verification? (y/N)
-```
-Default: skip. If yes → run Tier 2 standard (Types A+B always, C+D when schema affords, 3-run reproducibility).
-
-**L4/L5 (Investigation/Presentation) — Full menu:**
-```
-Validation passed (score: {score}/100, grade {grade}).
-Choose validation depth:
-  (a) Standard — Types A+B, 3-run reproducibility (default)
-  (b) Deep — All types + 5-run reproducibility + full receipt
-  (c) Skip — Proceed without additional validation
-```
-Default: (a) Standard. Option (b) sets `validation_tier=3` and triggers receipt generation at step 18.5.
-
-**Skip conditions (CP 2.1 does not fire):**
-- User said "just do it" or passed `validation_tier` explicitly
-- Question level is L1/L2 (Tier 1 always-on is sufficient)
-- Preference learning auto-apply is active (see below)
-
-**Preference learning:**
-Track the user's validation choices per question level across pipeline runs. Store in `working/validation_preferences.yaml`:
-```yaml
-preferences:
-  L3: {choice: skip, run_count: 3}
-  L4: {choice: standard, run_count: 5}
-```
-After 3 consecutive same-choice runs at a given level, auto-apply on the 4th without asking. Print: `"Auto-applying your usual choice ({choice}) for L{level}. Use /validate reset-preferences to see the menu again."`
-
-The user can reset with `/validate reset-preferences` to clear saved preferences and restore the menu.
-
-### Checkpoint 2.5 — Storyboard Review (after narrative-coherence-reviewer completes)
-
-**Type:** B (user-facing). **Plans:** full_presentation only (L5).
-
-Present storyboard summary with beat headlines and arc structure.
-
-**Skip if:** User said "just do it" or reviewer flagged issues (go to revision).
-
-### Checkpoint 3 — Story & Charts (after visual-design-critic chart-level completes)
-
-**Type:** A (automated). **Plans:** full_presentation, quick_chart.
-
-Verify: R2 (title collision scan), R3 (backgrounds), R5 (banned words), R7 (chart figsize), story arc, chart fan-out results. Print title collision table.
-
-**Fix Loop (chart-maker-fixes):**
-After the visual-design-critic completes, read `working/design_review_{{DATASET}}.md` and extract the verdict:
-
-1. **APPROVED** → Mark `chart-maker-fixes` as `skipped` in pipeline_state.json. Proceed to storytelling tier.
-
-2. **APPROVED WITH FIXES** → Extract the fix report section from the design review. Set `chart-maker-fixes` to `ready`. Pass the fix report as `FIX_REPORT` input. The chart-maker-fixes agent (same file as chart-maker, with `FIX_REPORT` provided) re-generates only the charts listed in the fix report. After completion, re-run visual-design-critic as a quick re-check. If still `APPROVED WITH FIXES` after the re-check, proceed anyway (one fix loop iteration max).
-
-3. **NEEDS REVISION** → HALT the pipeline with message: `"Design critic returned NEEDS REVISION. Manual intervention required. Review: working/design_review_{{DATASET}}.md"`. Do NOT proceed to storytelling.
-
-### Checkpoint 4 — Final Deck (after deck-creator and visual-design-critic slide-level complete)
-
-**Type:** A (automated). **Plans:** full_presentation, refresh_deck.
-
-Verify: R1 (theme), R2 (titles), R3 (backgrounds), R4 (recommendation order), R5 (banned words), R6 (breathing slides), R7 (chart figsize), R10 (HTML components), R11 (export), deck size 8-22 slides, speaker notes present, receipt generated (if Tier 3).
-
-**Receipt check (Tier 3 only):**
-If `validation_tier == "tier_3"`, verify that `outputs/analysis_receipt_*.md` exists and is non-empty. If missing, trigger the receipt-generator agent at step 18.5 before completing the checkpoint. If the receipt-generator fails, WARN but do not FAIL the checkpoint.
-
-**Marp Lint Gate (R10):**
-Run `helpers/export/marp_linter.py` against the deck output. Print the lint report.
-
-```python
-from helpers.export.marp_linter import lint_deck, format_report
-
-result = lint_deck("outputs/deck_{{DATASET_NAME}}_{{DATE}}.marp.md")
-print(format_report(result))
-
-if not result["summary"]["pass"]:
-    # FAIL checkpoint — report errors
-    print(f"CHECKPOINT 4 FAIL: {result['summary']['errors']} lint errors")
-    for issue in result["issues"]:
-        if issue["severity"] == "ERROR":
-            print(f"  - {issue['code']}: {issue['message']}")
-```
-
-Lint errors that FAIL Checkpoint 4:
-- `FM-*`: Missing or wrong frontmatter keys
-- `COMP-MIN`: Fewer than 3 HTML component types
-- `CLASS-INVALID`: Invalid slide class (e.g., `breathing`)
-- `R2-COLLISION`: Chart title identical to slide headline
-
-Lint warnings that are reported but do NOT fail the checkpoint:
-- `COMP-PLAIN`: Plain-markdown content slides
-- `SLIDES-LOW` / `SLIDES-HIGH`: Slide count outside 8-22
-- `R6-PACING`: Consecutive content slides without pacing break
-- `IMG-BARE-MD`: Bare markdown image (`![](...)`) not wrapped in `.chart-container`
-
----
-
-## Chart Fan-Out Protocol
-
-When chart-maker becomes READY (after narrative-coherence-reviewer):
-
-1. **Parse storyboard:** Read `working/storyboard_{{DATASET}}.md`. For each beat, traverse the `slides` array and collect slides with `type: chart-full`, `chart-left`, or `chart-right`. Each chart-type slide references its parent beat's chart spec.
-2. **Build chart_specs list:** `[{beat_number, slide_index, headline, chart_spec, output_name}, ...]`
-3. **Sequential execution:** Invoke Chart Maker once per chart spec, one at a time (no parallelism). For each invocation:
-   - Pass the specific `chart_spec`, `output_name`, and shared pipeline context
-   - Charts are generated at standard (10, 6) figsize (R7)
-   - Track: `chart_results[beat] = {status, files, error}`
-   - On failure: log error, mark chart as `failed`, continue to next chart
-4. **Batch review:** After ALL charts are generated, invoke Visual Design Critic once with the full set of chart files for batch review. Pass all `chart_results` output paths.
-5. **Verify:** Check all output files exist (base PNG + SVG per chart). Report missing/failed charts at Checkpoint 3 for retry.
-
----
-
-## AGENT FAILURE HANDLING
-
-If an agent errors or returns without its declared outputs, retry it once with the same context. On a second failure, mark it `failed` and apply the degradation policy: non-critical agents (visual-design-critic, narrative-coherence-reviewer, opportunity-sizer) degrade with a warning; critical agents (cross-verification, validation, data-explorer) HALT.
-
----
-
-## CIRCUIT BREAKER
-
-Prevents runaway failures from consuming resources:
-
-- Track failure count per execution tier
-- **Threshold: 3 failures in a single tier** → HALT the pipeline
-- On HALT, report:
-  ```
-  Circuit breaker tripped in tier {N}.
-  Failed agents: {list with error messages}
-  Completed agents: {list}
-  Suggestion: Fix the underlying issue and /resume-pipeline
-  ```
-- The circuit breaker does NOT fire for skipped agents, only for failed agents
-
----
-
-## EXECUTION METRICS
-
-Timing is derived from the `started_at` / `completed_at` stamps in `pipeline_state.json`; nothing is computed by hand. After each tier completes, and again at pipeline end:
-
-```python
-from helpers.pipeline.dag import write_metrics
-metrics = write_metrics(state, RUN_DIR / "pipeline_metrics.json")   # tiers taken from state["tiers"]
-```
-
-The file carries per-agent durations, per-tier wall-clock vs. sequential duration, `parallel_efficiency` (sequential / wall-clock; 2.0 means a 2x speedup from parallelism), and a summary (completed / degraded / failed / skipped, `avg_parallel_efficiency`). Report `total_duration_seconds` and `avg_parallel_efficiency` at Pipeline Complete.
-
----
-
-## Progress Reporting
-
-At the start and end of each tier (mapped to phases), emit progress:
-
-**Phase mapping** (tiers to phases for user-facing messages):
-
-| Phase | Agents | Name |
-|-------|--------|------|
-| 1 | question-framing, hypothesis | Framing |
-| 2 | data-explorer, descriptive-analytics, root-cause-investigator, cross-verification, validation, opportunity-sizer | Exploration & Analysis |
-| 3 | story-architect, narrative-coherence-reviewer, chart-maker, visual-design-critic | Storytelling & Charts |
-| 4 | storytelling, deck-creator, visual-design-critic-slides, close-the-loop | Deck & Delivery |
-
-**Start format:** `[Phase N/4: {Name}] Starting... ({agent_count} agents)`
-**End format:** `[Phase N/4: {Name}] Complete. ({summary}) | Overall: {completed}/{total} agents done`
-
----
-
-## COMMON FAILURE MODES
-
-| Failure | Root Cause | Prevention Rule | When Caught |
-|---------|-----------|----------------|-------------|
-| Dark theme on standard analysis | Deck Creator defaulted to dark | R1 | Checkpoint 4 |
-| Chart title = slide headline | Story Architect wrote same text | R2 | Checkpoint 3, 4 |
-| Chart on pure white background | `swd_style()` not called | R3 | Checkpoint 3 |
-| Recommendations in random order | Listed by topic not confidence | R4 | Checkpoint 4 |
-| Sensational language | Dramatic words in headlines | R5 | Checkpoint 3, 4 |
-| Wall of charts, no pacing | No breathing slides | R6 | Checkpoint 4 |
-| Tiny chart text on slides | Chart rendered at small figsize | R7 | Checkpoint 3 |
-| Agent guidance not followed | Didn't read agent file from disk | R8 | All checkpoints |
-| Analysis on corrupted data | Data loading error | R9 | Checkpoint 2 |
-| Cycle in registry | New agent added with circular dep | Cycle detection | Pre-flight |
-| Deadlock in DAG | Tier has no READY agents | Deadlock detection | Phase 2 loop |
-| Runaway failures | Multiple agents failing | Circuit breaker | Phase 2 loop |
-| No HTML components | Deck uses only plain markdown | R10 | Checkpoint 4 (lint) |
-| Missing html:true | Components render as raw HTML text | R10 | Checkpoint 4 (lint) |
-| Missing size:16:9 | Slides render at 4:3 with broken layouts | R10 | Checkpoint 4 (lint) |
-| Export fails | Marp CLI not installed or crashes | R11 | Post-Checkpoint 4 |
-| Stale pipeline state | Previous run crashed mid-execution | Step 0 cleanup | Pre-flight |
-| Chart text overlap | Labels collide at rendered size | R7 | Checkpoint 3 + chart-maker HALT |
-| Chart overflows slide | Bare `![](...)` image not in `.chart-container` | R10 | Checkpoint 4 (lint: IMG-BARE-MD) |
-
----
-
-## Post-Checkpoint 4: Deck Export (R11)
-
-After Checkpoint 4 passes, export the deck to PDF and HTML:
-
-```python
-from helpers.export.marp_export import export_both, check_ready
-
-deck_path = "outputs/deck_{{DATASET_NAME}}_{{DATE}}.marp.md"
-theme = pipeline_args.get("theme", "analytics")
-
-# Check if Marp CLI is available
-status = check_ready()
-if not status["marp_cli"]:
-    print("WARNING: Marp CLI not available. Skipping PDF/HTML export.")
-    print("  Install: npm install -g @marp-team/marp-cli")
-    # Record skip in pipeline_state.json
-    pipeline_state["export"] = {"status": "skipped", "reason": "marp_cli_unavailable"}
-else:
-    try:
-        exports = export_both(deck_path, theme)
-        print(f"PDF:  {exports['pdf']}")
-        print(f"HTML: {exports['html']}")
-        # Record in pipeline_state.json
-        pipeline_state["export"] = {
-            "status": "completed",
-            "pdf": str(exports["pdf"]),
-            "html": str(exports["html"]),
-        }
-    except Exception as e:
-        print(f"WARNING: Export failed: {e}")
-        pipeline_state["export"] = {"status": "failed", "error": str(e)}
-```
-
-Export is non-blocking — failures are logged as warnings, not pipeline halts. The Marp
-markdown deck is always the primary deliverable; PDF/HTML are convenience outputs.
-
----
-
-## Post-Pipeline: Finalize Run Directory
-
-After export and before metric capture, consolidate the run directory:
-
-1. **Copy artifacts** from `working/` and `outputs/` into `{RUN_DIR}/working/` and `{RUN_DIR}/outputs/`
-2. **Update pipeline_state.json** in `{RUN_DIR}/`: set `status: completed`, record `completed_at`
-3. **Verify symlink:** Confirm `working/latest` points to this run directory
-
-The run directory is now a self-contained snapshot of the entire analysis.
-
----
-
-## Post-Pipeline: Metric Capture & Archive
-
-After all checkpoints pass, before reporting completion:
-
-**Metric capture hook:**
-1. Scan analysis report for metric references
-2. Check `.knowledge/datasets/{active}/metrics/index.yaml` for each metric
-3. Note new metrics: "New metric detected: {name}. Use `/metrics` to define it."
-4. Update `last_used` on existing entries
-
-**Archive hook:**
-1. Apply archive-analysis skill (`.claude/skills/archive-analysis/SKILL.md`)
-2. Capture: title, question, level, key findings, metrics used, agents invoked, output files
-3. Write to `.knowledge/analyses/index.yaml`
-
-## Pipeline Complete
-
-When all checkpoints pass, report:
-1. Output files (deck, charts, narrative paths, PDF/HTML export paths)
-2. Checkpoint results summary (including Marp lint report)
-3. Execution metrics summary (duration, parallel efficiency)
-4. Metrics status (new/updated)
-5. Archive confirmation (analysis ID)
-6. Export status (PDF/HTML generated, or skipped with reason)
-6. Any manual follow-ups needed
+Then invoke `python -m helpers.pipeline.controller run EXACT_RUN_DIRECTORY`.
+The controller uses Claude Code with `claude-opus-4-6`, a fresh process per job,
+normal permissions, and explicit output paths. Never bypass permissions or
+silently execute a blocked isolated job inline. Workers must not recursively
+invoke this skill or edit controller state.
+
+Code owns readiness, bounded retries, artifact checks, status and completion.
+Query logging inherits a worker-specific directory. Only validated run-local
+artifacts enter the handoff ledger. This is logical isolation, not an OS sandbox.
+
+Numeric historical checkpoints in plans are not executable approvals. New gates
+are explicit. Record an approval only after the named person approves the actual
+evidence; local actor strings do not authenticate identities.
+
+## Inspect and report
+
+Read final status and actual artifacts. An optional failure produces a degraded
+run, even when a deliverable exists. Missing required evidence is not success.
+Structural checks do not establish analytical correctness. Apply the relevant
+analytical methods and preserve limitations.
+
+Presentation workers retain their own chart, storytelling and export standards.
+This entry point does not impose those deliverables on unrelated plans.
+
+Resume only the explicitly identified run using `/resume-pipeline`. Do not copy
+global artifacts into a run to make it look complete. See
+`docs/PIPELINE-CONTROLLER.md` for migration and current limitations.

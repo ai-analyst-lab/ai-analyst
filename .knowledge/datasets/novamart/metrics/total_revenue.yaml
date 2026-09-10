@@ -1,0 +1,41 @@
+id: total_revenue
+name: Total revenue
+aliases:
+  - completed revenue
+  - recognized revenue
+means: What customers were charged on completed orders, after discounts and including shipping
+grain: order
+numerator: Sum of orders.total_amount for completed orders
+denominator: null
+window: Requested order_date window, or the full available period when none is given
+filters:
+  - orders.status = 'completed'
+rejected:
+  - all order statuses
+  - pre-discount subtotal
+  - summing order amounts after joining to order_items
+status: trusted
+owner: finance-analytics
+source: NovaMart finance policy
+last_reviewed: 2026-08-28
+usage_checks:
+  sql_requires_all:
+    - total_amount
+    - completed
+context_refs:
+  - entity:order
+  - dimension:order_status
+  - filter:completed_orders
+  - correction:order-item-fanout
+compile:
+  measure: SUM(total_amount)
+  table: orders
+  grain: order
+  grain_key: [order_id]
+  dimensions:
+    order_month: date_trunc('month', order_date)
+    device: device
+  filters:
+    status: status = :status
+    date_between: order_date >= :start AND order_date < :end
+  requires_columns: [order_id, order_date, total_amount, status]

@@ -1,0 +1,16 @@
+{
+  "question": "Did the 2024 Summer Sale create incremental value for NovaMart?",
+  "rounds": [
+    [
+      {"path_id": "before-after", "method": "before and after comparison", "source": "orders and promotions", "population": "all completed orders", "assumptions": ["nearby periods are comparable"], "direction": "yes", "basis": "revenue rose during the sale"},
+      {"path_id": "matched-users", "method": "matched user comparison", "source": "users and orders", "population": "customers with comparable prior activity", "assumptions": ["matching captured the main differences"], "direction": "unclear", "basis": "the difference became small after matching"},
+      {"path_id": "margin", "method": "contribution margin comparison", "source": "orders, order_items, and products", "population": "completed sale-period orders", "assumptions": ["recorded product cost is comparable"], "direction": "no", "basis": "discounted volume did not offset lower unit margin"}
+    ],
+    [
+      {"path_id": "before-after", "method": "before and after comparison", "source": "orders and promotions", "population": "all completed orders", "assumptions": ["nearby periods are comparable"], "direction": "yes", "basis": "revenue again rose during the sale"},
+      {"path_id": "matched-users", "method": "matched user comparison", "source": "users and orders", "population": "customers with comparable prior activity", "assumptions": ["matching captured the main differences"], "direction": "unclear", "basis": "the matched difference remained small"},
+      {"path_id": "margin", "method": "contribution margin comparison", "source": "orders, order_items, and products", "population": "completed sale-period orders", "assumptions": ["recorded product cost is comparable"], "direction": "no", "basis": "the margin result remained negative"}
+    ]
+  ],
+  "capture_status": "teaching fallback designed to preserve a defensible method disagreement"
+}

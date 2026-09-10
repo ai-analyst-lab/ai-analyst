@@ -1,0 +1,34 @@
+schema_version: 1
+name: novamart-analyst
+version: 1.0.0-course
+purpose: Answer bounded descriptive questions using approved NovaMart course data.
+supported_uses: [descriptive_analysis]
+prohibited_uses: [write_business_data, individual_eligibility_decision, autonomous_external_publish]
+owner: course-participant
+reviewers: [analytical-reviewer]
+data_dependencies: [novamart-course-data]
+tool_dependencies: [python, duckdb]
+context:
+  package: ../../.knowledge
+  owners: [course-participant]
+workflows:
+  bounded_answer:
+    definition: workflow-definition.json
+    inputs: workflow-inputs.json
+    question_binding: bounded-answer.QUESTION
+engine_config: engines.yaml
+routing_policy: routing-policy.yaml
+evaluation:
+  suite: evaluation-scorecard.md
+  release_criteria: release-policy.yaml
+invocation:
+  command: python -m helpers.operations.operator
+  autonomy_policy: autonomy-policy.yaml
+  project_root: ../..
+outputs:
+  receipt_directory: working/operator-receipts
+monitoring:
+  operating_log: working/operating-log.jsonl
+  incident_contact: course-participant
+last_release: 2026-09-07
+next_review: 2026-10-07

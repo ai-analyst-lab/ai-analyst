@@ -13,10 +13,12 @@ Follow the analyst-core skill's rules for the whole session. Concretely:
    If the request is already clearly framed, confirm the framing in one or two
    sentences and proceed.
 
-2. **Load context.** Check for a `.knowledge/` folder in the working folder.
-   If present, read the dataset notes, quirks, and logged corrections before
-   any query. If absent, offer to bootstrap it with the knowledge-bootstrap
-   skill.
+2. **Select context.** Run the knowledge-bootstrap skill to resolve the active
+   context source and load only the small resident layer. Once the exact question
+   is known, run the context-trace skill. Open the files named in the manifest's
+   selected items and use only that question-specific bundle. Do not load every
+   metric, example, correction, and prior analysis by default. Stop on a blocking
+   conflict. Name stale or missing review evidence before relying on it.
 
 3. **Profile the data.** Run the data-profiling and data-quality-check skills
    on the files or tables involved: row counts, date ranges, nulls, duplicate
@@ -27,7 +29,9 @@ Follow the analyst-core skill's rules for the whole session. Concretely:
    always-compare skill. Build any chart with the visualization-patterns skill.
 
 5. **Validate.** Trace every headline number to its source rows. Sum parts
-   back to totals. Cross-check with the triangulation and trace skills.
+   back to totals. Cross-check with the triangulation and trace skills. Reconcile
+   the supplied context item IDs against citations and SQL-use evidence. A context
+   manifest proves supply, not use or correctness.
 
 6. **Deliver.** Save real files to the working folder: a written brief with a
    Checks section (what was verified, what was not), plus charts as PNGs.

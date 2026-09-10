@@ -17,9 +17,9 @@ The `analyst-core` skill carries the contract; these are its load-bearing rules.
    expectation. A naked number is not a finding.
 4. **Trace findings to rows.** Cite the table, the filter, the query. Log every data-touching
    query (automatic through `ConnectionManager`; by hand only if you bypass it).
-5. **Validate before presenting.** The four layers (structural, logical, business rules,
-   Simpson's paradox) run through the Validation agent; the confidence grade (A to F) goes in the
-   executive summary; a BLOCKER halts.
+5. **Evaluate before presenting.** Use evidence that matches the claim and consequence. Keep
+   correctness, stability, provenance, methodological support, and safety separate. A blocking
+   failure halts. Never average unlike evidence into one confidence score.
 6. **Say what was not checked.** Insufficient data, unverified assumptions, and caveats are part
    of the answer, not a footnote to hide.
 7. **Log corrections so mistakes do not repeat.** Rule 0 of SQL: consult the context store first
@@ -37,18 +37,39 @@ intent.
 
 - **Quick fact** ("how many signed up in March?"): query, answer with source and comparison.
 - **Investigation** ("why did activation drop?"): frame, hypothesize, explore, analyze, validate,
-  brief. The `question-router` skill picks the depth (L1 to L5); `/run-pipeline` runs the full
-  18-step pipeline to a validated deck; `/resume-pipeline` and `/runs` manage runs.
+  brief. The `question-router` skill proposes the depth (L1 to L5); `/run-pipeline`
+  compiles explicit inputs and deliverables and invokes the workflow controller.
+  A deck is required only for a presentation plan.
 - **Experiments and causal**: `/experiment`, `/experiment-brief`, `/srm-check` (the gate before any
   lift read), `/causal` when randomization is not possible.
-- **Trust checks**: `/reliability` (is the answer stable), `/eval` (score against a ground-truth set),
-  `/context-compare`, `/trace`, `/codex-review`.
+- **Trust checks**: `/reliability` (does behavior repeat), `/trace-analysis` (what evidence produced
+  the claim), `/triangulation` (do independent methods support it), `/score-analysis` (act,
+  investigate, abstain, or incomplete), `/eval` (run a frozen suite), `/evaluate-grader` (does a
+  model grader align with people), `/monitor-evals` (what changed over time), `/context-compare`,
+  `/context-trace` (what context was supplied and why), `/improve-context` (test one context
+  change against the same cases), `/trace`, `/codex-review`.
 - **Deliverables**: brief + chart into `outputs/`; `/export` to Docs, Slides, Notion, PDF, Word.
 - **Pace**: `/pace guided | narrated | autopilot`. Never run an L3+ analysis silently in guided
   or narrated mode; open with the plan and the detected pace.
 
 The full skill map with one line each: `docs/SKILLS.md`. Agents and their contracts:
 `agents/INDEX.md` and `agents/registry.yaml`. Python helpers by package: `helpers/INDEX.md`.
+
+The top-level `agents/` files are pipeline workflow definitions, not native Claude Code project
+subagents. `/run-pipeline` reads their contracts and registry, while `helpers/pipeline/dag.py`
+validates dependencies and computes execution tiers. The version-3 controller runs
+one fresh Claude Code process per worker, sequentially, with explicit inputs and
+per-attempt outputs. It stops on unavailable permissions or account capacity; it
+does not silently switch to the main conversation. This implementation is a local
+release candidate pending live rehearsal. See `docs/PIPELINE-VERIFICATION.md` and
+`docs/AGENT_ARCHITECTURE.md` for tested behavior and limitations.
+
+When running as an assigned controller worker, follow the supplied bounded job
+and exact output paths. Do not launch the whole analytical pipeline, edit retained
+knowledge or source files, or export externally. Report any proposed correction in
+your assigned output for later review. The controller snapshots project context,
+but does not copy local hook/permission settings or warehouse credentials. Do not
+assume the interactive project's hooks or connections are present in that snapshot.
 
 ## Data and memory
 
@@ -65,8 +86,12 @@ The full skill map with one line each: `docs/SKILLS.md`. Agents and their contra
   (`AAP_USE_REMOTE=1` or `use_remote: true`); verify `connection_type` before trusting a source,
   and check `CURRENT_ACCOUNT()` against your own config. Runbooks: `connect-snowflake`,
   `setup-snowflake`, `docs/SETUP_SNOWFLAKE.md`, `docs/postgres-integration-guide.md`.
-- **Outputs**: final deliverables in `outputs/` (charts in `outputs/charts/`), intermediates in
-  `working/`, pipeline runs in their run directory. Neither is committed.
+- **Outputs**: interactive deliverables in `outputs/` (charts in `outputs/charts/`),
+  intermediates in `working/`. Controller workers use the exact paths inside their
+  selected run directory, not these shared interactive paths. Neither is committed.
+- **Evaluation boundary**: public tasks may live under `data/evals/public/`. Course heldout answers
+  do not live in a student clone. Trial outputs are locked before a separate grader reads a private
+  reference. A locally visible answer file is development material, not a secret heldout test.
 
 ## What runs on your machine
 

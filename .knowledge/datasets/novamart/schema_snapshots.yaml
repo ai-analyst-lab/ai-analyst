@@ -1,0 +1,11 @@
+# Known-good column-shape checksums from the course NovaMart database.
+# Generated with helpers.data.schema_guard.schema_checksum on 2026-09-06.
+tables:
+  events: 7ec3c4f74142d6b9
+  experiment_assignments: 6cac9b33500b05fd
+  experiments: 1ba5a06021a4fe62
+  memberships: 942fb674a1e5f2c1
+  order_items: aa367a978df3d8d8
+  orders: 2c499a5ce339a6fc
+  sessions: 3e3d7a10125883d5
+  users: 8c976ee857b19d33

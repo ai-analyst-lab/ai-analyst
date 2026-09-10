@@ -1,0 +1,12 @@
+{
+  "question": "Among users who completed a first purchase, what share completed another purchase within 30 days?",
+  "decision_tolerance": {"absolute": 0.01, "unit": "rate"},
+  "runs": [
+    {"trial": 1, "status": "completed", "headline": "9.4%", "measured": "repeat completed purchase within 30 days", "definition_source": "task definition"},
+    {"trial": 2, "status": "completed", "headline": "0.094", "measured": "repeat completed purchase within 30 days", "definition_source": "task definition"},
+    {"trial": 3, "status": "completed", "headline": "9.5%", "measured": "repeat completed purchase within 30 days", "definition_source": "task definition"},
+    {"trial": 4, "status": "completed", "headline": "9.4 percent", "measured": "repeat completed purchase within 30 days", "definition_source": "task definition"},
+    {"trial": 5, "status": "completed", "headline": "9.4%", "measured": "repeat completed purchase within 30 days", "definition_source": "task definition"}
+  ],
+  "capture_status": "illustrative fallback pending replacement by a verified live capture"
+}

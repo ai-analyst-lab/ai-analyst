@@ -1,0 +1,40 @@
+schema_version: 1
+dataset: novamart
+verified_queries:
+  - id: checkout_redesign_treatment_conversion
+    question: What was treatment purchase conversion for the checkout redesign experiment?
+    intent: experiment treatment conversion using assignment-time windows
+    domains: [experiments, conversion]
+    sql: |
+      SELECT
+        COUNT(DISTINCT CASE WHEN o.order_id IS NOT NULL THEN a.user_id END) * 1.0
+          / NULLIF(COUNT(DISTINCT a.user_id), 0) AS purchase_conversion
+      FROM experiment_assignments a
+      JOIN experiments e ON a.experiment_id = e.experiment_id
+      LEFT JOIN orders o
+        ON a.user_id = o.user_id
+       AND o.order_date >= a.assigned_date
+      WHERE e.experiment_name = 'checkout_redesign'
+        AND a.variant = 'treatment'
+    teaches:
+      - Use intention-to-treat assignment.
+      - Start each user's outcome window on that user's assigned date.
+      - Count completed orders rather than a generic event when purchase is the outcome.
+    status: trusted
+    owner: experimentation
+    source: Reviewed checkout redesign readout
+    verified_at: 2026-07-08
+    last_reviewed: 2026-08-28
+  - id: legacy_monthly_active_members
+    question: How many members were active at month end?
+    intent: legacy month-end membership reporting
+    domains: [membership]
+    sql: |
+      SELECT COUNT(*) FROM memberships WHERE status = 'active'
+    teaches:
+      - Use the status field for the archived membership dashboard.
+    status: reviewed
+    owner: membership-analytics
+    source: Archived membership dashboard
+    verified_at: 2025-11-15
+    last_reviewed: 2025-12-01

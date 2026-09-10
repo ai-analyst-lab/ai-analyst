@@ -1,0 +1,24 @@
+dataset_id: novamart
+display_name: NovaMart practice data
+description: Synthetic ecommerce data used throughout Agentic Analytics
+connection_type: duckdb
+database: data/practice/novamart_practice.duckdb
+connection:
+  type: duckdb
+local_data:
+  path: data/practice
+  duckdb: data/practice/novamart_practice.duckdb
+date_range:
+  start: 2024-01-01
+  end: 2024-12-31
+organization: novamart
+tables:
+  users: {rows: 50000}
+  sessions: {rows: 1383467}
+  events: {rows: 6510093}
+  orders: {rows: 47199}
+  order_items: {rows: 75447}
+  memberships: {rows: 5513}
+  experiments: {rows: 2}
+  experiment_assignments: {rows: 20000}
+context_policy: context-policy.yaml

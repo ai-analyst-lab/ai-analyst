@@ -1,0 +1,9 @@
+observed_problem: ""
+affected_request: ""
+affected_run: ""
+evidence: []
+suspected_failure_class: ""
+proposed_target_component: ""
+owner: ""
+review_status: proposed
+evaluation_cases_to_add_or_rerun: []

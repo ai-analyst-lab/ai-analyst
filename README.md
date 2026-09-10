@@ -9,7 +9,7 @@
 
 <strong>An open-source AI data analyst that runs inside Claude Code.</strong>
 
-<img src="https://img.shields.io/badge/skills-63-D97706"> <img src="https://img.shields.io/badge/agents-39-D97706"> <img src="https://img.shields.io/badge/helpers-70%20modules-D97706"> <img src="https://img.shields.io/badge/python-3.10%2B-3776AB"> <img src="https://img.shields.io/badge/license-MIT-3da639"> <a href="https://github.com/ai-analyst-lab/ai-analyst/actions/workflows/ci.yml"><img src="https://github.com/ai-analyst-lab/ai-analyst/actions/workflows/ci.yml/badge.svg"></a>
+<img src="https://img.shields.io/badge/skills-63-D97706"> <img src="https://img.shields.io/badge/agents-40-D97706"> <img src="https://img.shields.io/badge/helpers-147%20modules-D97706"> <img src="https://img.shields.io/badge/python-3.10%2B-3776AB"> <img src="https://img.shields.io/badge/license-MIT-3da639"> <a href="https://github.com/ai-analyst-lab/ai-analyst/actions/workflows/ci.yml"><img src="https://github.com/ai-analyst-lab/ai-analyst/actions/workflows/ci.yml/badge.svg"></a>
 
 frames the decision · profiles before trusting · every number gets a comparison · traces findings to rows · validates before presenting · remembers your corrections
 
@@ -29,13 +29,13 @@ frames the decision · profiles before trusting · every number gets a compariso
 
 You talk to it the way you would talk to an analyst on your team. Connect your data, ask what you want to know, and it does the work like a careful analyst would: it asks what decision the answer serves, profiles the data before trusting it, pairs every number with a comparison, traces each finding back to the rows behind it, validates before presenting, and saves real deliverables (briefs, charts, decks) into your project. A `.knowledge/` folder is its memory: schema notes, data quirks, your metric definitions, and a log of every correction you make, so a mistake corrected once is never repeated.
 
-Under the hood: 63 skills (the standards it follows), 39 agents (the multi-step workflows behind the big jobs), 70 Python helper modules (the deterministic statistics: experiments, causal inference, forecasting, profiling, validation), an 18-step analysis pipeline you can run, resume, and inspect, and an eval harness so you can measure the analyst instead of trusting it.
+Under the hood: reusable skills for the standards it follows, 40 registered pipeline agents for the multi-step workflows behind the big jobs, deterministic Python helpers for experiments, causal inference, forecasting, profiling, and validation, an analysis pipeline you can run, resume, and inspect, and an eval harness so you can measure the analyst instead of trusting it.
 
-Works on CSV files, DuckDB, Postgres, BigQuery, and Snowflake.
+Works on CSV files, DuckDB, Postgres, BigQuery, Snowflake, Databricks, Redshift, SQL Server, and MySQL.
 
 ## Ten-minute start
 
-Nothing to sign up for, and no data baked in. On first run the analyst interviews you and helps you connect your own data, so it starts on your world instead of a toy dataset.
+The repository ships with small public examples, synthetic NovaMart context, and public evaluation tasks. It does not contain the NovaMart database, private held-out answers, company data, or credentials. The checked-in active context is NovaMart so course exercises work after the student adds the database. Everyone else should run `/setup` before analysis to connect a source and replace that active context.
 
 ```bash
 git clone https://github.com/ai-analyst-lab/ai-analyst.git
@@ -56,7 +56,7 @@ Then, inside Claude Code, get set up:
 /analyst Using the orders table, how did revenue trend last quarter versus the one before, and where did we lose the most? Save me a one-page brief with one chart.
 ```
 
-It frames the decision, profiles the data, runs the comparison, flags anything odd, and writes the brief and chart into `outputs/`. (Want practice data first? The course sample datasets, S&P 500 prices, FRED macro series, and synthetic A/B experiments with answer keys, live in the `ai-analyst-plus` repo under `course-examples/`.)
+It frames the decision, profiles the data, runs the comparison, flags anything odd, and writes the brief and chart into `outputs/`. Course students place `novamart_practice.duckdb` at `data/practice/novamart_practice.duckdb`. Other public practice datasets and synthetic evaluation examples are included in `data/`.
 
 **Explicit beats implicit.** Starting a request with `/analyst` runs the full method by name every time. Plain questions work too, and the analyst-core skill steers them, but the command is the reliable path when you want the whole method.
 
@@ -89,7 +89,7 @@ Three layers, and Claude handles the routing.
 
 **Skills** are standards it follows automatically. When it makes a chart, it styles it properly. When it starts an analysis, it checks data quality first. When it reports a number, it gives you a comparison so the number means something. You rarely call these by name; they apply whenever they are relevant, and several apply at once. Every skill is a `SKILL.md` under `.claude/skills/` with a trigger description, so you can read what it enforces.
 
-**Agents** are the multi-step workflows behind the bigger jobs. A full analysis moves through a pipeline: frame the question, explore and validate the data, investigate the root cause, build the story, design the charts, assemble the deck, checking its own work at each step. `/run-pipeline` runs it; `/resume-pipeline` and `/runs` pick up and inspect runs.
+**Pipeline agents** are the multi-step workflow definitions behind the bigger jobs. They live in top-level `agents/` because `/run-pipeline`, not Claude Code's native project-agent loader, reads their contracts and registry. The controller validates explicit input bindings and launches each worker through a configured engine adapter, sequentially. Claude Code remains the default engine; the OpenAI-compatible adapter is disabled until it is configured and approved. The controller records outputs directly inside the selected run and does not silently fall back to the main conversation. The controller has deterministic and subprocess integration coverage. Live-provider behavior and native Windows remain separate verification boundaries documented in [verification status](docs/PIPELINE-VERIFICATION.md). See [Agent architecture](docs/AGENT_ARCHITECTURE.md) for the distinction from native subagents.
 
 **Helpers** are the deterministic Python underneath: `experiment_stats` (power, SRM, sequential tests, variance reduction), `causal` (difference-in-differences, propensity matching, Rosenbaum bounds), forecasting with seasonality detection, structural validation, provenance logging. The model reasons; the arithmetic runs in code.
 
@@ -106,7 +106,7 @@ You can always just ask in plain English. Slash commands are shortcuts.
 `/experiment` A/B design, power, analysis, decision · `/experiment-brief` structured test brief · `/srm-check` sample-ratio gate · `/causal` diff-in-diff, matching, before/after
 
 **Trust**
-`/reliability` is an answer stable across runs · `/eval` score the analyst against ground-truth cases · `/context-compare` does a piece of context change the answer · `/trace` where a number came from · `/codex-review` a second model re-derives the analysis blind
+`/reliability` does behavior repeat · `/trace-analysis` inspect the evidence behind a claim · `/triangulation` compare independent analytical paths · `/score-analysis` decide whether to use one analysis · `/eval` run a frozen system suite · `/evaluate-grader` compare a model grader with human labels · `/monitor-evals` inspect regressions and drift · `/context-compare` test one context change · `/codex-review` ask a second model to re-derive an analysis
 
 **Decks and sharing**
 `/export` to Docs, Slides, Notion, PDF, Word, Slack, or email. Fixing an existing deck lives in [deck-doctor](https://github.com/ai-analyst-lab/deck-doctor)
@@ -121,31 +121,42 @@ The full list with triggers is in `CLAUDE.md`, and every skill's own `SKILL.md` 
 
 ## Your data
 
-The repo includes public practice data so it works before you connect anything. For your own data, run `/connect-data` (or `/setup` for full onboarding). Supported sources:
+The repo includes small public practice datasets, synthetic NovaMart context, and public evaluation fixtures. The larger NovaMart DuckDB file is distributed separately for the course. For your own data, run `/connect-data` or `/setup` for full onboarding. Supported sources:
 
 - **CSV files**, dropped in a directory
 - **DuckDB**, local or MotherDuck
 - **Postgres**, any Postgres-compatible database
 - **BigQuery**, with a Google service account
 - **Snowflake**, with user/password or key pair (see `docs/SETUP_SNOWFLAKE.md`)
+- **Databricks**, through a configured SQL warehouse
+- **Redshift**, through its PostgreSQL-compatible interface
+- **SQL Server or Azure SQL**, through ODBC
+- **MySQL or MariaDB**, through a configured connection
 
 It profiles the data, writes schema documentation, and remembers context across sessions in `.knowledge/`: corrections, proven query patterns, metric definitions, your business glossary. Nothing in `.knowledge/`, `data/`, or `outputs/` that you generate is committed unless you choose to.
 
 ## Test your analyst
 
-Most AI-analysis tools ask you to trust them. This one includes an eval harness.
+Most AI analysis tools ask you to trust a polished result. This repository includes an evaluation control plane so you can inspect one analysis and measure the system across frozen tasks.
 
-The eval harness grades the analyst against a ground-truth set you define for your own data: each case is a question with a computed answer, a tolerance, and the method used to derive it, so the answer key is auditable. Run `/eval train` and the analyst is driven on each question blind, then graded; the run record carries the git sha, the model, and which metrics were defined at the time, so you can watch accuracy move as you change skills or add context. The repo ships no ground truth (it ships no data); a worked example set over public S&P 500 data lives in `ai-analyst-plus` under `course-examples/`.
+Public task manifests live under `data/evals/public/`. The controller records the complete system and data configuration, creates a fresh trial, locks its output, and only then permits grading. Local working cases support iteration. Course heldout references remain outside the student clone and are graded through a separate course boundary. A visible answer file on the same machine is useful development material, but it is not described as a secret heldout test.
 
-Two companion checks: `/reliability` asks the same question N times and reports whether the answer is stable, and `/context-compare` runs a question with and without a piece of context to measure whether that context is worth keeping.
+The checks answer different questions. `/reliability` measures repeated behavior without claiming correctness. `/trace-analysis` follows a claim to its source and query. `/triangulation` compares methodologically distinct paths. `/eval` measures a named system configuration across working, heldout, capability, or regression cases. `/evaluate-grader` tests the evaluator against frozen human labels. None of these signals is allowed to cancel a blocking failure in another dimension. `data/evals/public/week5-engine.yaml` is the compact controlled suite for comparing two configured engines while the surrounding system remains fixed.
+
+## Engines and operating handoff
+
+Engine adapters live under `helpers/engines/`. Secret-free definitions live in `config/engines.yaml`; credentials are referenced by environment-variable name and never belong in that file. Capability preflight distinguishes unavailable credentials or unsupported behavior from analytical failure. Evaluation receipts record the engine fingerprint, usage where supplied, latency, known cost, and raw-envelope paths. Missing cost remains unknown.
+
+`examples/analyst-v1/` is a bounded operating-handoff example. It includes a system manifest, autonomy policy, one approved workflow, release and recovery records, a value scorecard, and an operator guide. The local operator is inspectable course infrastructure, not a hosted service or an operating-system security boundary.
 
 ## What runs on your machine
 
 Two Claude Code hooks are configured in `.claude/settings.json`: one appends a line per tool
 action to `working/action_log_<date>.jsonl` (the provenance trail the `trace` skill reads), one
 records Snowflake MCP queries into the query log. Both write local files only; delete the `hooks`
-block to turn them off. Your data is processed locally; what leaves the machine is your prompts
-to the Claude API and exports you explicitly invoke. Details in
+block to turn them off. Local tools process your data on your machine, but model prompts and
+supplied context travel to the configured model provider unless you selected and verified a
+genuinely local endpoint. Exports can also leave the machine when you explicitly invoke them. Details in
 [SECURITY.md](.github/SECURITY.md).
 
 ## Make it yours
@@ -156,7 +167,7 @@ to the Claude API and exports you explicitly invoke. Details in
 | Add a skill | Create `.claude/skills/my-skill/SKILL.md` with a `name` and trigger `description` |
 | Add an agent | Copy `agents/CONTRACT_TEMPLATE.md` |
 | Change the chart or deck theme | Add a YAML theme in `themes/brands/` (FiveThirtyEight and Economist are included as examples) |
-| Adjust the pipeline | Edit `.claude/skills/run-pipeline/SKILL.md` |
+| Adjust the pipeline | Review plans, registry and explicit bindings; see `docs/PIPELINE-CONTROLLER.md` |
 | Keep it honest | Run `python scripts/repo_lint.py` and `pytest` before you commit; CI runs both |
 
 See [docs/setup-guide.md](docs/setup-guide.md) for setup and [docs/theming.md](docs/theming.md) for branding.
@@ -165,10 +176,10 @@ See [docs/setup-guide.md](docs/setup-guide.md) for setup and [docs/theming.md](d
 
 v3 replaces the v2 tree. The v2 release is preserved as the `v2` branch and the `v2.0.0` tag, so existing links and clones keep working. What changed:
 
-- **Architecture.** v2 had 23 agents and no skills; v3 is skills-first (63) with the agents (39) behind the pipeline. Your v2 `CLAUDE.md` customizations need to be re-applied on the v3 file.
+- **Architecture.** v2 had 23 agents and no skills; v3 is skills-first with 40 registered agents behind the pipeline. Your v2 `CLAUDE.md` customizations need to be re-applied on the v3 file.
 - **Knowledge store.** `.knowledge/` layout is the same idea with a richer tree (corrections, archaeology, organizations, reliability). Run `/connect-data` again on your datasets to rebuild the brain.
 - **Removed.** The north-star skill (its reference corpus is not ours to redistribute), community skills tied to a course, and duplicate skills merged into their stronger sibling (see CHANGELOG).
-- **Data.** v2 bundled a demo dataset. v3 ships blank: you connect your own on first run, and the sample datasets live in `ai-analyst-plus/course-examples/`.
+- **Data.** v2 bundled a larger demo dataset. v3 includes only small public examples, synthetic NovaMart context, and public evaluation fixtures. The NovaMart database and all private held-out references remain outside the repository.
 
 ## Cowork plugin
 

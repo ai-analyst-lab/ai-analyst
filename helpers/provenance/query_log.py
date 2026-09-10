@@ -34,6 +34,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import os
 import time
 import uuid
 from datetime import datetime
@@ -83,10 +84,11 @@ def autolog_enabled() -> bool:
 def _log_path(dataset_name: str, date: str) -> Path:
     """Return the JSONL log file path for a given analysis run.
 
-    Uses _EXPLICIT_LOG_DIR if set (pipeline mode), otherwise _WORKING_DIR.
-    Also writes a copy to the top-level working/ dir for backward compatibility.
+    A controller-provided directory crosses subprocess boundaries. Explicit
+    in-process configuration remains supported for legacy callers.
     """
-    base_dir = _EXPLICIT_LOG_DIR or _WORKING_DIR
+    controlled = os.environ.get("AI_ANALYST_QUERY_LOG_DIR")
+    base_dir = Path(controlled) if controlled else (_EXPLICIT_LOG_DIR or _WORKING_DIR)
     return base_dir / f"query_log_{dataset_name}_{date}.jsonl"
 
 

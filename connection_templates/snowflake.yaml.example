@@ -17,7 +17,7 @@ connection:
   database: "{database}"
   schema: "public"
   user: "{username}"
-  password: "{password}"   # Consider using env vars: $SNOWFLAKE_PASSWORD
+  password: "$SNOWFLAKE_PASSWORD"   # Secret belongs in .env, never in this manifest
 
 summary:
   table_count: null

@@ -1,126 +1,106 @@
 #!/usr/bin/env python3
-"""Deterministic reliability statistics from N independent runs.
+"""Compatibility CLI for the shared evaluation reliability engine.
 
 Usage:
     python3 helpers/stats/reliability_stats.py <run_dir>
 
-Expects <run_dir>/runs.json shaped like:
-    {"question": "...", "runs": [
-        {"run": 1, "headline": "25.3%", "measured": "...", "definition_source": "..."},
-        ...
-    ]}
-
-Writes <run_dir>/stats.json and <run_dir>/report.md, and appends one line to
-.knowledge/reliability/log.jsonl so every reliability check is tracked and auditable.
-The numbers are computed here (deterministically), never estimated by the model.
+New workflows should use ``helpers.evals.reliability`` directly. This wrapper
+keeps earlier skills and saved exercises working while producing the stronger
+Week 3 record.
 """
+
 import json
-import re
 import sys
-import statistics
-from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from helpers.evals.normalization import normalize_number
+from helpers.evals.reliability import measure_reliability
+from helpers.evals.reports import render_reliability
+
 
 def parse_number(headline):
-    """Pull the leading numeric value out of a headline like '25.3%', '$3.15M', '1,409'."""
-    if headline is None:
-        return None
-    text = str(headline).replace(",", "")
-    m = re.search(r"-?\d+(?:\.\d+)?", text)
-    if not m:
-        return None
-    value = float(m.group())
-    suffix = text[m.end():m.end() + 1].lower()
-    if suffix == "k":
-        value *= 1e3
-    elif suffix == "m":
-        value *= 1e6
-    elif suffix == "b":
-        value *= 1e9
-    return value
+    return normalize_number(headline).value
 
 
-def compute(runs):
-    n = len(runs)
-    headlines = [r.get("headline") for r in runs]
-    nums = [v for v in (parse_number(h) for h in headlines) if v is not None]
-    stats = {"n": n, "n_numeric": len(nums), "headlines": headlines}
-
-    if nums:
-        mean = statistics.fmean(nums)
-        sd = statistics.pstdev(nums) if len(nums) > 1 else 0.0
-        rounded = [round(v, 4) for v in nums]
-        counts = Counter(rounded)
-        modal_value, modal_count = counts.most_common(1)[0]
-        rel_range = (max(nums) - min(nums)) / abs(mean) if mean else (0.0 if len(set(rounded)) == 1 else 1.0)
-        converged = len(set(rounded)) == 1 or rel_range <= 0.02
-        stats.update({
-            "mean": round(mean, 4),
-            "stdev": round(sd, 4),
-            "cv": round(sd / mean, 4) if mean else None,   # coefficient of variation
-            "min": min(nums),
-            "max": max(nums),
-            "range": round(max(nums) - min(nums), 4),
-            "rel_range": round(rel_range, 4),
-            "distinct_values": sorted(set(rounded)),
-            "n_distinct": len(set(rounded)),
-            "agreements": modal_count,            # runs sharing the most common value
-            "differences": n - modal_count,
-            "agreement_rate": round(modal_count / n, 3),
-            "verdict": "STABLE" if converged else "DRIFT",
-        })
-    else:
-        stats["verdict"] = "UNKNOWN"   # no parseable numbers
-
-    sources = [str(r.get("definition_source") or "").strip().lower() for r in runs]
-    stats["used_dictionary"] = sum(1 for s in sources if "dictionary" in s)
-    return stats
+def compute(runs, *, unit_hint=None, absolute_tolerance=None, relative_tolerance=None):
+    report = measure_reliability(
+        runs,
+        unit_hint=unit_hint,
+        absolute_tolerance=absolute_tolerance,
+        relative_tolerance=relative_tolerance,
+    )
+    distribution = report.get("distribution") or {}
+    exact = report["exact_agreement"]
+    old_verdict = {
+        "exactly_stable": "STABLE",
+        "stable_within_tolerance": "STABLE",
+        "variable": "DRIFT",
+        "unknown": "UNKNOWN",
+    }[report["verdict"]]
+    return {
+        **report,
+        "n": report["requested_trials"],
+        "n_numeric": report["successful_trials"],
+        "headlines": [row.get("headline") for row in runs],
+        "mean": distribution.get("mean"),
+        "stdev": distribution.get("stdev"),
+        "cv": distribution.get("cv"),
+        "min": distribution.get("minimum"),
+        "max": distribution.get("maximum"),
+        "range": distribution.get("range"),
+        "distinct_values": distribution.get("distinct", []),
+        "n_distinct": len(distribution.get("distinct", [])),
+        "agreements": exact["count"],
+        "differences": report["successful_trials"] - exact["count"],
+        "agreement_rate": exact["rate"],
+        "used_dictionary": sum(
+            "dictionary" in str(row.get("definition_source") or "").casefold() for row in runs
+        ),
+        "verdict": old_verdict,
+    }
 
 
 def write_report(run_dir, question, runs, stats):
-    lines = [f"# Reliability report", "", f"**Question:** {question}",
-             f"**Runs:** {stats['n']}  ·  **Verdict:** {stats['verdict']}", ""]
-    if stats.get("verdict") in ("STABLE", "DRIFT"):
-        lines += [
-            f"- distinct values: {stats['n_distinct']}  ({', '.join(str(v) for v in stats['distinct_values'])})",
-            f"- agreements: {stats['agreements']} / {stats['n']}  (agreement rate {stats['agreement_rate']})",
-            f"- differences: {stats['differences']}",
-            f"- mean {stats['mean']}  ·  stdev {stats['stdev']}  ·  CV {stats['cv']}  ·  range {stats['range']} (rel {stats['rel_range']})",
-            f"- used metric dictionary: {stats['used_dictionary']} / {stats['n']} runs",
-            "",
-        ]
-    lines += ["| Run | Headline | What it measured | Source |", "|---|---|---|---|"]
-    for r in runs:
-        lines.append(f"| {r.get('run')} | {r.get('headline','')} | {str(r.get('measured','')).replace('|','/')} | {r.get('definition_source','')} |")
-    lines += ["", "_Stability is necessary, not sufficient: a wrong query is perfectly stable. "
-              "N is illustrative; this check needs no answer key and is nearly free when the runs are genuinely independent._"]
-    (run_dir / "report.md").write_text("\n".join(lines))
+    report = dict(stats)
+    report["question"] = question
+    return render_reliability(report, Path(run_dir) / "report.md")
 
 
 def main():
     run_dir = Path(sys.argv[1])
-    payload = json.loads((run_dir / "runs.json").read_text())
+    payload = json.loads((run_dir / "runs.json").read_text(encoding="utf-8"))
     question = payload.get("question", "(unknown)")
-    runs = payload.get("runs", [])
-    stats = compute(runs)
+    tolerance = payload.get("decision_tolerance", {})
+    stats = compute(
+        payload.get("runs", []),
+        unit_hint=tolerance.get("unit"),
+        absolute_tolerance=tolerance.get("absolute"),
+        relative_tolerance=tolerance.get("relative"),
+    )
     stats["question"] = question
     stats["computed_at"] = datetime.now(timezone.utc).isoformat()
-    (run_dir / "stats.json").write_text(json.dumps(stats, indent=2))
-    write_report(run_dir, question, runs, stats)
+    (run_dir / "stats.json").write_text(json.dumps(stats, indent=2) + "\n", encoding="utf-8")
+    write_report(run_dir, question, payload.get("runs", []), stats)
 
-    # Append to the audit log (tracked over time).
     log_dir = Path(".knowledge/reliability")
     log_dir.mkdir(parents=True, exist_ok=True)
     entry = {
-        "ts": stats["computed_at"], "question": question, "n": stats["n"],
-        "verdict": stats["verdict"], "cv": stats.get("cv"), "n_distinct": stats.get("n_distinct"),
-        "agreement_rate": stats.get("agreement_rate"), "dir": str(run_dir),
+        "ts": stats["computed_at"],
+        "question": question,
+        "requested": stats["requested_trials"],
+        "successful": stats["successful_trials"],
+        "verdict": stats["verdict"],
+        "exact_agreement_rate": stats["exact_agreement"]["rate"],
+        "tolerance_agreement_rate": stats["tolerance_agreement"]["rate"],
+        "dir": str(run_dir),
     }
-    with (log_dir / "log.jsonl").open("a") as f:
-        f.write(json.dumps(entry) + "\n")
-
+    with (log_dir / "log.jsonl").open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(entry) + "\n")
     print(json.dumps(stats, indent=2))
 
 

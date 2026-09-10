@@ -1,0 +1,138 @@
+# Pipeline reliability implementation: verification and remaining work
+
+Status: implementation candidate, not released or ready to teach. September 6, 2026.
+
+## Latest result after the usage reset
+
+The historical account-limit section below is superseded. Real workers have run.
+Latest full regression: **1,060 passed, one skipped, one warning**, 9.16 seconds.
+The JUnit file below has been refreshed to that result.
+
+The fresh-permission analytical test completed after an explicit resume following
+a text/path-probe bug fix. Analysis was not repeated. Both workers recorded zero
+permission denials, and the requested figures matched independent SQL. A negative
+test through the actual `validate_only` named plan rejected unsupported causal
+claims and stopped without retrying to obtain a pass.
+
+See `PIPELINE-REHEARSAL-FINDINGS.md` for captured run IDs, timings, first-attempt
+failures and remaining analytical defects. The completed report contains two
+one-cent errors in extra averages, caught by review; review's confidence and
+triangulation claims still need work. This is not unconditional analytical acceptance.
+
+Natural-language course inspection has also been tried in an isolated source copy.
+It found the relevant components but calculated results before approval and called
+an exercise amount revenue. The course prompt is being repaired and rerun. That
+inspection is not proof of the complete student build. Public release, native
+Windows and all named-plan model executions remain unverified.
+
+## Location and preservation
+
+- Branch: `codex/pipeline-reliability-2026-09-05`.
+- Worktree: isolated local release worktree.
+- Base commit: `ae114aa5d2606701e76214f0015558a143678227`.
+- The original `ai-analyst` checkout is unchanged. Its six pre-existing edited or
+  untracked documentation files were copied into this worktree before changes.
+- No push, public release, or shared-repository migration has occurred.
+
+## What has been implemented
+
+- Explicit optional dependency semantics in the DAG and affected real worker edges.
+- Collision-safe legacy run creation, with an optional symlink and JSON navigation pointer.
+- Duplicate registry and plan checks.
+- A file-backed version-3 controller with bounded retries, explicit execution mode,
+  per-plan deliverables, input binding, approval records, artifact containment and hashes.
+- Isolated source workspaces, per-attempt outputs, external file snapshots, per-run locks,
+  and explicit resume verification.
+- A compiler from existing registry/contract/plan definitions to reviewed run contracts.
+- A Claude Code adapter using Opus 4.6, fresh CLI processes, normal permissions, and
+  inherited query-log directories. Usage/auth/permission blocks stop without blind retry.
+- Shortened run/resume skills delegating mechanics to code, plus migration/limitation docs.
+
+## Deterministic evidence
+
+The original five new regression tests all failed before fixes. They covered optional
+contribution ordering, optional failure release, duplicate registry names, repeated-run
+collision, and the actual sizing/story conflict.
+
+The isolated environment is `/tmp/ai-analyst-reliability-venv`, installed from the
+project's declared development dependencies plus `pygments`. The final full regression
+run initially passed **1,040 tests, with one skip and one existing deprecation
+warning**. Subsequent hardening and rehearsal checks are recorded below. The JUnit record is
+`working/verification/reliability-tests.xml`. All five real named plans also passed
+compilation tests using explicitly labeled synthetic input fixtures. This is
+structural coverage, not real analytical execution of those plans.
+
+Fault cases cover missing inputs/outputs, failed required workers, degraded optional
+workers, changed artifacts/definitions, stale attempt files, concurrent controller locks,
+explicit approvals, unsupported isolation, and controller resume. Deterministic test
+workers execute real file handoffs; they are not evidence of successful LLM behavior.
+
+## Live model attempt
+
+Sandboxed `claude auth status` misleadingly reported logged out. Outside the sandbox,
+the installed Claude CLI was authenticated. No new login is needed.
+
+The exact Opus 4.6 probe outside the sandbox returned:
+
+```text
+api_error_status: 429
+You've hit your session limit; resets 3am (America/Los_Angeles)
+input_tokens: 0
+output_tokens: 0
+```
+
+The session ID was `aa28be57-d2d4-454b-8445-36c234a4cafa`. No analytical worker
+executed. This must not be described as a successful live test. Do not switch
+accounts, billing modes, or models to bypass the account limit.
+
+## Still required before release and Session 3 technical finalization
+
+1. Rehearse an actual multi-worker analytical request after usage resets, with
+   normal permissions. Verify input bindings, output locations, tool access and
+   whether source-workspace context supports the actual workers.
+2. Test at least analysis-only and presentation boundaries through real compiled
+   plans. Reconcile legacy optional/wildcard output declarations and any worker
+   contract mismatches revealed by those tests. A compiler that fails safely is
+   not proof that all existing plans are usable without further configuration.
+3. Verify semantic analytical gates. The controller now enforces a declared JSON
+   verdict, stopping on rejection without automatic review retries. This still
+   does not prove the reviewer performed a correct analytical assessment.
+4. Measure latency and usage for the proposed Session 3 build. Do not select a lab
+   solely because a structural plan check succeeds.
+5. Test native Windows/PowerShell startup and filesystem behavior. Symlink fallback
+   code is not a substitute for an actual Windows rehearsal.
+6. Review compatibility: legacy state is preserved but not auto-migrated; worker
+   scheduling is initially sequential; broad platform adapters remain deferred.
+7. Only after those checks, finalize the lesson's exact runtime claims, lab prompts,
+   captures and release pin. The full Session 3 teaching redesign remains required.
+
+The broader eval/context integration backlog remains in the approved improvement
+plan. It has not been implemented by this orchestration pass.
+
+## Continuation: September 6, before the usage reset
+
+- Added tests for rejected review verdicts and changed helper/context snapshots.
+- Declared executable analysis code as an analysis-worker output so review has
+  an explicit producer for its required code input.
+- Aligned CLAUDE.md and README with the new execution behavior. They no longer
+  instruct a silent inline fallback or require a deck for every plan.
+- Tested the CLI's logged-out envelope, which can have a null HTTP status. It now
+  stops as an account block instead of retrying an analytical job.
+- Prepared `scripts/rehearse_pipeline.py`: two existing worker instructions in an
+  explicit bounded test contract, using real NovaMart data. The reference SQL is
+  executed independently and is not supplied to the workers. This is not a blind
+  security boundary, a successful model run, or proof of built-in plan routing.
+- Repository lint passes with 29 non-blocking skill-description length warnings.
+  Its report covers tracked files; do not imply it inspected every new file.
+- Latest full suite after these changes: **1,052 passed, one skipped, one warning**,
+  in 8.83 seconds. The JUnit record above contains this run.
+
+Use `prepare` before a new rehearsal so current instructions are snapshotted.
+Only `run` invokes Claude. Run assessment checks numerical output against the
+reference, but still requires human inspection of the report, chart and tool trace.
+
+The installed CLI help and official programmatic-use documentation were reviewed.
+The ordinary print mode can inherit host customizations. The controller's source
+snapshot is not a claim of hermetic model context. Bare mode is not being substituted
+because it changes authentication requirements. Reference:
+https://code.claude.com/docs/en/headless

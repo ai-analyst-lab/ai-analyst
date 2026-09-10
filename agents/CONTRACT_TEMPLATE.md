@@ -1,13 +1,14 @@
 # CONTRACT Block Template (OR-1.5)
 
 ## Purpose
-Every agent `.md` file MUST begin with a CONTRACT block -- a YAML declaration
-inside an HTML comment that describes the agent's interface. The OR-3 DAG walker
-reads these contracts to build the execution graph.
+Every pipeline-agent `.md` file MUST begin with a CONTRACT block, a YAML declaration
+inside an HTML comment that describes the agent's interface. The pipeline orchestrator
+and `helpers/pipeline/dag.py` use these contracts and `agents/registry.yaml` to build and
+validate the execution graph.
 
-The CONTRACT block is invisible to the agent at runtime (it is an HTML comment),
-but it is machine-readable for pipeline orchestration, dependency resolution,
-and documentation generation.
+The CONTRACT block is hidden when the Markdown is rendered, but it remains part of the source file
+the orchestrator reads. It is structured metadata for pipeline orchestration, dependency
+resolution, and documentation.
 
 ## Format
 
@@ -161,8 +162,12 @@ CONTRACT_END -->
 When a non-critical agent (`critical: false`) fails:
 1. Pipeline sets the agent's status to `degraded` (not `failed`).
 2. A warning is logged with the error message.
-3. Downstream agents that depend on the degraded agent receive a `DEGRADED_UPSTREAM` flag in their context so they can adapt (e.g., skip optional sections).
-4. The pipeline continues -- it does **not** halt.
+3. Downstream workers may proceed only when all required inputs and dependencies
+   are satisfied. Declare nonessential contributions in `optional_dependencies`.
+   A degraded output is not a valid required input. No synthetic failure file is
+   treated as analytical evidence.
+4. The run remains degraded if it can finish its requested deliverables. If a
+   required dependency cannot be satisfied, the dependent work remains blocked.
 
 ## Required Body Section: Operating Mode
 
@@ -198,7 +203,7 @@ Output from agent X. The orchestrator reads agent X's `outputs` to locate the fi
 
 1. **CONTRACT block must be first.** It must be the very first thing in the file, before the `# Agent Name` heading. No blank lines before it.
 
-2. **CONTRACT block is an HTML comment.** It starts with `<!-- CONTRACT_START` and ends with `CONTRACT_END -->`. This makes it invisible when the agent file is read as instructions, but parseable by the DAG walker.
+2. **CONTRACT block is an HTML comment.** It starts with `<!-- CONTRACT_START` and ends with `CONTRACT_END -->`. This hides it in rendered Markdown while keeping it parseable by the pipeline tooling.
 
 3. **`depends_on` must match `agent:X` sources.** Every `agent:X` reference in `inputs[].source` must have a corresponding entry in `depends_on`. If an agent reads output from `agent:question-framing`, then `question-framing` must appear in `depends_on`.
 

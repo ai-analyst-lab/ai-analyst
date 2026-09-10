@@ -1,0 +1,14 @@
+{
+  "name": "bounded_answer",
+  "execution_mode": "isolated",
+  "max_attempts": 2,
+  "workers": {
+    "bounded-answer": {
+      "file": "agents/examples/bounded-answer.md",
+      "depends_on": [],
+      "inputs": {"QUESTION": {"required": true}},
+      "outputs": {"answer": "answer.md"}
+    }
+  },
+  "deliverables": ["bounded-answer.answer"]
+}

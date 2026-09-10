@@ -1,0 +1,1 @@
+{"candidate_version":"1.1.0","requested_trials":3,"completed_trials":3,"status_counts":{"pass":2,"fail":1},"case_summary":{"bounded-answer-correctness":{"blocking_pass":false}},"configuration":{"reviewer":"analytical-reviewer","allowed_changed_paths":["agents/examples/bounded-answer.md"]},"limitations":["A previously passing case regressed"]}

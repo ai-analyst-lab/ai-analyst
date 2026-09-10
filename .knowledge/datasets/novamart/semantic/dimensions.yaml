@@ -1,0 +1,27 @@
+schema_version: 1
+dataset: novamart
+dimensions:
+  - id: order_status
+    entity: order
+    expression: orders.status
+    aliases: [status, order state]
+    sample_values: [completed, cancelled, returned]
+    status: trusted
+    owner: data-platform
+    last_reviewed: 2026-08-28
+  - id: device
+    entity: session
+    expression: sessions.device
+    aliases: [platform, device type]
+    sample_values: [web, ios, android]
+    status: trusted
+    owner: product-analytics
+    last_reviewed: 2026-08-28
+  - id: membership_status
+    entity: membership
+    expression: memberships.status
+    aliases: [member status, membership state]
+    sample_values: [expired, converted, active, cancelled]
+    status: trusted
+    owner: membership-analytics
+    last_reviewed: 2026-08-28

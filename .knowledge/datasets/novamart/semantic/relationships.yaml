@@ -1,0 +1,68 @@
+schema_version: 1
+dataset: novamart
+relationships:
+  - id: sessions_to_users
+    left: sessions
+    right: users
+    "on": sessions.user_id = users.user_id
+    cardinality: many_to_one
+    status: trusted
+    owner: data-platform
+    last_reviewed: 2026-08-28
+  - id: order_items_to_orders
+    left: order_items
+    right: orders
+    "on": order_items.order_id = orders.order_id
+    cardinality: many_to_one
+    warning: Summing order-level amounts after this join fans out the measure.
+    status: trusted
+    owner: data-platform
+    last_reviewed: 2026-08-28
+  - id: orders_to_sessions
+    left: orders
+    right: sessions
+    "on": orders.session_id = sessions.session_id
+    cardinality: many_to_one
+    status: trusted
+    owner: data-platform
+    last_reviewed: 2026-08-28
+  - id: events_to_sessions
+    left: events
+    right: sessions
+    "on": events.session_id = sessions.session_id
+    cardinality: many_to_one
+    status: trusted
+    owner: data-platform
+    last_reviewed: 2026-08-28
+  - id: orders_to_users
+    left: orders
+    right: users
+    "on": orders.user_id = users.user_id
+    cardinality: many_to_one
+    status: trusted
+    owner: data-platform
+    last_reviewed: 2026-08-28
+  - id: memberships_to_users
+    left: memberships
+    right: users
+    "on": memberships.user_id = users.user_id
+    cardinality: many_to_one
+    status: trusted
+    owner: data-platform
+    last_reviewed: 2026-08-28
+  - id: assignments_to_experiments
+    left: experiment_assignments
+    right: experiments
+    "on": experiment_assignments.experiment_id = experiments.experiment_id
+    cardinality: many_to_one
+    status: trusted
+    owner: experimentation
+    last_reviewed: 2026-08-28
+  - id: assignments_to_users
+    left: experiment_assignments
+    right: users
+    "on": experiment_assignments.user_id = users.user_id
+    cardinality: many_to_one
+    status: trusted
+    owner: experimentation
+    last_reviewed: 2026-08-28

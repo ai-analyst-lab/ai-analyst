@@ -1,0 +1,8 @@
+allowed_data_sources: [novamart-course-data]
+allowed_tools: [python, duckdb]
+read_only: true
+prohibited_actions: [write_business_data, change_access, publish_external]
+approval_required: [share_sensitive_output]
+stop_conditions: [missing_required_data, unresolved_definition, failed_blocking_eval]
+sensitive_output_handling: do_not_publish
+expansion_approver: system-owner

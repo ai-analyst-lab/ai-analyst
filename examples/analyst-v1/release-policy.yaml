@@ -1,0 +1,4 @@
+blocking_statuses: [fail, error, blocked]
+required_cases: [bounded-answer-correctness]
+approved_changed_paths: [agents/examples/bounded-answer.md]
+reviewer_required: true

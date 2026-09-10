@@ -22,6 +22,9 @@ outputs:
   - path: working/storyboard_{{DATASET}}.md
     type: markdown
 depends_on:
+  - validation
+  - cross-verification
+optional_dependencies:
   - opportunity-sizer
 knowledge_context:
   - .knowledge/datasets/{active}/manifest.yaml

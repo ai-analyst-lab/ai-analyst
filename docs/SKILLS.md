@@ -1,6 +1,6 @@
 # Skills map
 
-57 skills under `.claude/skills/`, each a `SKILL.md` with a `name` and a trigger `description`. The description is what makes a skill fire; open a skill file to see the full method it enforces. Grouped here for people; the loader needs them flat.
+63 skills under `.claude/skills/`, each a `SKILL.md` with a `name` and a trigger `description`. The description is what makes a skill fire; open a skill file to see the full method it enforces. Grouped here for people; the loader needs them flat.
 
 ## Method (always on)
 
@@ -56,11 +56,17 @@
 
 | Skill | One line |
 |---|---|
-| `triangulation` | Cross-reference and validate findings before presenting them: mandatory segment-first Simpson's Paradox check, denominator changes, survivorship bias, plausibility vs benchmarks. |
-| `trace` | Show the provenance trace — every reported number linked to the SQL that produced it, with a confidence badge. |
-| `reliability` | Check whether an AI analysis answer is STABLE by running the same question several independent times and measuring what holds versus what drifts. |
-| `eval` | Run the held-out ground-truth set live against the analyst and score it. |
+| `triangulation` | Compare blind, methodologically distinct analytical paths, repeat them, and reconcile persistent disagreement. |
+| `trace-analysis` | Follow one claim to its receipt, source, query, result, and run evidence, then inspect analytical risks. |
+| `trace` | Show the provenance trace for the current run. |
+| `reliability` | Run one task through fresh trials and separate exact agreement, tolerance agreement, failed runs, and parse failures. |
+| `score-analysis` | Keep evidence dimensions separate and decide whether to act, investigate, abstain, or mark the review incomplete. |
+| `eval` | Evaluate a named system configuration across a frozen working, heldout, capability, or regression suite. |
+| `evaluate-grader` | Compare a narrow model grader with frozen human labels and inspect disagreement and scoring stability. |
+| `monitor-evals` | Distinguish system, data, suite, evaluator, and operational changes across evaluation history. |
 | `context-compare` | Advanced: runs the same question under two configurations and diffs the results. |
+| `context-trace` | Show what question-specific context was supplied, selected, omitted, stale, or conflicting. |
+| `improve-context` | Diagnose one context failure, test the smallest change against frozen cases, and produce an accept, revise, or revert receipt. |
 | `codex-review` | Independently validate the current analysis with a second model (OpenAI Codex). |
 | `tracking-gaps` | Assess whether the data needed for an analysis actually exists, identify what's missing, and produce prioritized instrumentation requests for engineering when gaps are found. |
 
@@ -98,4 +104,3 @@
 | `pace` | Change how visibly Claude surfaces analytical work during L3+ analyses. |
 | `session-handoff` | Preserve critical state when a session approaches context limits so the next session can pick up seamlessly. |
 | `switch-dataset` | Change the active dataset to switch between different data sources for analysis. |
-

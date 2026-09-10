@@ -1,0 +1,9 @@
+{
+  "request_id": "example-001",
+  "request_type": "descriptive_analysis",
+  "workflow": "bounded_answer",
+  "question": "Which customer segment has the highest average order value?",
+  "data_sources": ["novamart-course-data"],
+  "tools": ["python", "duckdb"],
+  "actions": ["read_data", "write_run_artifacts"]
+}

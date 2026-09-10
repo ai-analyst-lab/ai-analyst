@@ -1,12 +1,26 @@
 # Agent Index
 
-## System Variables (auto-resolved)
+These files are repository-defined pipeline agents. They are consumed by `/run-pipeline` through
+`agents/registry.yaml`; they are not native Claude Code project subagents from `.claude/agents/`.
+The version-3 controller launches selected jobs sequentially in separate Claude Code
+processes, including a single ready job. It does not silently fall back to inline
+execution. Some specialist workers are invoked by their own skills rather than the
+named-plan controller. See `docs/AGENT_ARCHITECTURE.md` and
+`docs/PIPELINE-CONTROLLER.md` for the supported path and migration limits.
+
+## Instruction variables and execution bindings
+
+The table describes names used by existing worker instructions. It does not guarantee
+that every variable is loaded automatically. The version-3 request must supply explicit
+values or file bindings, and resolve output filename placeholders. Context referenced
+only in prose is not automatically a snapshotted input. Inspect the actual worker
+contract and compiled request before execution.
 | Variable | Value | Used in |
 |----------|-------|---------|
 | `{{DATE}}` | Current date, YYYY-MM-DD | All agent output filenames |
 | `{{DATASET_NAME}}` | Short name derived from data path or user input | File naming, report headers |
 | `{{BUSINESS_CONTEXT_TITLE}}` | Short title derived from `{{BUSINESS_CONTEXT}}` | Question brief header |
-| `{{RUN_ID}}` | Unique run identifier (YYYY-MM-DD_question-slug) | Run Pipeline, Resume Pipeline |
+| `{{RUN_ID}}` | Version-3 timestamp plus UUID identifier; older runs use legacy formats | Run Pipeline, Resume Pipeline |
 | `{{RUN_DIR}}` | Per-run output directory path | All agents during pipeline |
 | `{{SQL_PATTERNS}}` | Archaeology-retrieved SQL patterns | Analysis agents |
 | `{{CORRECTIONS}}` | Logged corrections for current context | Analysis agents |

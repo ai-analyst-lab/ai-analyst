@@ -26,6 +26,9 @@ outputs:
   - path: outputs/narrative_{{DATASET_NAME}}_{{DATE}}.md
     type: markdown
 depends_on:
+  - chart-maker
+  - story-architect
+optional_dependencies:
   - visual-design-critic
 knowledge_context:
   - .knowledge/datasets/{active}/manifest.yaml

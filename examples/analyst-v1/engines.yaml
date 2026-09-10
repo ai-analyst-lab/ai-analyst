@@ -1,0 +1,13 @@
+version: 1
+default: claude
+engines:
+  claude:
+    type: claude_cli
+    model: claude-opus-4-6
+    timeout: 600
+  comparison:
+    type: openai_compatible
+    enabled: false
+    endpoint: http://localhost:11434/v1
+    model: configure-before-use
+    api_key_env: AI_ANALYST_OPENAI_API_KEY
