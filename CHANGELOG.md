@@ -9,6 +9,17 @@ All notable changes to this project will be documented in this file.
 - Noninteractive local-Python workers now preapprove the read-only `Glob` and `Grep` tools. The
   project root and explicit input paths were already readable, but repository searches could still
   create an unresolved permission denial and block otherwise valid artifacts.
+- The workflow controller now reexports the canonical Claude adapter instead of retaining an
+  unreachable second implementation that could drift from the live engine code.
+
+### Verification
+
+- 1,138 tests pass and one provider-dependent test is skipped.
+- A fresh public-checkout Session 3 rehearsal completed a two-worker analysis and review in one
+  uninterrupted foreground run. Both worker envelopes recorded zero permission denials.
+- The successful runtime result is not unconditional analytical acceptance. Review allowed a
+  minor supporting-percentage error under PASS, and context selection included irrelevant metric
+  definitions. Both limitations are recorded in `docs/PIPELINE-REHEARSAL-FINDINGS.md`.
 
 ## [3.1.0] - 2026-09-10
 

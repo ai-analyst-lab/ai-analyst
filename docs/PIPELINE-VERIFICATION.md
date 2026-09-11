@@ -1,16 +1,20 @@
 # Pipeline reliability implementation: verification and remaining work
 
 Status: released as AI Analyst 3.1 on September 10, 2026. The deterministic suite, repository lint,
-fresh-clone check, CI, and secret scans passed. The environment-specific boundaries below remain.
+fresh-clone check, CI, secret scans, and a bounded Session 3 live rehearsal passed. The
+environment-specific and analytical boundaries below remain.
 
 Release commit: `c4b91ef835ab99da395d9addf1d4c6dacfa7668c`. The documentation-only release follow-up may move
 `main` beyond that commit without changing the pinned course runtime.
 
+Patch release 3.1.1 adds the read-only search permission repair and removes the dead duplicate
+Claude adapter from the controller. The live runtime uses the one canonical implementation in
+`helpers/engines/claude_cli.py`.
+
 ## Latest result after the usage reset
 
 The historical account-limit section below is superseded. Real workers have run.
-Latest full regression: **1,060 passed, one skipped, one warning**, 9.16 seconds.
-The JUnit file below has been refreshed to that result.
+Latest full regression: **1,138 passed, one skipped**.
 
 The fresh-permission analytical test completed after an explicit resume following
 a text/path-probe bug fix. Analysis was not repeated. Both workers recorded zero
@@ -26,8 +30,9 @@ triangulation claims still need work. This is not unconditional analytical accep
 Natural-language course inspection was also tried in an isolated source copy before release.
 It found the relevant components but calculated results before approval and called
 an exercise amount revenue. That historical inspection is not proof of the complete student build.
-Native Windows and all named-plan model executions remain unverified. The released Session 3 prompt
-requires a fresh-clone rehearsal, recorded separately below when completed.
+Native Windows and all named-plan model executions remain unverified. The released Session 3
+exercise has now been rehearsed from a fresh public checkout. See the September 10 section in
+`PIPELINE-REHEARSAL-FINDINGS.md` for the exact outcomes and qualifications.
 
 ## Location and preservation
 
@@ -90,23 +95,22 @@ accounts, billing modes, or models to bypass the account limit.
 
 ## Remaining verification and engineering work
 
-1. Rehearse the released Session 3 natural-language request from a fresh public clone with normal
-   permissions. Verify input bindings, output locations, tool access, routing, and the resulting
-   analytical artifacts.
-2. Test at least analysis-only and presentation boundaries through real compiled
+1. Test at least analysis-only and presentation boundaries through real compiled
    plans. Reconcile legacy optional/wildcard output declarations and any worker
    contract mismatches revealed by those tests. A compiler that fails safely is
    not proof that all existing plans are usable without further configuration.
-3. Verify semantic analytical gates. The controller now enforces a declared JSON
+2. Verify semantic analytical gates. The controller now enforces a declared JSON
    verdict, stopping on rejection without automatic review retries. This still
-   does not prove the reviewer performed a correct analytical assessment.
-4. Measure latency and usage for the proposed Session 3 build. Do not select a lab
-   solely because a structural plan check succeeds.
-5. Test native Windows/PowerShell startup and filesystem behavior. Symlink fallback
+   does not prove the reviewer performed a correct analytical assessment. The latest
+   live review allowed a minor incorrect percentage under PASS.
+3. Improve context selection and request-specific exclusions. The latest rehearsal
+   supplied revenue metric definitions to a request that explicitly prohibited treating
+   `total_amount` as revenue.
+4. Test native Windows/PowerShell startup and filesystem behavior. Symlink fallback
    code is not a substitute for an actual Windows rehearsal.
-6. Review compatibility: legacy state is preserved but not auto-migrated; worker
+5. Review compatibility: legacy state is preserved but not auto-migrated; worker
    scheduling is initially sequential; broad platform adapters remain deferred.
-7. Update this verification record and the course captures after each environment-specific
+6. Update this verification record and the course captures after each environment-specific
    rehearsal. Do not turn one successful run into a universal reliability claim.
 
 The broader eval/context integration backlog remains in the approved improvement

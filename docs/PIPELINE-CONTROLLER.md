@@ -170,6 +170,11 @@ can be retained as a warning only after a non-error response; normal artifact an
 downstream review requirements still apply. Read the rehearsal findings before
 claiming this profile works for fresh student accounts.
 
+The profile explicitly preapproves the read-only `Glob` and `Grep` tools. Path-bounded `Read`,
+attempt-bounded `Edit`, and exact Python-script Bash rules remain separate. The controller imports
+this adapter from `helpers/engines/claude_cli.py`; there is no second controller-local
+implementation to keep synchronized.
+
 The test driver's `--fresh-permissions` option omits user/project/local settings
 for compatibility testing. It does not eliminate managed policy and is not the
 normal student launch command.

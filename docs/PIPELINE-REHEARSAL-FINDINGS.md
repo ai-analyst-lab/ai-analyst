@@ -138,15 +138,59 @@ plausibility as triangulation. These are unresolved analytical-review defects.
 Runtime completion and the permission/resume checks passed. Full analytical
 acceptance remains qualified; do not label this capture error-free.
 
+## September 10 Session 3 release rehearsal
+
+The released course exercise was rehearsed from a fresh public checkout with Opus 4.6. The
+exercise first surveyed the system, prepared and ran a bounded two-worker baseline, then added a
+retained monthly-operations reporting brief and a skill that assembled the adapted request. The
+exercise additions were local and are not part of the public runtime release.
+
+Baseline run: `20260911T013925_e98738cc930b46d1a94fce91605d916a`.
+Both workers completed on their first attempts. The three monthly order counts and amounts matched
+independent DuckDB calculations. Review also recorded missing query provenance and capped its
+confidence grade because cross-verification and reproducibility inputs were absent. The chart
+headline described both November and December as about 30 percent above October, although December
+was 32.6 percent above October. This was imprecise rather than causal.
+
+The first adapted run, `20260911T015901_c66e3cd6b34849a69bf0324c40a7d633`, produced a correct
+analysis and review but the controller blocked it. The validation worker attempted an ordinary
+read-only `Glob` search that the local-Python permission profile had advertised but had not
+preapproved. The controller correctly refused to accept artifacts after an unresolved denial.
+
+Patch 3.1.1 explicitly preapproves `Glob` and `Grep` for this bounded worker profile. A regression
+test verifies the generated command, and the controller now imports the sole canonical Claude
+adapter rather than retaining dead duplicate code.
+
+An intermediate headless test, `20260911T021257_b830816c6fa848ae8d01a2bdf316b572`, was interrupted
+after the outer noninteractive Claude session launched the controller in the background and exited.
+No controller process remained, so its running state and lock were preserved as interrupted
+evidence. This is a headless orchestration failure, not a completed runtime result.
+
+Final uninterrupted run: `20260911T022130_0340c7a2c89946c9934bcba63ce08c56`.
+The outer natural-language session kept the controller in the foreground. Analysis and validation
+both completed on their first attempts in about 7 minutes 43 seconds. Their engine envelopes
+recorded zero permission denials. The report was 233 words, the requested chart was readable, the
+saved calculation code reproduced the monthly values, and the requested scope exclusions were
+followed.
+
+Runtime acceptance passed. Analytical acceptance remains qualified. The report stated that
+non-completed orders were 14.8 percent of Q4 volume; independent calculation gives 14.6 percent.
+The reviewer identified the discrepancy but still returned PASS because it considered the detail
+nonmaterial. The automatic context selector also supplied revenue metric definitions even though
+the brief explicitly prohibited labeling the exercise amount as revenue. The report followed the
+brief, but irrelevant context increased the risk of a semantic error. There were no query-log files
+for the worker's direct DuckDB access.
+
+This rehearsal establishes that the bounded custom definition, hashed input handoffs, sequential
+worker execution, artifact acceptance, and corrected read-only permission profile can complete in
+this macOS environment. It does not establish native Windows behavior, repeated reliability,
+correct semantic review policy, optimal context selection, or successful execution of every named
+plan.
+
 ## Boundaries still unverified
 
-- A fresh-permission uninterrupted run from creation through review; the completed
-  test above required a code fix and explicit resume. Analytical acceptance remains
-  qualified by the issues above.
-- Natural-language routing from the actual student prompt.
 - All five built-in plans executing to their different deliverables.
 - Native Windows execution and the complete set of named-plan model executions.
-- The released Session 3 natural-language prompt from a fresh public clone.
 - Repeated reliability across questions, datasets and models.
 
 Frozen worker/context snapshots do not freeze the currently installed controller
