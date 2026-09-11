@@ -5,12 +5,17 @@ import subprocess
 import pytest
 
 from helpers.pipeline.controller import ClaudeCLI, EngineBlocked, PipelineError
+from helpers.engines.claude_cli import ClaudeCLI as PortableClaudeCLI
 
 
 def job(tmp_path):
     return {"name": "review", "instructions": "Review the assigned results.",
             "inputs": {}, "outputs": {}, "directory": str(tmp_path),
             "project_root": str(tmp_path)}
+
+
+def test_controller_reexports_the_canonical_claude_adapter():
+    assert ClaudeCLI is PortableClaudeCLI
 
 
 @pytest.mark.parametrize("response", [
