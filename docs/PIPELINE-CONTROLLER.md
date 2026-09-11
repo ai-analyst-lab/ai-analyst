@@ -1,8 +1,8 @@
 # File-backed workflow controller
 
-This branch introduces a version-3 controller. It has deterministic regression
-coverage; consult `docs/PIPELINE-VERIFICATION.md` for actual model-run status before
-treating the release as student-ready.
+AI Analyst 3.1 includes a version-3 controller. It has deterministic regression coverage and a
+bounded live-model rehearsal. Consult `docs/PIPELINE-VERIFICATION.md` for the verified boundaries
+before treating one environment or plan as evidence for every workflow.
 
 ## Responsibilities
 

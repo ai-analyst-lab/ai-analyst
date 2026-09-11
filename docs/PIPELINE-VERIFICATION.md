@@ -1,6 +1,10 @@
 # Pipeline reliability implementation: verification and remaining work
 
-Status: implementation candidate, not released or ready to teach. September 6, 2026.
+Status: released as AI Analyst 3.1 on September 10, 2026. The deterministic suite, repository lint,
+fresh-clone check, CI, and secret scans passed. The environment-specific boundaries below remain.
+
+Release commit: `c4b91ef835ab99da395d9addf1d4c6dacfa7668c`. The documentation-only release follow-up may move
+`main` beyond that commit without changing the pinned course runtime.
 
 ## Latest result after the usage reset
 
@@ -19,20 +23,19 @@ failures and remaining analytical defects. The completed report contains two
 one-cent errors in extra averages, caught by review; review's confidence and
 triangulation claims still need work. This is not unconditional analytical acceptance.
 
-Natural-language course inspection has also been tried in an isolated source copy.
+Natural-language course inspection was also tried in an isolated source copy before release.
 It found the relevant components but calculated results before approval and called
-an exercise amount revenue. The course prompt is being repaired and rerun. That
-inspection is not proof of the complete student build. Public release, native
-Windows and all named-plan model executions remain unverified.
+an exercise amount revenue. That historical inspection is not proof of the complete student build.
+Native Windows and all named-plan model executions remain unverified. The released Session 3 prompt
+requires a fresh-clone rehearsal, recorded separately below when completed.
 
 ## Location and preservation
 
-- Branch: `codex/pipeline-reliability-2026-09-05`.
-- Worktree: isolated local release worktree.
+- Release branch: `release/course-runtime-2026-09-10`.
+- Public repository: `https://github.com/ai-analyst-lab/ai-analyst`.
 - Base commit: `ae114aa5d2606701e76214f0015558a143678227`.
-- The original `ai-analyst` checkout is unchanged. Its six pre-existing edited or
-  untracked documentation files were copied into this worktree before changes.
-- No push, public release, or shared-repository migration has occurred.
+- Release commit: `c4b91ef835ab99da395d9addf1d4c6dacfa7668c`.
+- The original dirty `ai-analyst` checkout was not modified while the release was assembled.
 
 ## What has been implemented
 
@@ -85,11 +88,11 @@ The session ID was `aa28be57-d2d4-454b-8445-36c234a4cafa`. No analytical worker
 executed. This must not be described as a successful live test. Do not switch
 accounts, billing modes, or models to bypass the account limit.
 
-## Still required before release and Session 3 technical finalization
+## Remaining verification and engineering work
 
-1. Rehearse an actual multi-worker analytical request after usage resets, with
-   normal permissions. Verify input bindings, output locations, tool access and
-   whether source-workspace context supports the actual workers.
+1. Rehearse the released Session 3 natural-language request from a fresh public clone with normal
+   permissions. Verify input bindings, output locations, tool access, routing, and the resulting
+   analytical artifacts.
 2. Test at least analysis-only and presentation boundaries through real compiled
    plans. Reconcile legacy optional/wildcard output declarations and any worker
    contract mismatches revealed by those tests. A compiler that fails safely is
@@ -103,8 +106,8 @@ accounts, billing modes, or models to bypass the account limit.
    code is not a substitute for an actual Windows rehearsal.
 6. Review compatibility: legacy state is preserved but not auto-migrated; worker
    scheduling is initially sequential; broad platform adapters remain deferred.
-7. Only after those checks, finalize the lesson's exact runtime claims, lab prompts,
-   captures and release pin. The full Session 3 teaching redesign remains required.
+7. Update this verification record and the course captures after each environment-specific
+   rehearsal. Do not turn one successful run into a universal reliability claim.
 
 The broader eval/context integration backlog remains in the approved improvement
 plan. It has not been implemented by this orchestration pass.

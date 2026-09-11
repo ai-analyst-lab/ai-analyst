@@ -145,7 +145,8 @@ acceptance remains qualified; do not label this capture error-free.
   qualified by the issues above.
 - Natural-language routing from the actual student prompt.
 - All five built-in plans executing to their different deliverables.
-- Native Windows execution, a fresh public clone and a published course revision.
+- Native Windows execution and the complete set of named-plan model executions.
+- The released Session 3 natural-language prompt from a fresh public clone.
 - Repeated reliability across questions, datasets and models.
 
 Frozen worker/context snapshots do not freeze the currently installed controller

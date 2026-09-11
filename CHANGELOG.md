@@ -36,7 +36,7 @@ a complete public runtime without publishing private data or held-out answers.
 
 ### Verification
 
-- 1,137 tests pass and one provider-dependent test is skipped in the clean release candidate
+- 1,137 tests pass and one provider-dependent test is skipped in a clean clone of the release
 - Repository lint and secret scanning pass
 - Live-provider behavior and native Windows remain separately documented verification boundaries
 
