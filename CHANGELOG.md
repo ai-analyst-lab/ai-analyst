@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.1.1] - 2026-09-10
+
+### Fixed
+
+- Noninteractive local-Python workers now preapprove the read-only `Glob` and `Grep` tools. The
+  project root and explicit input paths were already readable, but repository searches could still
+  create an unresolved permission denial and block otherwise valid artifacts.
+
 ## [3.1.0] - 2026-09-10
 
 This release makes the analytical system more inspectable and gives the Agentic Analytics course

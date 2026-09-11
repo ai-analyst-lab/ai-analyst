@@ -69,8 +69,11 @@ class ClaudeCLI:
             if self.existing_file(analysis_code) and Path(analysis_code).suffix == ".py":
                 source = Path(analysis_code).absolute().as_posix()
                 execution_rules += [f"Bash({python} {source})", f"Bash({python} {source} *)"]
+            # Read rules already expose the project root and explicit inputs. Glob and Grep are
+            # separate read-only tools in Claude Code, so noninteractive workers must approve
+            # them explicitly or an ordinary repository search becomes an unresolved denial.
             command += ["--permission-mode", "default", "--strict-mcp-config", "--tools", "Read,Glob,Grep,Write,Edit,Bash",
-                        "--allowedTools", *reads, f"Edit({attempt}/**)", *execution_rules,
+                        "--allowedTools", "Glob", "Grep", *reads, f"Edit({attempt}/**)", *execution_rules,
                         "--add-dir", *sorted(directories)]
             command += ["--append-system-prompt", self.execution_instructions(job)]
         return command

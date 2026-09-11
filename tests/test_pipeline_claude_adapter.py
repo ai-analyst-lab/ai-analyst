@@ -49,6 +49,9 @@ def test_local_python_profile_is_opt_in_and_does_not_change_global_settings(tmp_
     assert "--setting-sources" not in command
     assert "--strict-mcp-config" in command
     assert "--append-system-prompt" in command
+    allowed = command[command.index("--allowedTools") + 1:command.index("--add-dir")]
+    assert "Glob" in allowed
+    assert "Grep" in allowed
     execution = command[command.index("--append-system-prompt") + 1]
     assert "first write" in execution
     assert "do not experiment with alternate shell syntaxes" in execution
