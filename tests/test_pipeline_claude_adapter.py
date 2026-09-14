@@ -59,6 +59,7 @@ def test_local_python_profile_is_opt_in_and_does_not_change_global_settings(tmp_
     assert "Grep" in allowed
     execution = command[command.index("--append-system-prompt") + 1]
     assert "first write" in execution
+    assert "Do not run mkdir" in execution
     assert "do not experiment with alternate shell syntaxes" in execution
     assert any(arg.startswith("Edit(//") and arg.endswith("/**)") for arg in command)
     assert "Bash" not in command  # Never a blanket tool approval argument.

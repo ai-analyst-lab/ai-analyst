@@ -96,6 +96,8 @@ class ClaudeCLI:
             "use Write/Edit to save Python in the assigned attempt directory, then use Bash to run "
             "that script with the specified interpreter. For example, first write " + script +
             ", then execute exactly: " + invocation + ". Arguments may follow the script path. "
+            "The controller already created every declared output directory. Write each deliverable "
+            "directly to its assigned absolute path. Do not run mkdir or another directory-creation command. "
             "Do not try python -c, heredocs, /dev/stdin, shell redirects, ls, or compound shell commands. "
             "Use Read/Glob/Grep to inspect source files, or an approved Python script where needed. "
             "If a command is denied, do not experiment with alternate shell syntaxes or change permissions. "
