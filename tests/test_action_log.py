@@ -5,6 +5,7 @@ scripts/render_action_log.py (markdown + HTML rendering).
 """
 
 import json
+import stat
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,11 @@ from scripts.log_action import (
     action_log_path,
 )
 from scripts.render_action_log import to_markdown, to_html
+
+
+def test_action_log_hook_is_executable():
+    hook = Path(__file__).parents[1] / ".claude" / "hooks" / "log-action.sh"
+    assert hook.stat().st_mode & stat.S_IXUSR
 
 
 # =====================================================================
