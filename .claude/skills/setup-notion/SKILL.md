@@ -52,7 +52,7 @@ After approval, add this project-local server entry while preserving the rest of
 An equivalent supported Claude Code command is:
 
 ```text
-claude mcp add --transport http notion https://mcp.notion.com/mcp
+claude mcp add --transport http --scope project notion https://mcp.notion.com/mcp
 ```
 
 Do not put tokens or credentials in the configuration.
