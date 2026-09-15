@@ -258,18 +258,18 @@ class ConnectionManager:
             return {"ok": False, "type": self._conn_type, "message": str(exc)}
 
     def _snowflake_identity(self) -> dict:
-        """Return the live session identity (account, warehouse, database, schema, version).
+        """Return the live session identity (account, user, role, warehouse, database, schema, version).
 
         Uses Snowflake's context functions, so it reports what the SESSION is really bound to,
         which is how the wizard proves a connection landed on the warehouse rather than a local copy.
         """
         try:
             cur = self._connection.cursor()
-            cur.execute("SELECT CURRENT_ACCOUNT(), CURRENT_WAREHOUSE(), CURRENT_DATABASE(), "
-                        "CURRENT_SCHEMA(), CURRENT_VERSION()")
+            cur.execute("SELECT CURRENT_ACCOUNT(), CURRENT_USER(), CURRENT_ROLE(), "
+                        "CURRENT_WAREHOUSE(), CURRENT_DATABASE(), CURRENT_SCHEMA(), CURRENT_VERSION()")
             row = cur.fetchone() or []
             cur.close()
-            keys = ["account", "warehouse", "database", "schema", "version"]
+            keys = ["account", "user", "role", "warehouse", "database", "schema", "version"]
             return {k: (row[i] if i < len(row) else None) for i, k in enumerate(keys)}
         except Exception as exc:
             return {"error": str(exc)}

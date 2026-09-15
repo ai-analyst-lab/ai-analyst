@@ -21,7 +21,15 @@ class _FakeCursor:
         self._p.executed.append(sql)
         u = sql.upper()
         if "CURRENT_ACCOUNT" in u:
-            self._row = ("ACME-PROD", "ANALYST_WH", "SALES_DB", "PUBLIC", "8.1.0")
+            self._row = (
+                "ACME-PROD",
+                "COURSE_STUDENT",
+                "READ_ONLY",
+                "ANALYST_WH",
+                "SALES_DB",
+                "PUBLIC",
+                "8.1.0",
+            )
             self.description = [("a",)]
         elif "INFORMATION_SCHEMA.TABLES" in u:
             self._rows = [("customers",), ("orders",), ("products",)]
@@ -62,6 +70,7 @@ def test_test_connection_reports_live_identity():
     res = cm.test_connection()
     assert res["ok"] is True and res["type"] == "snowflake"
     assert res["account"] == "ACME-PROD" and res["warehouse"] == "ANALYST_WH"
+    assert res["user"] == "COURSE_STUDENT" and res["role"] == "READ_ONLY"
     assert "ACME-PROD" in res["message"]
 
 
