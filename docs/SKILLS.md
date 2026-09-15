@@ -78,7 +78,7 @@
 | `export` | Export analysis results in different formats for different audiences — email summaries, Slack updates, decision briefs, Google Docs with embedded charts, Word documents, slide decks, or raw data CSVs. |
 | `google-doc-export` | Create properly formatted Google Docs via the MCP API. |
 | `google-slides-export` | Create properly formatted Google Slides presentations via the MCP API. |
-| `notion-export` | Export analysis results to a Notion page with proper structure, embedded charts, data stamps, and provenance toggle blocks. |
+| `notion-export` | Publish a verified analysis as an approved Notion text page and retain its URL. |
 | `chart-to-drive` | Upload chart PNGs to the user's own Google Drive for Docs and Slides insertion; no public file hosts. |
 | `setup-notion` | Guided Notion connection setup wizard. |
 

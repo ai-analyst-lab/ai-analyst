@@ -516,13 +516,10 @@ agents:
   critical: false
   depends_on:
   - storytelling
-  - chart-maker
   inputs:
   - NARRATIVE
-  - CHART_FILES
   - PAGE_TITLE
   - DATASET
-  - PROVENANCE_BLOCKS
   - ANALYSIS_RECEIPT
   - PARENT_PAGE_ID
   outputs:

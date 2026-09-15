@@ -17,7 +17,7 @@ pipeline outputs into ready-to-share deliverables.
 `/export data` — export analysis data tables as CSV
 `/export gdoc` — create a Google Doc with full Analysis Readout (charts, SQL, bookmarks)
 `/export docx` — generate a local .docx Word document (no Google upload)
-`/export notion` — export analysis to a Notion page (with charts, data stamps, provenance toggles)
+`/export notion` — publish a verified analysis as an approved Notion text page
 `/export receipt` — generate full analysis receipt (Reproduce-level audit trail)
 `/export all` — generate all text formats + data (does NOT include gdoc, notion, or receipt — use `/export gdoc`, `/export notion`, and `/export receipt` separately)
 
@@ -255,25 +255,30 @@ manually or share it directly."
 
 **Format: notion**
 
-Creates a Notion page from the analysis with charts, data stamps, and provenance toggle
-blocks. Follows the Notion Export skill (`.claude/skills/notion-export/SKILL.md`).
+Publishes a verified analysis as an approved Notion text page. Follow
+`.claude/skills/notion-export/SKILL.md`.
 
-#### Step 0: Notion Auth Check
-Check if `mcp__notion__*` tools are accessible. If not: "Notion MCP is not configured."
+#### Step 0: Notion auth check
+
+Check whether official Notion MCP tools are accessible. If not, use the `setup-notion` skill.
 
 #### Generation
-Invoke the `notion-export` agent with:
-- `NARRATIVE`: latest narrative
-- `CHART_FILES`: chart PNGs from `outputs/charts/`
-- `DATASET`: active dataset
-- `PROVENANCE_BLOCKS`: from cross-verification (if available)
-- `ANALYSIS_RECEIPT`: receipt path (if Tier 3)
 
-The agent handles Analysis Gallery detection, chart hosting, toggle blocks, and self-check.
+Invoke the `notion-export` agent with:
+
+- `NARRATIVE`: latest verified narrative;
+- `PAGE_TITLE`: proposed title, when provided;
+- `DATASET`: active dataset;
+- `ANALYSIS_RECEIPT`: receipt path, when available; and
+- `PARENT_PAGE_ID`: approved destination.
+
+The agent verifies access with a read, previews the destination and content, waits for approval,
+creates one text page, and retains the external URL. Notion's hosted MCP does not currently support
+file uploads. Do not upload local charts through this path.
 
 Output: `outputs/notion_url_{{DATASET}}_{{DATE}}.txt`
 
-Say: "Analysis exported to Notion: {url}. {N} findings with charts and provenance."
+Say: "Analysis published to Notion: {url}. Open the page to complete external verification."
 
 **Format: receipt**
 

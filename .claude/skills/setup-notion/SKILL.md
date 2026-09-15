@@ -1,144 +1,104 @@
 ---
 name: setup-notion
 description: >-
-  Guided Notion connection setup wizard. Verifies the Notion connector is enabled, walks the user
-  through enabling and authorizing it, and checks for an Analysis Gallery database. Use when the
-  user says "/setup-notion", "connect to notion", "set up notion", "I want to export to Notion",
-  or when a Notion export or ingest fails because Notion tools are not available.
+  Connect Claude Code to Notion's official hosted MCP, complete OAuth, verify the intended
+  workspace with a read, and stop before any write. Use when the user asks to connect Notion,
+  set up Notion, export to Notion, or diagnose an unavailable Notion connection.
 ---
 
-# Skill: Setup Notion
+# Setup Notion
 
 ## Purpose
-Guided Notion MCP setup wizard. Configures the hosted Notion MCP server,
-walks the user through OAuth authentication, and verifies the connection
-by searching their workspace.
 
-## When to Use
-- User says `/setup-notion`, "connect to notion", "set up notion",
-  "I want to export to Notion"
-- Routed here from `/connect-data` or `/export notion` when Notion MCP
-  is not configured
+Configure Notion's official hosted MCP for this project, help the user complete browser OAuth,
+and verify the intended workspace before any content is created.
 
-## Invocation
-`/setup-notion` — start the setup wizard
+## Current supported path
+
+- Official endpoint: `https://mcp.notion.com/mcp`
+- Transport: remote HTTP
+- Authentication: OAuth in the browser
+- Project configuration: `.mcp.json`
+
+Notion's hosted MCP does not currently support file uploads. Do not promise that a local chart or
+other file can be uploaded through this server. Create the text page first. If the user needs an
+attachment, they can add it manually or use a separately approved API workflow.
 
 ## Instructions
 
-### Step 1: Check Existing Configuration
+### 1. Inspect before changing configuration
 
-**1a. Check `.mcp.json` for Notion server:**
-Read `.mcp.json` (if it exists) and look for a `notion` server entry.
+1. Read `.mcp.json` if it exists.
+2. Preserve every existing MCP server.
+3. Check whether a Notion server already points to the official endpoint.
+4. If Notion tools are already available, skip configuration and verify the connection.
+5. Before editing anything, show the user the exact non-secret change and ask for approval.
 
-**1b. Check if Notion MCP tools are available:**
-Try to call `mcp__notion__notion-search` with a test query.
+Never replace the entire MCP configuration merely to add Notion.
 
-**Decision matrix:**
-- Notion MCP configured + tools available → skip to Step 4 (verify)
-- Notion MCP configured + tools NOT available → go to Step 3 (restart needed)
-- No Notion config at all → continue to Step 2
+### 2. Add the official server
 
-### Step 2: Add Notion to `.mcp.json`
+After approval, add this project-local server entry while preserving the rest of `.mcp.json`:
 
-1. Read `.mcp.json` if it exists (preserve other servers like Snowflake, Slack)
-2. Add the `notion` server entry:
-   ```json
-   {
-     "notion": {
-       "type": "http",
-       "url": "https://mcp.notion.com/mcp"
-     }
-   }
-   ```
-3. Write the updated `.mcp.json` using the **Edit** tool (or **Write** if creating fresh)
-
-That's it — no API key, no npm package, no credentials. Notion's hosted MCP
-server handles authentication via OAuth when the user runs `/mcp`.
-
-Tell the user:
-- "Notion MCP server added to your config."
-- "This uses Notion's official hosted server with OAuth — no API key needed."
-
-### Step 3: Restart & Authenticate
-
-The MCP server won't be available until Claude Code restarts and loads the
-new `.mcp.json` config.
-
-Tell the user:
-- "Claude Code needs to restart to pick up the new config."
-- "After restarting:"
-- "  1. Run `/mcp` in Claude Code"
-- "  2. Find **notion** in the server list and click **Authenticate**"
-- "  3. A browser window will open — sign in to Notion and authorize access"
-- "  4. Select which pages/databases to share (or share the whole workspace)"
-- "  5. Come back here and run `/setup-notion` again — I'll verify the connection"
-
-**Important:** During OAuth, the user chooses which pages Claude can access.
-Remind them: "Share at least the page or database where you want analysis
-exports to go."
-
-Stop here — do not proceed to Step 4 in this session if MCP tools are
-not yet available.
-
-### Step 4: Verify Connection
-
-Use the Notion MCP search tool to verify access:
-```
-mcp__notion__notion-search(query="", filter={"value": "page"})
+```json
+{
+  "notion": {
+    "type": "http",
+    "url": "https://mcp.notion.com/mcp"
+  }
+}
 ```
 
-**If it works:**
-- Show the user how many pages/databases are accessible
-- List 3-5 example pages by title so they can confirm scope is right
-- Continue to Step 5
+An equivalent supported Claude Code command is:
 
-**If it fails:**
-- "Notion connection failed. Try running `/mcp` to re-authenticate."
-- Common issues: OAuth expired, pages not shared with the integration,
-  workspace permissions
-
-### Step 5: Check for Analysis Gallery
-
-Search for an "Analysis Gallery" database:
-```
-mcp__notion__notion-search(query="Analysis Gallery", filter={"value": "database"})
+```text
+claude mcp add --transport http notion https://mcp.notion.com/mcp
 ```
 
-**If found:**
-- "Found your Analysis Gallery database. Exports will create new entries there."
-- Store the database ID for future exports.
+Do not put tokens or credentials in the configuration.
 
-**If not found:**
-- Offer to create one: "No Analysis Gallery found. Want me to help you set
-  one up? It's a Notion database that organizes all your analysis exports
-  with properties like Title, Date, Dataset, and Confidence Grade."
-- If yes: create a new database page with properties:
-  - Title (title type)
-  - Date (date type)
-  - Dataset (text type)
-  - Confidence (select type: A, B, C, D, F)
-  - Status (select type: Draft, Final)
-- If no: "No problem. Exports will create standalone pages instead."
+### 3. Authenticate
 
-### Step 6: Summary
+If this session did not load the new server, tell the user to restart Claude Code. Then have the
+user run `/mcp`, select Notion, and complete OAuth in the browser.
 
-```
-Notion is connected:
-  Server: Notion hosted MCP (OAuth)
-  Workspace: {workspace_name}
-  Accessible pages: {count}
-  Analysis Gallery: {Found / Not found / Created}
+Before the user authorizes access, remind them to confirm:
 
-You can now:
-  - `/export notion` — export any analysis to Notion
-  - Analysis Gallery entries include charts, data stamps, and provenance
+- the Notion account;
+- the workspace;
+- whether that workspace is approved for the intended work; and
+- that the connected client can act with the access granted to that user.
+
+Do not claim that OAuth proves the destination or makes every future action safe.
+
+### 4. Verify with a read
+
+Ask the user for the title of a page they expect in the approved workspace. Use the available
+Notion search tool to find it without changing anything.
+
+Show the workspace and matching page titles. If the expected page is missing, the workspace is
+wrong, or the tool call fails, stop and report the exact blocked step. Do not create a page.
+
+### 5. Report the result
+
+Report only what was verified:
+
+```text
+Notion connection
+Server: official hosted MCP
+Endpoint: https://mcp.notion.com/mcp
+Workspace: [verified workspace, if exposed]
+Read test: [page title found, or exact blocked step]
+Ready for an approved write: [yes or no]
 ```
 
 ## Rules
-1. Never ask for an API key — Notion's hosted MCP uses OAuth exclusively
-2. Always preserve existing `.mcp.json` servers when adding Notion
-3. Always test the connection before declaring success
-4. After writing `.mcp.json` for the first time, tell the user to restart
-5. Remind users to share relevant pages with the integration during OAuth
-6. The config is always `{"type": "http", "url": "https://mcp.notion.com/mcp"}`
-   — no variations, no env vars needed
+
+1. Use only Notion's official hosted endpoint unless the user explicitly requests another server.
+2. Preserve existing MCP servers.
+3. Stop for approval before editing MCP configuration.
+4. Never request or store a Notion API key for this OAuth path.
+5. Verify the workspace with a read before any write.
+6. Preview the destination and content before any later write.
+7. Never claim that hosted Notion MCP can upload files.
+8. If access is wrong, disconnect or revoke it rather than continuing with a nearby workspace.

@@ -8,7 +8,7 @@ shared `ConnectionManager` interface.
 - Interface: Google Cloud's Python client library
 - Authentication: Application Default Credentials for local development
 - Repository configuration: `.knowledge/datasets/{dataset-id}/manifest.yaml`
-- Verification: `ConnectionManager.verify_remote()` plus a bounded read query
+- Verification: `ConnectionManager.verify_remote()` plus a small read query
 
 The Google Workspace MCP servers are separate. They connect to products such as Drive, Docs, and
 Sheets. They are not the data-query path for BigQuery in this repository.
@@ -27,7 +27,7 @@ Help me connect this AI Analyst repository to BigQuery through its existing Conn
 
 First inspect the connect-data skill, the BigQuery connection template, and the BigQuery code in ConnectionManager. Tell me which non-secret values you need. Ask for one value at a time. Use Application Default Credentials and do not ask me to paste credentials into chat or the repository.
 
-Before you report success, verify the remote project and dataset, list the tables I can read, run one bounded count query, and show me the query-log receipt. Stop if the connection resolves to local practice data or if the remote identity does not match what I approve.
+Before you report success, verify the remote project and dataset, list the tables I can read, run one small count query, and show me the query-log receipt. Stop if the connection resolves to local practice data or if the remote identity does not match what I approve.
 ```
 
 Claude should guide you through installing the package if it is missing and ask you to complete
@@ -58,7 +58,7 @@ connection:
 1. The client is authenticated.
 2. The remote project id matches the one you approved.
 3. The intended dataset and readable tables are visible.
-4. A bounded count query succeeds.
+4. A small count query succeeds.
 5. The query is recorded in the repository's query log.
 
 Creating the manifest proves only that configuration exists. It does not prove the connection.

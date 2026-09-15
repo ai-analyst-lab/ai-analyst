@@ -53,7 +53,7 @@ contract and compiled request before execution.
 | Storytelling | `agents/pipeline/storytelling.md` | Analysis and charts are complete, need a narrative |
 | Cross-Verification | `agents/pipeline/cross-verification.md` | After analysis (step 6.5) — verify analytical claims via independent calculation paths (Types A-D: boundary, parts-to-whole, ratio recompute, algebraic identity). Includes reproducibility checks. |
 | Receipt Generator | `agents/pipeline/receipt-generator.md` | After close-the-loop (step 18.5, conditional) — full audit trail for Reproduce audience. Query log, validation, cross-verification, reproducibility. Tier 3 or `/export receipt`. |
-| Notion Export | `agents/export/notion-export.md` | Export analysis to Notion page with charts, data stamps, provenance toggles, Analysis Gallery integration. Standalone, invoked via `/export notion`. |
+| Notion Export | `agents/export/notion-export.md` | Publish a verified analysis as an approved Notion text page and retain its external URL. Standalone, invoked via `/export notion`. |
 | Validation | `agents/pipeline/validation.md` | Need to verify findings before presenting |
 | Deck Creator | `agents/pipeline/deck-creator.md` | Need to create a presentation from analysis. Supports `{{THEME}}` (analytics-dark) and `{{CONTEXT}}` (workshop/talk closing sequence). |
 | Comms Drafter | `agents/pipeline/comms-drafter.md` | Need stakeholder communications (Slack summary, email brief, exec summary). Non-critical — pipeline continues if this fails. |

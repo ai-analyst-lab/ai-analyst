@@ -1,197 +1,93 @@
 ---
 name: notion-export
-description: |
-  Export analysis results to a Notion page with proper structure, embedded charts, data stamps, and provenance toggle blocks. Use this skill whenever the user says "/export notion", "export to Notion", "create a Notion page", "share this in Notion", "put this in Notion", "send to Notion", or mentions wanting analysis outputs in their Notion workspace. Also trigger when the user mentions their Analysis Gallery or wants to add analysis results to a Notion database. This skill handles Notion MCP authentication, page structure decisions (toggle blocks vs H3 fallback), chart image hosting, provenance embedding, and Analysis Gallery database integration. The skill auto-detects whether toggle blocks are supported and falls back gracefully.
+description: >-
+  Publish an approved analysis as a Notion text page through the official hosted MCP. Use when
+  the user asks to export, publish, create, share, put, or send analysis results to Notion.
 ---
 
-# Skill: Notion Export
+# Notion Export
 
 ## Purpose
 
-Export analysis results to Notion as a well-structured page with charts, data stamps,
-and provenance. Supports both standalone pages and Analysis Gallery database entries.
+Create one useful Notion page from a verified analysis, with an explicit preview and external
+verification. The page should help an intended reader understand the question, evidence, result,
+and limitation.
 
-## Invocation
+## Important limitation
 
-`/export notion` — export the latest analysis to Notion
+Notion's hosted MCP does not currently support file uploads. Do not upload local charts through
+this workflow and do not route private charts through a public file host. Create a complete text
+page. The user can attach an approved chart manually or use a separately approved API workflow.
 
 ## Instructions
 
-### Step 0: Check Notion MCP Availability
+### 1. Verify the connection
 
-Check if `mcp__notion__*` tools are accessible:
+Confirm that Notion tools are available. If not, use the `setup-notion` skill first.
 
-1. Attempt `mcp__notion__notion-search` with a test query
-2. **If tools available:** Proceed to Step 1
-3. **If tools unavailable:** "Notion MCP is not configured. Set up the Notion integration first."
+Ask the user to identify the approved workspace, the exact parent page or destination, a page
+title they expect the connection to find, and whether this analysis is allowed in that workspace.
 
-### Step 1: Find Source Material
+Run a search before any write. Stop if the workspace or visible pages do not match the user's
+expectation.
 
-Same as the main export skill — find the latest narrative, charts, validation, and
-close-the-loop outputs. Also gather:
-- Provenance blocks (from cross-verification YAML + provenance assembler)
-- Query log (for receipt-level detail)
-- Confidence grade and score
+### 2. Inspect the source analysis
 
-### Step 2: Auto-Detect Analysis Gallery
+Read the analysis artifact the user selects. Do not choose an unverified draft merely because it
+is recent. Identify the business question, takeaway, supporting values, source, date range, and
+limitations. If those elements cannot be supported by the artifact, stop and ask the user.
 
-Search for an "Analysis Gallery" database in the user's Notion workspace:
+### 3. Check for an existing page
 
+Search for the proposed title in the approved destination. If a matching page exists, ask whether
+to update it, choose another title, or stop. Do not create a duplicate silently.
+
+### 4. Preview before writing
+
+Prepare a concise text page with:
+
+1. title;
+2. business question;
+3. takeaway;
+4. supporting values;
+5. source and date range;
+6. limitation;
+7. link or path to the internal analysis receipt when appropriate.
+
+Show the exact workspace, parent destination, title, and full page content. Do not create or edit
+anything until the user approves that preview.
+
+### 5. Create one page
+
+After approval, create the page through the available official Notion MCP tool. Do not retry a
+slow response by creating another page. Inspect the tool result first.
+
+### 6. Verify externally
+
+Return the page URL and ask the user to open it in Notion. Confirm the workspace, parent location,
+title, question, takeaway, values, source, limitation, and that no private source data was copied
+unintentionally.
+
+The page URL is the external receipt. A successful tool response alone is not completion.
+
+### 7. Report
+
+```text
+Notion page
+Workspace: [verified workspace]
+Destination: [verified parent]
+Title: [page title]
+URL: [page URL]
+External verification: [confirmed or still required]
+Files uploaded: none
 ```
-mcp__notion__notion-search(query="Analysis Gallery", filter={"value": "database"})
-```
-
-**If found:**
-- Create a new page within the database
-- Set properties: Title, Date, Dataset, Confidence Grade, Status
-- Use the database's property schema for structured metadata
-
-**If not found:**
-- Create a standalone page
-- Inform the user: "No Analysis Gallery database found. Creating a standalone page.
-  To organize analyses, create a Notion database called 'Analysis Gallery' with
-  properties: Title (title), Date (date), Dataset (text), Confidence (select: A/B/C/D/F),
-  Status (select: Draft/Final)."
-
-### Step 3: Build Page Structure
-
-#### Page Title
-`{Analysis Title} — {Dataset} ({Date})`
-
-#### Page Icon
-Use the confidence grade as the icon:
-- A: green circle
-- B: yellow circle
-- C: orange circle
-- D/F: red circle
-
-#### Content Structure
-
-```
-Callout block: Confidence badge
-  "Confidence: {grade} ({score}/100) — {interpretation}"
-
-H2: Executive Summary
-  Paragraph: 3-5 sentence overview
-  Bulleted list: Key findings (max 3)
-
-H2: Finding 1 — {title}
-  Callout block (gray): Data stamp
-    "{row_count} rows | {date_range} | {primary_table} | {grade} ({score})"
-  Paragraph: Insight and evidence
-  Image block: Chart (if available)
-  Toggle block: "Show methodology & SQL"
-    Paragraph: Methodology details
-    Code block (sql): Full SQL query
-    Paragraph: Cross-verification result
-
-H2: Finding 2 — {title}
-  ... (repeat pattern)
-
-H2: Recommendations
-  Numbered list: Action items
-
-H2: Data Quality & Limitations
-  Paragraph: Validation summary
-  Bulleted list: Caveats
-
-Divider
-
-H3: Provenance
-  Toggle block: "Full provenance for F1"
-    ... (full provenance block content)
-  Toggle block: "Full provenance for F2"
-    ...
-
-H3: Analysis Receipt
-  Paragraph: "Full audit trail available at: outputs/analysis_receipt_{DATASET}_{DATE}.md"
-```
-
-### Step 4: Toggle Block Detection
-
-Before building the page, check if toggle blocks work:
-
-1. Create a test page with one toggle block via `notion-create-pages`
-2. If it succeeds: use toggle blocks for provenance sections
-3. If it fails or toggles aren't supported:
-   - **Fallback:** Use H3 headings instead of toggle blocks
-   - Provenance details go under H3 subheadings (always visible)
-   - Add a note: "Toggle blocks not available — provenance shown inline"
-
-### Step 5: Chart Image Hosting
-
-Charts must be reachable at an HTTPS URL for Notion to embed them.
-
-**Data handling rule: charts go only to the user's own Google Drive.** Never upload
-charts or data to public file hosts; the analysis may contain confidential numbers.
-
-**Workflow:**
-1. Upload each chart to Drive via the chart-to-drive skill
-   (`.claude/skills/chart-to-drive/SKILL.md`) and get the shareable URL
-2. Insert image blocks using the Drive URL
-3. If Google Drive tools are unavailable: create the page without images, list the
-   chart file paths in the page so the user can add them by hand, and say so plainly
-
-### Step 6: Create the Page
-
-Use `mcp__notion__notion-create-pages` with the structured content.
-
-Build the page content as Notion blocks:
-- `heading_2` for section headings
-- `paragraph` for body text
-- `bulleted_list_item` for bullet lists
-- `numbered_list_item` for numbered lists
-- `callout` for data stamps and confidence badges
-- `toggle` for provenance detail sections (with fallback to `heading_3`)
-- `code` for SQL blocks (language: "sql")
-- `image` for chart images
-- `divider` for section separators
-
-### Step 7: Self-Check (6 Points)
-
-After creating the page, read it back and verify:
-
-1. **Title correct** — page title matches expected format
-2. **All findings present** — count H2 sections matches finding count
-3. **Charts embedded** — image blocks present for each chart
-4. **Data stamps present** — callout blocks with data stamp text
-5. **Provenance sections exist** — toggle or H3 blocks for each finding
-6. **No empty sections** — no heading followed immediately by another heading
-
-If any check fails, attempt one fix iteration (max 1 retry).
-
-### Step 8: Report
-
-```
-Analysis exported to Notion:
-  URL: {page_url}
-  Location: {Analysis Gallery / Standalone page}
-  Findings: {N}
-  Charts: {N} embedded
-  Provenance: {toggle blocks / H3 sections}
-  Self-check: {PASS / PASS with {N} fixes / {N} issues flagged}
-```
-
----
 
 ## Rules
 
-1. **Never duplicate content.** If an Analysis Gallery entry already exists for
-   this dataset + date, ask before creating a duplicate.
-2. **Data stamps on every finding.** Even if provenance toggle blocks fail,
-   the callout data stamps must be present.
-3. **Chart URLs must be accessible.** Verify the image URL works before embedding.
-   If upload fails, skip the image and note: "Chart not embedded — upload failed."
-4. **One fix iteration max.** If the self-check fails after one retry, report
-   issues and let the user fix manually.
-5. **Never expose secrets.** Database connection strings, passwords, and API keys
-   must not appear in the Notion page content.
-
-## Edge Cases
-
-- **No Notion MCP:** Cannot export. Suggest: "Configure Notion MCP integration first."
-- **Toggle blocks unsupported:** Fall back to H3 headings (always visible)
-- **No charts available:** Create page without images, note in report
-- **Google Drive unavailable:** Create the page without images, list chart paths for manual upload
-- **Large analysis (>10 findings):** Split into sections with a table of contents at top
-- **Analysis Gallery has custom properties:** Map to known properties, skip unknown ones
+1. Verify the workspace with a read before writing.
+2. Preview the destination and full content before writing.
+3. Require explicit approval before creating or editing a page.
+4. Never create a duplicate silently.
+5. Never expose secrets or private source data.
+6. Never claim that a tool response proves the page is correct.
+7. Never claim that hosted Notion MCP can upload files.

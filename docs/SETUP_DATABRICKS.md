@@ -7,7 +7,7 @@ shared `ConnectionManager` interface.
 
 - Interface: Databricks SQL Connector for Python
 - Repository configuration: `.knowledge/datasets/{dataset-id}/manifest.yaml`
-- Verification: remote identity, visible tables, a bounded read query, and the query receipt
+- Verification: remote identity, visible tables, a small read query, and the query receipt
 
 Databricks also offers managed MCP servers in public preview. Those are useful when an AI product
 needs governed Databricks tools. AI Analyst's repeatable SQL path uses the SQL connector because
@@ -30,7 +30,7 @@ Help me connect this AI Analyst repository to a Databricks SQL warehouse through
 
 First inspect the connect-data skill, the Databricks connection template, and the Databricks code in ConnectionManager. Tell me which non-secret values you need and ask for one at a time. Ask me which authentication method my organization approves. Never echo a token, put it in a command argument, or commit it.
 
-Before you report success, verify the remote catalog and schema, list the tables I can read, run one bounded count query, and show me the query-log receipt. Stop if the connection resolves to local practice data or the remote identity does not match what I approve.
+Before you report success, verify the remote catalog and schema, list the tables I can read, run one small count query, and show me the query-log receipt. Stop if the connection resolves to local practice data or the remote identity does not match what I approve.
 ```
 
 ## Values Claude should collect
@@ -59,7 +59,7 @@ connection:
 1. Confirm the server hostname.
 2. Confirm the current catalog and schema.
 3. List only tables the approved identity can read.
-4. Run one bounded count query.
+4. Run one small count query.
 5. Find the query receipt in the repository.
 
 ## Common problems
