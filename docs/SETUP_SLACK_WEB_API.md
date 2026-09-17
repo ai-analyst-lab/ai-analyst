@@ -103,7 +103,8 @@ unnecessary for this one narrow, verified action.
 - `invalid_auth`: authorize again. Do not reuse a token from another person or workspace.
 - Wrong workspace: stop. Reauthorize while signed into AI Analyst Lab.
 - `missing_scope`: tell the instructor. Do not broaden permissions yourself.
-- `channel_not_found`: confirm you are a member of AI Analyst Lab and can see `#show-and-tell`.
+- `not_in_channel` or `channel_not_found`: open AI Analyst Lab and join `#show-and-tell`, then verify
+  the destination again before retrying.
 - Rate limited: allow the helper to honor Slack's retry delay. Do not start a second post.
 - Uncertain write: inspect `#show-and-tell` before trying again.
 
