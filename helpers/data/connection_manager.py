@@ -462,7 +462,19 @@ class ConnectionManager:
             cur = self._connection.cursor()
             try:
                 cur.execute(sql)
-                df = cur.fetch_pandas_all() if cur.description else pd.DataFrame()
+                if not cur.description:
+                    df = pd.DataFrame()
+                else:
+                    try:
+                        df = cur.fetch_pandas_all()
+                    except Exception as exc:
+                        # The Snowflake connector keeps Arrow-backed pandas support optional.
+                        # A standard connector install can still return ordinary rows, so do not
+                        # fail a valid connection merely because that acceleration extra is absent.
+                        if "Optional dependency: 'pandas' is not installed" not in str(exc):
+                            raise
+                        columns = [d[0] for d in cur.description]
+                        df = pd.DataFrame(cur.fetchall(), columns=columns)
             finally:
                 cur.close()
         elif self._conn_type == "bigquery" and self._connection:
@@ -802,11 +814,30 @@ class ConnectionManager:
         connect_kwargs = dict(
             account=conn_config.get("account", ""),
             user=conn_config.get("user", ""),
-            password=conn_config.get("password", ""),
             warehouse=conn_config.get("warehouse", ""),
             database=conn_config.get("database", ""),
             schema=conn_config.get("schema", "public"),
         )
+
+        # Snowflake is deprecating password-only authentication for service
+        # users. Keep the legacy password path for existing manifests, while
+        # allowing course and production agents to use an explicit PAT without
+        # disguising the token as a password in configuration.
+        authenticator = str(
+            conn_config.get("authenticator") or conn_config.get("auth_method") or "password"
+        ).strip().lower().replace("-", "_")
+        if authenticator in {"programmatic_access_token", "pat"}:
+            token = conn_config.get("token", "")
+            if not token:
+                raise ConnectionError(
+                    "Snowflake programmatic access token authentication requires "
+                    "connection.token (for example, $SNOWFLAKE_TOKEN)."
+                )
+            connect_kwargs["authenticator"] = "PROGRAMMATIC_ACCESS_TOKEN"
+            connect_kwargs["token"] = token
+        else:
+            connect_kwargs["password"] = conn_config.get("password", "")
+
         if conn_config.get("role"):
             connect_kwargs["role"] = conn_config["role"]
         self._connection = snowflake.connector.connect(**connect_kwargs)

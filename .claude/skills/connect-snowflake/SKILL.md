@@ -17,7 +17,7 @@ and config already exist; this skill is about *opting into remote and verifying
 you landed there*.
 
 This is distinct from `/setup-snowflake` (the first-time wizard that collects the
-connection fields, writes the password to `.env`, and verifies the native
+connection fields, stores the approved credential in `.env`, and verifies the native
 ConnectionManager session). Use **this** skill when the
 warehouse is already configured and you just want to query the live data through
 `ConnectionManager`.
@@ -96,8 +96,9 @@ python3 scripts/log_query.py --dataset {active} --agent ad-hoc \
   `-W ignore` + `warnings.filterwarnings('ignore')` as shown.
 - Requires `snowflake-connector-python` (`pip install -e ".[warehouses]"`; see the
   /setup-snowflake prerequisite).
-- The password lives in `.env` as `SNOWFLAKE_PASSWORD`; account, user, warehouse,
-  database, schema, and role live in the dataset manifest. Never echo or cat `.env`.
+- A PAT lives in `.env` as `SNOWFLAKE_TOKEN`; a legacy password uses
+  `SNOWFLAKE_PASSWORD`. Account, user, warehouse, database, schema, and role live in the dataset
+  manifest. Never echo or cat `.env`.
 
 ## To go back to local DuckDB
 Unset the opt-in: `unset AAP_USE_REMOTE` for the shell, and/or set

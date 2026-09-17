@@ -23,17 +23,24 @@ pip install snowflake-connector-python
 Create a `.env` file in the project root (already in `.gitignore`):
 
 ```bash
-# Snowflake connection
+# Snowflake connection using a programmatic access token
+SNOWFLAKE_AUTHENTICATOR=programmatic_access_token
 SNOWFLAKE_ACCOUNT=your_account.region
 SNOWFLAKE_USER=your_username
-SNOWFLAKE_PASSWORD=your_password
+SNOWFLAKE_TOKEN=your_programmatic_access_token
 SNOWFLAKE_WAREHOUSE=ANALYTICS_WH
 SNOWFLAKE_DATABASE=ANALYTICS_DB
+SNOWFLAKE_SCHEMA=analytics_prod
 SNOWFLAKE_ROLE=ANALYST
 
 # dbt (optional)
 DBT_PROJECT_PATH=/path/to/your/dbt/project
 ```
+
+Programmatic access tokens are the recommended path for service and agent users. The Snowflake
+user still needs the role named in `SNOWFLAKE_ROLE`; that role controls what the token can access.
+If the account still permits password authentication, set `SNOWFLAKE_AUTHENTICATOR=password` and
+use `SNOWFLAKE_PASSWORD` instead of `SNOWFLAKE_TOKEN`.
 
 **Security Note:** Never commit `.env` to version control. Use environment variables or a secrets manager in production.
 
@@ -194,9 +201,13 @@ Verify the generated SQL includes explicit UTC timestamp boundaries.
 
 ### "Authentication failed"
 
-- Check `SNOWFLAKE_USER` and `SNOWFLAKE_PASSWORD` are correct
+- Check `SNOWFLAKE_AUTHENTICATOR`, `SNOWFLAKE_USER`, and the matching
+  `SNOWFLAKE_TOKEN` or `SNOWFLAKE_PASSWORD` are correct
 - Verify your Snowflake account URL format: `account.region` (e.g., `xy12345.us-east-1`)
 - Confirm network access (VPN, firewall, IP whitelist)
+- For `PAT_INVALID`, confirm the PAT belongs to this user, is active, and has not expired
+- For `Network policy is required`, ask the Snowflake administrator whether the user's PAT
+  authentication policy permits access without a fixed network policy
 
 ### "Object does not exist"
 

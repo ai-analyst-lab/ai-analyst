@@ -6,6 +6,9 @@ A live end-to-end Snowflake test needs real credentials and is done separately.
 """
 from __future__ import annotations
 
+import sys
+import types
+
 import pandas as pd
 import pytest
 
@@ -57,6 +60,21 @@ class _FakeConn:
         return _FakeCursor(self)
 
 
+class _NoArrowCursor(_FakeCursor):
+    def execute(self, sql, params=None):
+        self._p.executed.append(sql)
+        self.description = [("N",)]
+        self._rows = [(47_199,)]
+
+    def fetch_pandas_all(self):
+        raise RuntimeError("Optional dependency: 'pandas' is not installed")
+
+
+class _NoArrowConn(_FakeConn):
+    def cursor(self):
+        return _NoArrowCursor(self)
+
+
 def _snowflake_cm():
     cm = ConnectionManager(config={"type": "snowflake", "connection": {"schema": "public"}})
     cm._connection = _FakeConn()
@@ -104,3 +122,90 @@ def test_read_table_snowflake_uses_query():
     df = cm.read_table("orders")
     assert list(df.columns) == ["n"] and len(df) == 3
     assert any("SELECT * FROM public.orders" in q for q in cm._connection.executed)
+
+
+def test_snowflake_query_falls_back_when_connector_pandas_extra_is_missing():
+    cm = ConnectionManager(config={"type": "snowflake", "connection": {"schema": "public"}})
+    cm._connection = _NoArrowConn()
+    cm._conn_type = "snowflake"
+    cm._schema_prefix = "public"
+
+    df = cm.query("SELECT COUNT(*) AS n FROM orders", log=False)
+
+    assert df.iloc[0, 0] == 47_199
+    assert list(df.columns) == ["N"]
+
+
+def _fake_snowflake_module(monkeypatch):
+    """Install a fake snowflake.connector and return its captured kwargs."""
+    captured = {}
+    connector = types.ModuleType("snowflake.connector")
+
+    def connect(**kwargs):
+        captured.update(kwargs)
+        return _FakeConn()
+
+    connector.connect = connect
+    snowflake = types.ModuleType("snowflake")
+    snowflake.connector = connector
+    monkeypatch.setitem(sys.modules, "snowflake", snowflake)
+    monkeypatch.setitem(sys.modules, "snowflake.connector", connector)
+    return captured
+
+
+def test_connect_snowflake_uses_explicit_pat(monkeypatch):
+    captured = _fake_snowflake_module(monkeypatch)
+    cm = ConnectionManager(config={
+        "type": "snowflake",
+        "connection": {
+            "account": "ORG-ACCOUNT",
+            "user": "COURSE_AGENT",
+            "authenticator": "programmatic_access_token",
+            "token": "secret-token",
+            "warehouse": "COURSE_WH",
+            "database": "COURSE_DB",
+            "schema": "COURSE_SCHEMA",
+            "role": "COURSE_READER",
+        },
+    })
+
+    cm.connect()
+
+    assert captured["authenticator"] == "PROGRAMMATIC_ACCESS_TOKEN"
+    assert captured["token"] == "secret-token"
+    assert "password" not in captured
+    assert captured["role"] == "COURSE_READER"
+
+
+def test_connect_snowflake_keeps_password_compatibility(monkeypatch):
+    captured = _fake_snowflake_module(monkeypatch)
+    cm = ConnectionManager(config={
+        "type": "snowflake",
+        "connection": {
+            "account": "ORG-ACCOUNT",
+            "user": "ANALYST",
+            "password": "legacy-secret",
+        },
+    })
+
+    cm.connect()
+
+    assert captured["password"] == "legacy-secret"
+    assert "authenticator" not in captured
+    assert "token" not in captured
+
+
+def test_connect_snowflake_pat_requires_token(monkeypatch):
+    _fake_snowflake_module(monkeypatch)
+    cm = ConnectionManager(config={
+        "type": "snowflake",
+        "connection": {
+            "authenticator": "pat",
+            "token": "",
+        },
+    })
+
+    with pytest.raises(ConnectionError, match="SNOWFLAKE_TOKEN") as exc:
+        cm.connect()
+
+    assert "token=" not in str(exc.value)

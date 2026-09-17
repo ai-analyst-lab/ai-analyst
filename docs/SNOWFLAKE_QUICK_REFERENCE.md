@@ -7,7 +7,7 @@
 ## Setup Checklist
 
 - [ ] Install Python package: `pip install snowflake-connector-python`
-- [ ] Copy `.env.example` to `.env` and fill in credentials
+- [ ] Create `.env` and add the approved Snowflake credential
 - [ ] Run validation: `python scripts/validate_snowflake_setup.py`
 - [ ] Switch dataset: `/switch-dataset analytics_prod`
 - [ ] Profile schema: `/data-profiling`
@@ -17,9 +17,10 @@
 ## Environment Variables (.env)
 
 ```bash
+SNOWFLAKE_AUTHENTICATOR=programmatic_access_token
 SNOWFLAKE_ACCOUNT=your_account.region
 SNOWFLAKE_USER=your_username
-SNOWFLAKE_PASSWORD=your_password
+SNOWFLAKE_TOKEN=your_programmatic_access_token
 SNOWFLAKE_WAREHOUSE=ANALYTICS_WH
 SNOWFLAKE_DATABASE=ANALYTICS_DB
 SNOWFLAKE_ROLE=ANALYST
@@ -30,6 +31,9 @@ DBT_PROJECT_PATH=/path/to/dbt/project
 ```
 
 **Never commit .env to git** — it's already in `.gitignore`.
+
+For a legacy password connection, set `SNOWFLAKE_AUTHENTICATOR=password` and use
+`SNOWFLAKE_PASSWORD` instead of `SNOWFLAKE_TOKEN`.
 
 ---
 
@@ -206,6 +210,8 @@ Check:
 - Account format: `account.region` (not just `account`)
 - Warehouse is running
 - Network access (VPN, firewall, IP whitelist)
+- PAT status and expiration when using `programmatic_access_token`
+- The effective PAT authentication policy when Snowflake reports that a network policy is required
 
 ### "Object does not exist"
 - Verify schema name: `analytics_prod` (case matters)

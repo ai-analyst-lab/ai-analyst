@@ -80,7 +80,7 @@ Present options:
 
 **For Snowflake:**
 - Route to the dedicated setup wizard: "Run `/setup-snowflake` for guided
-  Snowflake setup — it collects every field, writes the password to `.env`,
+  Snowflake setup — it selects the approved authentication method, stores the credential in `.env`,
   and verifies you are live on the warehouse before finishing."
 
 ### Step 3: Create Dataset Brain

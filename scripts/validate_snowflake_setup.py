@@ -21,6 +21,32 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 
+def snowflake_authenticator():
+    """Return the normalized configured Snowflake authentication method."""
+    value = os.getenv("SNOWFLAKE_AUTHENTICATOR") or os.getenv("SNOWFLAKE_AUTH_METHOD")
+    return str(value or "password").strip().lower().replace("-", "_")
+
+
+def snowflake_connect_kwargs(schema=None):
+    """Build connector kwargs without printing or persisting credentials."""
+    kwargs = {
+        "account": os.getenv("SNOWFLAKE_ACCOUNT"),
+        "user": os.getenv("SNOWFLAKE_USER"),
+        "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE"),
+        "database": os.getenv("SNOWFLAKE_DATABASE"),
+        "role": os.getenv("SNOWFLAKE_ROLE", "ANALYST"),
+    }
+    if schema:
+        kwargs["schema"] = schema
+
+    if snowflake_authenticator() in {"programmatic_access_token", "pat"}:
+        kwargs["authenticator"] = "PROGRAMMATIC_ACCESS_TOKEN"
+        kwargs["token"] = os.getenv("SNOWFLAKE_TOKEN")
+    else:
+        kwargs["password"] = os.getenv("SNOWFLAKE_PASSWORD")
+    return kwargs
+
+
 def check_env_vars():
     """Check if required environment variables are set."""
     print("=" * 60)
@@ -30,10 +56,13 @@ def check_env_vars():
     required_vars = [
         "SNOWFLAKE_ACCOUNT",
         "SNOWFLAKE_USER",
-        "SNOWFLAKE_PASSWORD",
         "SNOWFLAKE_WAREHOUSE",
         "SNOWFLAKE_DATABASE",
     ]
+    if snowflake_authenticator() in {"programmatic_access_token", "pat"}:
+        required_vars.append("SNOWFLAKE_TOKEN")
+    else:
+        required_vars.append("SNOWFLAKE_PASSWORD")
 
     optional_vars = [
         "SNOWFLAKE_ROLE",
@@ -45,8 +74,7 @@ def check_env_vars():
     for var in required_vars:
         value = os.getenv(var)
         if value:
-            # Mask password
-            display = "***" if "PASSWORD" in var else value
+            display = "***" if any(secret in var for secret in ("PASSWORD", "TOKEN")) else value
             print(f"  ✓ {var}: {display}")
         else:
             print(f"  ✗ {var}: NOT SET")
@@ -97,14 +125,7 @@ def test_connection():
     try:
         import snowflake.connector
 
-        conn = snowflake.connector.connect(
-            account=os.getenv("SNOWFLAKE_ACCOUNT"),
-            user=os.getenv("SNOWFLAKE_USER"),
-            password=os.getenv("SNOWFLAKE_PASSWORD"),
-            warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
-            database=os.getenv("SNOWFLAKE_DATABASE"),
-            role=os.getenv("SNOWFLAKE_ROLE", "ANALYST"),
-        )
+        conn = snowflake.connector.connect(**snowflake_connect_kwargs())
 
         cursor = conn.cursor()
         cursor.execute("SELECT CURRENT_VERSION(), CURRENT_WAREHOUSE(), CURRENT_DATABASE()")
@@ -124,7 +145,7 @@ def test_connection():
         print(f"  ✗ Connection failed: {exc}")
         print("\nCommon fixes:")
         print("  - Check account format: account.region (e.g., xy12345.us-east-1)")
-        print("  - Verify username and password")
+        print("  - Verify username and the configured password or programmatic access token")
         print("  - Confirm warehouse is running")
         print("  - Check network access (VPN, firewall)")
         return False
@@ -141,15 +162,7 @@ def check_schema():
 
         schema = os.getenv("SNOWFLAKE_SCHEMA", "analytics_prod")
 
-        conn = snowflake.connector.connect(
-            account=os.getenv("SNOWFLAKE_ACCOUNT"),
-            user=os.getenv("SNOWFLAKE_USER"),
-            password=os.getenv("SNOWFLAKE_PASSWORD"),
-            warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
-            database=os.getenv("SNOWFLAKE_DATABASE"),
-            role=os.getenv("SNOWFLAKE_ROLE", "ANALYST"),
-            schema=schema,
-        )
+        conn = snowflake.connector.connect(**snowflake_connect_kwargs(schema=schema))
 
         cursor = conn.cursor()
 
@@ -261,7 +274,7 @@ def check_dataset_config():
 def main():
     """Run all validation checks."""
     print("\n" + "=" * 60)
-    print("AI ANALYST PLUS — SNOWFLAKE SETUP VALIDATION")
+    print("AI ANALYST — SNOWFLAKE SETUP VALIDATION")
     print("=" * 60)
 
     # Load .env if it exists

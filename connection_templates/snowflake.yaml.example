@@ -1,7 +1,7 @@
 # Connection Template: Snowflake
 # Copy to .knowledge/datasets/{name}/manifest.yaml and fill in values.
 # Requires: pip install snowflake-connector-python
-# Auth: user/password or use key-pair authentication.
+# Auth: programmatic access token (recommended for agents) or password.
 
 dataset_id: "{dataset_id}"
 display_name: "{Display Name}"
@@ -12,12 +12,18 @@ is_seed: false
 
 connection:
   type: snowflake
+  authenticator: programmatic_access_token
   account: "{account_identifier}"   # e.g., xy12345.us-east-1
   warehouse: "{warehouse}"
   database: "{database}"
   schema: "public"
   user: "{username}"
-  password: "$SNOWFLAKE_PASSWORD"   # Secret belongs in .env, never in this manifest
+  token: "$SNOWFLAKE_TOKEN"         # Secret belongs in .env, never in this manifest
+
+  # Legacy password authentication remains supported for accounts that allow it.
+  # Replace the two lines above with:
+  # authenticator: password
+  # password: "$SNOWFLAKE_PASSWORD"
 
 summary:
   table_count: null
