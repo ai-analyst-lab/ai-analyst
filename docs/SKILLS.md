@@ -1,6 +1,6 @@
 # Skills map
 
-63 skills under `.claude/skills/`, each a `SKILL.md` with a `name` and a trigger `description`. The description is what makes a skill fire; open a skill file to see the full method it enforces. Grouped here for people; the loader needs them flat.
+64 skills under `.claude/skills/`, each a `SKILL.md` with a `name` and a trigger `description`. The description is what makes a skill fire; open a skill file to see the full method it enforces. Grouped here for people; the loader needs them flat.
 
 ## Method (always on)
 
@@ -81,6 +81,7 @@
 | `notion-export` | Publish a verified analysis as an approved Notion text page and retain its URL. |
 | `chart-to-drive` | Upload chart PNGs to the user's own Google Drive for Docs and Slides insertion; no public file hosts. |
 | `setup-notion` | Guided Notion connection setup wizard. |
+| `setup-slack` | Authorize the user's own AI Analyst Lab Slack account, verify the workspace and channel, preview one message, and post through the direct Web API. |
 
 ## Knowledge and memory
 
