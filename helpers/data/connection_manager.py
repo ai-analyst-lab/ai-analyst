@@ -80,6 +80,7 @@ class ConnectionManager:
         self._connection = None
         self._conn_type = None
         self._schema_prefix = ""
+        self._connection_identity = {}
         self._csv_dir = None
         self._csv_files = None        # explicit manifest files: list (paths), when present
         self._csv_views = {}          # view name -> csv path registered on the DuckDB connection
@@ -545,6 +546,7 @@ class ConnectionManager:
                 row_count=(len(df) if df is not None else None),
                 execution_ms=execution_ms,
                 analysis_id=analysis_id,
+                connection_identity=self._connection_identity or None,
             )
         except Exception:
             # Provenance logging is never allowed to take down a real query.
@@ -841,6 +843,9 @@ class ConnectionManager:
         if conn_config.get("role"):
             connect_kwargs["role"] = conn_config["role"]
         self._connection = snowflake.connector.connect(**connect_kwargs)
+        identity = self._snowflake_identity()
+        if "error" not in identity:
+            self._connection_identity = identity
         self._schema_prefix = conn_config.get("schema", "public")
         self._conn_type = "snowflake"
 

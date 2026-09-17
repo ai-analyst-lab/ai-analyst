@@ -92,6 +92,15 @@ class TestAppendAndRead:
         )
         assert entry["query_id"] == "custom_id"
 
+    def test_connection_identity_is_preserved(self, tmp_working):
+        entry = append_entry(
+            dataset_name="ds1", date="2026-04-04",
+            agent="test", pipeline_step=1,
+            purpose="test", sql="SELECT 1",
+            connection_identity={"user": "SERVICE_AGENT", "role": "READER"},
+        )
+        assert entry["connection_identity"] == {"user": "SERVICE_AGENT", "role": "READER"}
+
     def test_read_returns_all_entries(self, sample_entries):
         entries = read_log("test-ds", "2026-04-04")
         assert len(entries) == 3

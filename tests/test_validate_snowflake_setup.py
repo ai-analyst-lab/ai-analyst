@@ -21,11 +21,11 @@ def test_validator_builds_explicit_pat_kwargs(monkeypatch):
     monkeypatch.setenv("SNOWFLAKE_TOKEN", "secret-token")
     monkeypatch.delenv("SNOWFLAKE_PASSWORD", raising=False)
 
-    kwargs = validator.snowflake_connect_kwargs(schema="NOVAMART")
+    kwargs = validator.snowflake_connect_kwargs(schema="COURSE_SCHEMA")
 
     assert kwargs["authenticator"] == "PROGRAMMATIC_ACCESS_TOKEN"
     assert kwargs["token"] == "secret-token"
-    assert kwargs["schema"] == "NOVAMART"
+    assert kwargs["schema"] == "COURSE_SCHEMA"
     assert "password" not in kwargs
 
 

@@ -177,6 +177,37 @@ def test_connect_snowflake_uses_explicit_pat(monkeypatch):
     assert captured["role"] == "COURSE_READER"
 
 
+def test_snowflake_autolog_includes_non_secret_connection_identity(monkeypatch, tmp_path):
+    captured = _fake_snowflake_module(monkeypatch)
+    monkeypatch.setenv("AI_ANALYST_QUERY_LOG_DIR", str(tmp_path))
+    cm = ConnectionManager(config={
+        "type": "snowflake",
+        "dataset_id": "course-dataset",
+        "connection": {
+            "account": "ORG-ACCOUNT",
+            "user": "COURSE_AGENT",
+            "authenticator": "programmatic_access_token",
+            "token": "secret-token",
+            "warehouse": "COURSE_WH",
+            "database": "COURSE_DB",
+            "schema": "COURSE_SCHEMA",
+            "role": "COURSE_READER",
+        },
+    })
+
+    cm.connect()
+    cm.query("SELECT 1", log=True)
+
+    from datetime import date
+    from helpers.provenance import query_log
+    entries = query_log.read_log("course-dataset", date.today().isoformat())
+    identity = entries[-1]["connection_identity"]
+    assert captured["token"] == "secret-token"
+    assert identity["user"] == "COURSE_STUDENT"
+    assert identity["role"] == "READ_ONLY"
+    assert "token" not in identity
+
+
 def test_connect_snowflake_keeps_password_compatibility(monkeypatch):
     captured = _fake_snowflake_module(monkeypatch)
     cm = ConnectionManager(config={

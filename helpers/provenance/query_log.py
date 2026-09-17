@@ -118,6 +118,7 @@ def append_entry(
     error: str | None = None,
     query_id: str | None = None,
     analysis_id: str | None = None,
+    connection_identity: dict | None = None,
 ) -> dict:
     """Append a query log entry to the JSONL file.
 
@@ -142,6 +143,8 @@ def append_entry(
         status: "success" or "error".
         error: Error message if status is "error".
         query_id: Optional explicit ID. Auto-generated if not provided.
+        connection_identity: Non-secret remote session context such as user, role, warehouse,
+            database, and schema. Credentials must never be included.
 
     Returns:
         The entry dict that was written.
@@ -166,6 +169,7 @@ def append_entry(
         "sql": sql,
         "dialect": dialect,
         "connection_type": connection_type,
+        "connection_identity": connection_identity or {},
         "tables_accessed": tables_accessed or [],
         "columns_accessed": columns_accessed or [],
         "result_summary": result_summary,
