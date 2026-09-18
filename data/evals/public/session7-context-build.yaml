@@ -6,7 +6,8 @@ visibility: public-task-manifest
 cases:
 - case_id: context-package-structure
   task: Validate the disposable Session 7 context package and report whether its files and references are structurally usable.
-  split: working
+  exposure: working
+  purpose: capability
   case_version: '1'
   status: verified
   truth_basis: computed
@@ -37,7 +38,8 @@ cases:
   has_private_reference: true
 - case_id: membership-retention-selection
   task: Build a context trace for the membership retention question and report whether the current contract is selected.
-  split: working
+  exposure: working
+  purpose: capability
   case_version: '1'
   status: verified
   truth_basis: expert
@@ -72,7 +74,8 @@ cases:
   has_private_reference: true
 - case_id: membership-retention-meaning
   task: Check the membership-retention contract against the reviewed course brief.
-  split: working
+  exposure: working
+  purpose: capability
   case_version: '1'
   status: verified
   truth_basis: expert

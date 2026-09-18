@@ -53,7 +53,7 @@ td, th {{ border-bottom: 1px solid #e5e7eb; padding: 10px; text-align: left; }}
 .note {{ background: #eef6ff; border-left: 4px solid #0877b9; padding: 12px; }}
 </style></head><body><div class="card">
 <h1>{html.escape(title)}</h1>
-<p>Suite {html.escape(str(manifest['suite_id']))}, version {html.escape(str(manifest['suite_version']))}, split {html.escape(str(manifest['split']))}.</p>
+<p>Suite {html.escape(str(manifest['suite_id']))}, version {html.escape(str(manifest['suite_version']))}, exposure {html.escape(str(manifest['exposure']))}, purpose {html.escape(str(manifest.get('purpose') or 'mixed'))}.</p>
 <p>{manifest.get('completed_trials', 0)} of {manifest.get('requested_trials', 0)} trials reached a recorded terminal state.</p>
 <h2>Grade outcomes</h2><table><thead><tr><th>Status</th><th>Count</th></tr></thead><tbody>{rows}</tbody></table>
 <p class="note">Read the per-case records and traces. An aggregate cannot tell you which failure matters or whether the evaluator itself is sound.</p>

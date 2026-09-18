@@ -12,15 +12,32 @@ from typing import Any
 
 from .statuses import (
     CASE_STATUSES,
+    EVALUATION_PURPOSES,
+    EXPOSURES,
     GRADE_ROLES,
     GRADE_STATUSES,
-    SPLITS,
     TRIAL_STATUSES,
     TRUTH_BASES,
     require_member,
 )
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
+
+
+def _migrate_legacy_split(values: dict[str, Any]) -> dict[str, Any]:
+    """Map the old overloaded split field onto two independent dimensions."""
+    legacy = values.pop("split", None)
+    if legacy in EXPOSURES:
+        values.setdefault("exposure", legacy)
+        values.setdefault("purpose", "capability")
+    elif legacy in EVALUATION_PURPOSES:
+        values.setdefault("exposure", "working")
+        values.setdefault("purpose", legacy)
+    elif legacy is not None:
+        raise ValueError(
+            "legacy split must be one of: capability, heldout, regression, working"
+        )
+    return values
 
 
 def utc_now() -> str:
@@ -31,7 +48,8 @@ def utc_now() -> str:
 class EvaluationCase:
     case_id: str
     task: str
-    split: str = "working"
+    exposure: str = "working"
+    purpose: str = "capability"
     case_version: str = "1"
     status: str = "proposed"
     truth_basis: str | None = None
@@ -45,6 +63,7 @@ class EvaluationCase:
     reference_query: str | None = None
     tolerance: dict[str, float] = field(default_factory=dict)
     graders: list[dict[str, Any]] = field(default_factory=list)
+    human_review_required: bool = False
     slices: dict[str, str] = field(default_factory=dict)
     data_snapshot: str | None = None
     truth_evidence: str | None = None
@@ -60,7 +79,8 @@ class EvaluationCase:
             raise ValueError("case_id cannot be empty")
         if not self.task.strip():
             raise ValueError("task cannot be empty")
-        require_member(self.split, SPLITS, "split")
+        require_member(self.exposure, EXPOSURES, "exposure")
+        require_member(self.purpose, EVALUATION_PURPOSES, "evaluation purpose")
         require_member(self.status, CASE_STATUSES, "status")
         if self.truth_basis is not None:
             require_member(self.truth_basis, TRUTH_BASES, "truth_basis")
@@ -86,7 +106,7 @@ class EvaluationCase:
 
     @classmethod
     def from_dict(cls, raw: dict[str, Any]) -> "EvaluationCase":
-        values = dict(raw)
+        values = _migrate_legacy_split(dict(raw))
         if values.get("verified_at") is not None and not isinstance(values["verified_at"], str):
             values["verified_at"] = values["verified_at"].isoformat()
         return cls(**values)
@@ -183,10 +203,11 @@ class RunManifest:
     run_id: str
     suite_id: str
     suite_version: str
-    split: str
+    exposure: str
     requested_trials: int
     system_fingerprint: dict[str, Any]
     evaluator_fingerprint: dict[str, Any]
+    purpose: str | None = None
     engine_fingerprint: dict[str, Any] = field(default_factory=dict)
     data_snapshot: str | None = None
     baseline_run_id: str | None = None
@@ -202,13 +223,16 @@ class RunManifest:
     schema_version: str = SCHEMA_VERSION
 
     def __post_init__(self) -> None:
-        require_member(self.split, SPLITS, "split")
+        require_member(self.exposure, EXPOSURES, "exposure")
+        if self.purpose is not None:
+            require_member(self.purpose, EVALUATION_PURPOSES, "evaluation purpose")
         if self.requested_trials < 1:
             raise ValueError("requested_trials must be at least 1")
 
     @classmethod
     def from_dict(cls, raw: dict[str, Any]) -> "RunManifest":
-        return cls(**raw)
+        values = _migrate_legacy_split(dict(raw))
+        return cls(**values)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

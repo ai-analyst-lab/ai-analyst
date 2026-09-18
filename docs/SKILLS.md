@@ -61,7 +61,7 @@
 | `trace` | Show the provenance trace for the current run. |
 | `reliability` | Run one task through fresh trials and separate exact agreement, tolerance agreement, failed runs, and parse failures. |
 | `score-analysis` | Keep evidence dimensions separate and decide whether to act, investigate, abstain, or mark the review incomplete. |
-| `eval` | Evaluate a named system configuration across a frozen working, heldout, capability, or regression suite. |
+| `eval` | Evaluate a named system configuration across working or heldout capability and regression cases. |
 | `evaluate-grader` | Compare a narrow model grader with frozen human labels and inspect disagreement and scoring stability. |
 | `monitor-evals` | Distinguish system, data, suite, evaluator, and operational changes across evaluation history. |
 | `context-compare` | Advanced: runs the same question under two configurations and diffs the results. |

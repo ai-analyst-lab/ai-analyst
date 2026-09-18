@@ -1,7 +1,8 @@
 """Shared status vocabularies for evaluation records."""
 
 CASE_STATUSES = frozenset({"proposed", "verified", "disputed", "retired"})
-SPLITS = frozenset({"working", "heldout", "capability", "regression"})
+EXPOSURES = frozenset({"working", "heldout"})
+EVALUATION_PURPOSES = frozenset({"capability", "regression"})
 TRUTH_BASES = frozenset({"computed", "anchored", "expert"})
 TRIAL_STATUSES = frozenset(
     {"queued", "running", "completed", "failed", "blocked", "error", "invalid", "unknown"}

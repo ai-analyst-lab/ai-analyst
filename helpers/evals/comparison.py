@@ -6,8 +6,23 @@ from statistics import median
 from typing import Any
 
 
+def _normalize_manifest_dimensions(manifest: dict[str, Any]) -> dict[str, Any]:
+    """Read legacy run manifests without preserving the overloaded split field."""
+    normalized = dict(manifest)
+    legacy = normalized.pop("split", None)
+    if "exposure" not in normalized:
+        normalized["exposure"] = legacy if legacy in {"working", "heldout"} else "working"
+    if "purpose" not in normalized:
+        normalized["purpose"] = legacy if legacy in {"capability", "regression"} else None
+    return normalized
+
+
 def compare_manifests(baseline: dict[str, Any], candidate: dict[str, Any]) -> dict[str, Any]:
-    compatibility_fields = ("suite_id", "suite_version", "split", "data_snapshot")
+    baseline = _normalize_manifest_dimensions(baseline)
+    candidate = _normalize_manifest_dimensions(candidate)
+    compatibility_fields = (
+        "suite_id", "suite_version", "exposure", "purpose", "data_snapshot"
+    )
     differences = {
         field: {"baseline": baseline.get(field), "candidate": candidate.get(field)}
         for field in compatibility_fields
@@ -20,7 +35,7 @@ def compare_manifests(baseline: dict[str, Any], candidate: dict[str, Any]) -> di
     allowed_engine_changes = {"model", "runner"} if controlled_change == "engine" else set()
     for field in (
         "model", "trials_per_case", "data_fingerprint", "context_fingerprint",
-        "tool_configuration", "slice", "runner",
+        "tool_configuration", "slice", "selected_case_ids", "runner",
     ):
         if field in allowed_engine_changes:
             continue

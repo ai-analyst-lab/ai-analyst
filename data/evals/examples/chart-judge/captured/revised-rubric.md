@@ -46,5 +46,5 @@ false passes.
 ## Clean numbers
 
 - Pass: Values use precision appropriate to their scale and decision use.
-- Fail: Values carry distracting or misleading precision, such as cents on millions-scale revenue.
+- Fail: Values carry distracting or misleading precision, such as cents on millions-scale order value.
 - Unknown: The displayed values are not legible.

@@ -11,7 +11,8 @@ def _run(run_id, cases, *, suite="context-course", version="1", model="claude-op
         "run_id": run_id,
         "suite_id": suite,
         "suite_version": version,
-        "split": "working",
+        "exposure": "working",
+        "purpose": None,
         "data_snapshot": "snapshot-1",
         "case_summary": {
             case_id: {"blocking_pass": passed} for case_id, passed in cases.items()

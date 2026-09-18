@@ -1,13 +1,33 @@
 {
-  "analysis_id": "session5-fanout-example",
-  "claim": "Completed order revenue was $5,907,972.60.",
-  "decision_at_risk": "How much completed revenue should the company plan from?",
-  "source": "NovaMart practice database",
-  "data_snapshot": "sha256:811991d2712f7c995823fec9652fed608f1907b96ddc54e4361c4a02abb650fb",
-  "reported_value": 5907972.60,
+  "analysis_id": "session5-opening-claim",
+  "capture_status": "captured course example",
+  "decision": "How much completed-order value should NovaMart use for planning?",
+  "question": "What was NovaMart's completed-order value across the full practice dataset?",
+  "metric": {
+    "name": "completed-order value",
+    "definition": "Sum total_amount for orders whose status is exactly completed.",
+    "unit": "USD"
+  },
+  "source": "data/practice/novamart_practice.duckdb",
+  "data_snapshot": "sha256:311be56bc7bd070f54724e9c10a16ff484aa1cbcfabd1d1ca72c0873e8a1ce38",
   "query": "SELECT round(sum(o.total_amount), 2) FROM orders o JOIN order_items i USING (order_id) WHERE o.status = 'completed';",
-  "known_issue": "The join creates one order row per order item, then sums the order total repeatedly.",
-  "corrected_query": "SELECT round(sum(total_amount), 2) FROM orders WHERE status = 'completed';",
-  "corrected_value": 3150899.34,
-  "teaching_note": "The SQL runs and the result looks plausible. The grain is wrong."
+  "filters": [
+    "o.status = 'completed'"
+  ],
+  "join": {
+    "left_table": "orders",
+    "right_table": "order_items",
+    "key": "order_id",
+    "cardinality_check": null
+  },
+  "declared_unit_of_analysis": "order",
+  "aggregation": "sum(o.total_amount)",
+  "reported_value": 5907972.60,
+  "interpretation": "Completed-order value supports a larger operating plan.",
+  "recommendation": "Increase the plan based on the reported completed-order value.",
+  "review": {
+    "status": "not reviewed",
+    "checks_completed": []
+  },
+  "limitations_recorded": []
 }

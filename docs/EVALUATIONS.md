@@ -54,12 +54,12 @@ The trace, triangulation, and score-analysis skills support this workflow. None 
 
 Cases move through proposed, verified, disputed, and retired states. A verified case records how its expected result was established, the data snapshot, an independent reviewer, and when it was verified.
 
-The runtime supports four splits:
+The runtime keeps two independent case dimensions:
 
-- `working`: visible cases used while developing a change
-- `heldout`: protected cases used after the output is locked
-- `capability`: tasks that measure a desired ability
-- `regression`: failures that should not return
+- Exposure describes who can see the reference: `working` for visible development cases or `heldout` for protected cases graded after output lock.
+- Purpose describes why the case exists: `capability` for a desired ability or `regression` for a failure that should not return.
+
+A working regression case and a heldout capability case are both valid. Do not collapse exposure and purpose into one field.
 
 Cases should cover typical work, important edge cases, and adversarial risks. A large suite of similar questions can still leave major risks untested.
 

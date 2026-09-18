@@ -27,3 +27,6 @@ tests/fixtures/operations/:novamart                     # synthetic test fixture
 tests/test_context_manifest.py:novamart                 # synthetic test fixture
 tests/test_context_sync.py:novamart                     # synthetic test fixture
 README.md:novamart                                      # public example and setup documentation
+docs/SETUP_GOOGLE_DOCS_API.md:bootcamp                  # public course setup example
+docs/SETUP_GOOGLE_DOCS_API.md:novamart                  # public synthetic course example
+tests/test_evals_runtime.py:novamart                    # public evaluation fixture names

@@ -1,6 +1,6 @@
 ---
 name: eval
-description: Evaluate a named AI Analyst configuration across a frozen suite. Use when the user asks to run an eval suite, compare a change, inspect system accuracy, or run working, heldout, capability, or regression cases.
+description: Evaluate a named AI Analyst configuration across a frozen suite. Use when the user asks to run an eval suite, compare a change, inspect system accuracy, or run working or heldout capability and regression cases.
 ---
 
 # Evaluate the system
@@ -18,7 +18,7 @@ Use one of these modes honestly:
 ## Run
 
 1. Load the question-only manifest from `data/evals/public/`.
-2. Select the split and any named slice before the run starts.
+2. Select the exposure, purpose, named cases, and any slice before the run starts. Exposure is `working` or `heldout`. Purpose is `capability` or `regression`. Do not treat these as one dimension.
 3. Use `helpers.evals.controller.EvaluationController` to launch and record the trials.
 4. Give each trial only its public task, permitted system files, permitted data, and permitted tools.
 5. Lock every trial output before grading begins.
@@ -26,7 +26,7 @@ Use one of these modes honestly:
 7. Preserve pass, fail, blocked, error, invalid, and unknown as different results.
 8. Report every case and slice before discussing the aggregate.
 
-The local controller is available through `python3 -m helpers.evals.cli run-suite`. Use `--model claude-opus-4-6`. General code access is not required for routing or contract cases. When local data analysis requires `--allow-code`, state that local process isolation is not the same as course-heldout answer isolation.
+The local controller is available through `python3 -m helpers.evals.cli run-suite`. Use `--model claude-opus-4-6`, `--exposure`, optional `--purpose`, and repeated `--case-id` arguments when selecting a subset. General code access is not required for routing or contract cases. When local data analysis requires `--allow-code`, state that local process isolation is not the same as course-heldout answer isolation.
 
 For a reviewed working suite with local references, lock the trial outputs first, then grade them
 with `python3 -m helpers.evals.cli grade-suite`. Pass the run ID, public manifest, and reviewed

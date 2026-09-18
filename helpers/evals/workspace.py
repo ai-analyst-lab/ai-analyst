@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import signal
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -41,7 +42,12 @@ class SanitizedWorkspaceBuilder:
         self.source_root = Path(source_root).resolve()
         self.allowed_entries = tuple(allowed_entries)
 
-    def build(self, destination: str | Path, case: EvaluationCase) -> Path:
+    def build(
+        self,
+        destination: str | Path,
+        case: EvaluationCase,
+        data_paths: tuple[str | Path, ...] = (),
+    ) -> Path:
         destination = Path(destination).resolve()
         destination.mkdir(parents=True, exist_ok=False)
         for entry in self.allowed_entries:
@@ -92,6 +98,25 @@ class SanitizedWorkspaceBuilder:
             target = destination / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copytree(source, target, symlinks=False, ignore=_copy_ignore)
+
+        for raw in data_paths:
+            source = Path(raw).resolve()
+            if not source.is_file() or source.is_symlink():
+                raise ValueError(f"evaluation data file is missing or unsafe: {source}")
+            try:
+                relative = source.relative_to(self.source_root)
+            except ValueError:
+                relative = Path("inputs") / "data" / source.name
+            if _is_forbidden(relative):
+                raise ValueError(f"evaluation data path uses a forbidden name: {relative}")
+            target = destination / relative
+            if target.exists():
+                if target.read_bytes() != source.read_bytes():
+                    raise ValueError(f"evaluation data path collides with workspace file: {relative}")
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, target)
+            target.chmod(0o444)
 
         task = case.to_dict(public=True)
         (destination / "eval_task.json").write_text(
@@ -154,6 +179,7 @@ class ClaudeCommand:
             "none",
             "--no-session-persistence",
             f"--tools={tools}",
+            f"--allowedTools={tools}",
             prompt,
         ]
 
@@ -164,34 +190,52 @@ class ClaudeCommand:
         json_schema: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Run one noninteractive trial inside an already sanitized workspace."""
-        completed = subprocess.run(
+        process = subprocess.Popen(
             self.argv(prompt, json_schema=json_schema),
             cwd=Path(workspace),
             text=True,
-            capture_output=True,
-            timeout=self.timeout_seconds,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             env=_child_environment(),
-            check=False,
+            start_new_session=os.name != "nt",
+            creationflags=(
+                subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
+            ),
         )
-        if completed.returncode != 0:
+        try:
+            stdout, stderr = process.communicate(timeout=self.timeout_seconds)
+        except subprocess.TimeoutExpired:
+            _terminate_process_tree(process)
             return {
                 "status": "error",
-                "raw_output": completed.stdout,
+                "raw_output": "",
+                "structured_result": {},
+                "errors": [
+                    {
+                        "type": "timeout",
+                        "timeout_seconds": self.timeout_seconds,
+                    }
+                ],
+            }
+        if process.returncode != 0:
+            return {
+                "status": "error",
+                "raw_output": stdout,
                 "structured_result": {},
                 "errors": [
                     {
                         "type": "claude_exit",
-                        "returncode": completed.returncode,
-                        "stderr": completed.stderr[-4000:],
+                        "returncode": process.returncode,
+                        "stderr": stderr[-4000:],
                     }
                 ],
             }
         try:
-            envelope = json.loads(completed.stdout)
+            envelope = json.loads(stdout)
         except json.JSONDecodeError as exc:
             return {
                 "status": "error",
-                "raw_output": completed.stdout,
+                "raw_output": stdout,
                 "structured_result": {},
                 "errors": [{"type": "invalid_json", "detail": str(exc)}],
             }
@@ -199,11 +243,37 @@ class ClaudeCommand:
         structured = result if isinstance(result, dict) else {"answer": result}
         return {
             "status": "completed",
-            "raw_output": completed.stdout,
+            "raw_output": stdout,
             "structured_result": structured,
             "errors": [],
             "cost_usd": envelope.get("total_cost_usd"),
         }
+
+
+def _terminate_process_tree(process: subprocess.Popen[str]) -> None:
+    """Stop a timed-out command and descendants that may still hold output pipes."""
+    if process.poll() is not None:
+        process.communicate()
+        return
+    if os.name == "nt":
+        process.kill()
+    else:
+        try:
+            os.killpg(process.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+    try:
+        process.communicate(timeout=5)
+        return
+    except subprocess.TimeoutExpired:
+        if os.name == "nt":
+            process.kill()
+        else:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        process.communicate()
 
 
 def _child_environment() -> dict[str, str]:

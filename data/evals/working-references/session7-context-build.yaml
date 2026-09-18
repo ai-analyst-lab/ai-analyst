@@ -5,7 +5,8 @@ purpose: Reviewed working references for the Session 7 context-package build
 cases:
 - case_id: context-package-structure
   task: Validate the disposable Session 7 context package and report whether its files and references are structurally usable.
-  split: working
+  exposure: working
+  purpose: capability
   case_version: '1'
   status: verified
   truth_basis: computed
@@ -28,7 +29,8 @@ cases:
   verified_at: '2026-09-06T00:00:00+00:00'
 - case_id: membership-retention-selection
   task: Build a context trace for the membership retention question and report whether the current contract is selected.
-  split: working
+  exposure: working
+  purpose: capability
   case_version: '1'
   status: verified
   truth_basis: expert
@@ -58,7 +60,8 @@ cases:
   verified_at: '2026-09-06T00:00:00+00:00'
 - case_id: membership-retention-meaning
   task: Check the membership-retention contract against the reviewed course brief.
-  split: working
+  exposure: working
+  purpose: capability
   case_version: '1'
   status: verified
   truth_basis: expert

@@ -8,7 +8,8 @@ cases:
   task: Build the deterministic context trace for "What is our membership retention
     rate?" Report selection_status as current_only, current_and_legacy, legacy_only,
     or neither based on which membership metric definitions the trace supplied.
-  split: working
+  exposure: working
+  purpose: capability
   case_version: '1'
   status: verified
   truth_basis: expert
@@ -48,11 +49,12 @@ cases:
   reviewed_by: Shane Butler
   verified_at: '2026-09-06T00:00:00+00:00'
   has_private_reference: true
-  schema_version: '1.0'
+  schema_version: '1.1'
 - case_id: completed-revenue
   task: Route the NovaMart total_revenue metric and report route as compiled, external,
     contract-guided, generated, or generated-unverified.
-  split: working
+  exposure: working
+  purpose: regression
   case_version: '1'
   status: verified
   truth_basis: computed
@@ -90,13 +92,14 @@ cases:
   reviewed_by: Shane Butler
   verified_at: '2026-09-06T00:00:00+00:00'
   has_private_reference: true
-  schema_version: '1.0'
+  schema_version: '1.1'
 - case_id: historical-active-members
   task: Build the deterministic context trace for "What did the archived dashboard
     report as historical membership retention at month-end?" Report selection_status
     as current_only, current_and_legacy, legacy_only, or neither based on which membership
     metric definitions the trace supplied.
-  split: working
+  exposure: working
+  purpose: regression
   case_version: '1'
   status: verified
   truth_basis: expert
@@ -137,4 +140,4 @@ cases:
   reviewed_by: Shane Butler
   verified_at: '2026-09-06T00:00:00+00:00'
   has_private_reference: true
-  schema_version: '1.0'
+  schema_version: '1.1'

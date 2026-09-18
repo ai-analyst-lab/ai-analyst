@@ -25,6 +25,27 @@ def new_run_id(prefix: str = "eval") -> str:
     return f"{prefix}-{stamp}-{uuid.uuid4().hex[:8]}"
 
 
+def _validate_data_snapshot(declared: str | None, observed: dict[str, Any]) -> None:
+    """Reject a frozen-suite run when its declared SHA-256 does not match its data."""
+    if not declared or not declared.startswith("sha256:"):
+        return
+    files = observed.get("files") or []
+    if not files:
+        return
+    missing = [record.get("path") for record in files if record.get("status") == "missing"]
+    if missing:
+        raise ValueError(f"evaluation data path is missing: {missing}")
+    if len(files) == 1:
+        actual = f"sha256:{files[0].get('sha256')}"
+    else:
+        actual = f"sha256:{observed.get('digest')}"
+    if actual != declared:
+        raise ValueError(
+            "evaluation data snapshot mismatch: "
+            f"manifest declares {declared}, observed {actual}"
+        )
+
+
 class EvaluationController:
     def __init__(self, project_root: str | Path, runs_root: str | Path | None = None):
         self.project_root = Path(project_root).resolve()
@@ -35,7 +56,9 @@ class EvaluationController:
         manifest_path: str | Path,
         runner: TrialRunner,
         *,
-        split: str = "working",
+        exposure: str = "working",
+        purpose: str | None = None,
+        case_ids: list[str] | None = None,
         trials_per_case: int = 1,
         model: str = "claude-opus-4-6",
         data_paths: list[str | Path] | None = None,
@@ -46,24 +69,46 @@ class EvaluationController:
         engine_fingerprint: dict[str, Any] | None = None,
     ) -> RunManifest:
         metadata, all_cases = load_suite(manifest_path, allow_private=False)
-        cases = [case for case in all_cases if case.split == split]
+        cases = [case for case in all_cases if case.exposure == exposure]
+        if purpose:
+            cases = [case for case in cases if case.purpose == purpose]
+        if case_ids:
+            selected_ids = set(case_ids)
+            cases = [case for case in cases if case.case_id in selected_ids]
+            missing_ids = selected_ids - {case.case_id for case in cases}
+            if missing_ids:
+                raise ValueError(
+                    "selected case IDs are unavailable under the requested exposure and purpose: "
+                    f"{sorted(missing_ids)}"
+                )
         if suite_slice:
             cases = [
                 case for case in cases if all(case.slices.get(k) == v for k, v in suite_slice.items())
             ]
         if not cases:
-            raise ValueError(f"no public cases selected for split {split}")
+            qualifier = f" and purpose {purpose}" if purpose else ""
+            raise ValueError(f"no public cases selected for exposure {exposure}{qualifier}")
 
+        resolved_data_paths = tuple(
+            (
+                Path(raw).expanduser()
+                if Path(raw).expanduser().is_absolute()
+                else self.project_root / Path(raw).expanduser()
+            ).resolve()
+            for raw in (data_paths or [])
+        )
+        system = system_fingerprint(self.project_root)
+        data = data_fingerprint(resolved_data_paths)
+        _validate_data_snapshot(metadata.get("data_snapshot"), data)
         run_id = new_run_id()
         store = RunStore(self.runs_root, run_id)
-        system = system_fingerprint(self.project_root)
-        data = data_fingerprint(data_paths or [])
         requested = len(cases) * trials_per_case
         manifest = RunManifest(
             run_id=run_id,
             suite_id=metadata.get("suite_id", Path(manifest_path).stem),
             suite_version=str(metadata.get("suite_version", "1")),
-            split=split,
+            exposure=exposure,
+            purpose=purpose,
             requested_trials=requested,
             system_fingerprint=system,
             evaluator_fingerprint={
@@ -76,6 +121,7 @@ class EvaluationController:
                 "model": model,
                 "trials_per_case": trials_per_case,
                 "slice": suite_slice or {},
+                "selected_case_ids": sorted(case.case_id for case in cases),
                 "data_fingerprint": data,
                 "intended_change": intended_change,
                 "allowed_changed_paths": sorted(allowed_changed_paths or []),
@@ -90,7 +136,9 @@ class EvaluationController:
             for trial_number in range(1, trials_per_case + 1):
                 trial_id = f"{case.case_id}-t{trial_number}-{uuid.uuid4().hex[:6]}"
                 workspace = store.root / "workspaces" / trial_id
-                SanitizedWorkspaceBuilder(self.project_root).build(workspace, case)
+                SanitizedWorkspaceBuilder(self.project_root).build(
+                    workspace, case, data_paths=resolved_data_paths
+                )
                 trial = TrialRecord(
                     run_id=run_id,
                     trial_id=trial_id,
@@ -205,6 +253,14 @@ class EvaluationController:
             case_id: {
                 "grades": statuses,
                 "blocking_pass": "fail" not in statuses and "error" not in statuses and "blocked" not in statuses,
+                "human_review_required": private_by_id[case_id].human_review_required,
+                "final_status": (
+                    "failed"
+                    if "fail" in statuses or "error" in statuses or "blocked" in statuses
+                    else "review_required"
+                    if private_by_id[case_id].human_review_required
+                    else "passed"
+                ),
             }
             for case_id, statuses in sorted(case_grades.items())
         }

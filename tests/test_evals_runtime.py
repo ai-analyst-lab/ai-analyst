@@ -1,6 +1,8 @@
 import json
 import io
 from pathlib import Path
+import sys
+import time
 
 import pytest
 import yaml
@@ -15,18 +17,19 @@ from helpers.evals.normalization import normalize_number, values_within_toleranc
 from helpers.evals.records import RunStore
 from helpers.evals.remote import RemoteGraderClient
 from helpers.evals.reliability import measure_reliability
-from helpers.evals.schema import EvaluationCase, TrialRecord
+from helpers.evals.schema import EvaluationCase, RunManifest, TrialRecord
 from helpers.evals.scorecard import decide
 from helpers.evals.triangulation import build_grid, compare_rounds
 from helpers.evals.trace import inspect_receipt
-from helpers.evals.workspace import SanitizedWorkspaceBuilder, output_schema_for_case
+from helpers.evals.workspace import ClaudeCommand, SanitizedWorkspaceBuilder, output_schema_for_case
 
 
 def verified_case(**overrides):
     values = {
         "case_id": "revenue-1",
         "task": "Report revenue.",
-        "split": "working",
+        "exposure": "working",
+        "purpose": "capability",
         "status": "verified",
         "truth_basis": "computed",
         "expected": 100,
@@ -61,6 +64,41 @@ def test_verified_case_requires_provenance():
         EvaluationCase(case_id="x", task="Do x", status="verified", truth_basis="computed")
 
 
+@pytest.mark.parametrize(
+    "legacy,expected_exposure,expected_purpose",
+    [
+        ("working", "working", "capability"),
+        ("heldout", "heldout", "capability"),
+        ("capability", "working", "capability"),
+        ("regression", "working", "regression"),
+    ],
+)
+def test_case_migrates_legacy_split_without_conflating_dimensions(
+    legacy, expected_exposure, expected_purpose
+):
+    case = EvaluationCase.from_dict({"case_id": "legacy", "task": "Test", "split": legacy})
+    assert case.exposure == expected_exposure
+    assert case.purpose == expected_purpose
+    assert "split" not in case.to_dict()
+
+
+def test_run_manifest_migrates_legacy_split():
+    manifest = RunManifest.from_dict(
+        {
+            "run_id": "run",
+            "suite_id": "suite",
+            "suite_version": "1",
+            "split": "heldout",
+            "requested_trials": 1,
+            "system_fingerprint": {},
+            "evaluator_fingerprint": {},
+        }
+    )
+    assert manifest.exposure == "heldout"
+    assert manifest.purpose == "capability"
+    assert "split" not in manifest.to_dict()
+
+
 def test_public_manifest_strips_answer_and_reference(tmp_path):
     private = tmp_path / "private.yaml"
     public = tmp_path / "public.yaml"
@@ -88,7 +126,25 @@ def test_week5_engine_suite_is_public_and_matches_working_references():
     )
     assert [case.case_id for case in public_cases] == [case.case_id for case in private_cases]
     assert len(public_cases) == 3
-    assert all(case.split == "working" for case in public_cases)
+    assert all(case.exposure == "working" for case in public_cases)
+    assert all(case.purpose in {"capability", "regression"} for case in public_cases)
+
+
+def test_week3_course_core_is_verified_representative_and_answer_free():
+    _, public_cases = load_suite("data/evals/public/week3-novamart.yaml")
+    _, private_cases = load_suite(
+        "data/evals/working-references/week3-novamart.yaml", allow_private=True
+    )
+    assert [case.case_id for case in public_cases] == [case.case_id for case in private_cases]
+    assert len(public_cases) == 7
+    assert all(case.status == "verified" for case in public_cases)
+    assert {case.purpose for case in public_cases} == {"capability", "regression"}
+    assert len({case.slices.get("task") for case in public_cases}) >= 4
+    assert len({case.slices.get("risk") for case in public_cases}) >= 5
+    assert any(case.human_review_required for case in public_cases)
+    public_text = Path("data/evals/public/week3-novamart.yaml").read_text()
+    for forbidden in ("expected:", "reference_query:", "reproduction:"):
+        assert forbidden not in public_text
 
 
 @pytest.mark.parametrize(
@@ -188,6 +244,80 @@ def test_sanitized_workspace_copies_declared_working_directory(tmp_path):
     assert (workspace / "working" / "context-store" / "metrics" / "retention.yaml").exists()
 
 
+def test_sanitized_workspace_copies_explicit_data_path_read_only(tmp_path):
+    source = tmp_path / "source"
+    data = source / "data" / "practice" / "course.duckdb"
+    data.parent.mkdir(parents=True)
+    data.write_bytes(b"database")
+    (source / "CLAUDE.md").write_text("instructions")
+    workspace = tmp_path / "workspace"
+
+    SanitizedWorkspaceBuilder(source).build(
+        workspace, verified_case(), data_paths=(data,)
+    )
+
+    copied = workspace / "data" / "practice" / "course.duckdb"
+    assert copied.read_bytes() == b"database"
+    assert copied.stat().st_mode & 0o222 == 0
+
+
+def test_claude_command_timeout_stops_descendants(tmp_path):
+    class SlowCommand(ClaudeCommand):
+        def argv(self, prompt, json_schema=None):
+            child = "import time; time.sleep(30)"
+            parent = (
+                "import subprocess, sys, time; "
+                "subprocess.Popen([sys.executable, '-c', " + repr(child) + "]); "
+                "time.sleep(30)"
+            )
+            return [sys.executable, "-c", parent]
+
+    started = time.monotonic()
+    result = SlowCommand(timeout_seconds=1).run(tmp_path, "ignored")
+
+    assert result["status"] == "error"
+    assert result["errors"] == [{"type": "timeout", "timeout_seconds": 1}]
+    assert time.monotonic() - started < 5
+
+
+def test_claude_command_preapproves_only_available_tools():
+    argv = ClaudeCommand(allowed_tools=("Read", "Bash")).argv("task")
+
+    assert "--tools=Read,Bash" in argv
+    assert "--allowedTools=Read,Bash" in argv
+
+
+def test_controller_rejects_data_snapshot_mismatch(tmp_path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "CLAUDE.md").write_text("instructions")
+    data = project / "data.duckdb"
+    data.write_bytes(b"current snapshot")
+    case = verified_case(data_snapshot="sha256:" + "0" * 64)
+    suite = project / "suite.yaml"
+    suite.write_text(
+        yaml.safe_dump(
+            {
+                "suite_id": "nova",
+                "suite_version": "1",
+                "data_snapshot": "sha256:" + "0" * 64,
+                "cases": [case.to_dict(public=True)],
+            },
+            sort_keys=False,
+        )
+    )
+
+    controller = EvaluationController(project, project / "runs")
+    with pytest.raises(ValueError, match="data snapshot mismatch"):
+        controller.run_public_suite(
+            suite,
+            lambda workspace, selected_case, trial_number: {"status": "completed"},
+            data_paths=[data],
+        )
+
+    assert not (project / "runs").exists()
+
+
 def test_sanitized_workspace_rejects_private_file_in_declared_directory(tmp_path):
     source = tmp_path / "source"
     fixture = source / "working" / "context-store" / "ground_truth.yaml"
@@ -243,6 +373,30 @@ def test_controller_runs_public_then_grades_locked_output(tmp_path):
     graded = controller.grade_run(manifest.run_id, public, private)
     assert graded.configuration["grade_status_counts"] == {"pass": 1}
     assert graded.case_summary["revenue-1"]["blocking_pass"]
+    assert graded.case_summary["revenue-1"]["final_status"] == "passed"
+
+
+def test_human_review_requirement_survives_automated_pass(tmp_path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "CLAUDE.md").write_text("answer carefully")
+    private = tmp_path / "private.yaml"
+    public = tmp_path / "public.yaml"
+    write_suite(private, verified_case(human_review_required=True))
+    publish_manifest(private, public)
+    controller = EvaluationController(project, tmp_path / "runs")
+    manifest = controller.run_public_suite(
+        public,
+        lambda workspace, case, trial: {
+            "status": "completed",
+            "structured_result": {"answer": 100},
+        },
+    )
+    graded = controller.grade_run(manifest.run_id, public, private)
+    summary = graded.case_summary["revenue-1"]
+    assert summary["blocking_pass"] is True
+    assert summary["human_review_required"] is True
+    assert summary["final_status"] == "review_required"
 
 
 def test_scorecard_blocking_failure_cannot_be_averaged_away():
@@ -294,14 +448,14 @@ def test_judge_alignment_keeps_unknown_and_disagreements():
 
 
 def test_run_comparison_rejects_moving_suite():
-    baseline = {"suite_id": "a", "suite_version": "1", "split": "working", "data_snapshot": "1", "configuration": {"model": "x", "trials_per_case": 1}}
+    baseline = {"suite_id": "a", "suite_version": "1", "exposure": "working", "purpose": None, "data_snapshot": "1", "configuration": {"model": "x", "trials_per_case": 1}}
     candidate = {**baseline, "suite_version": "2"}
     assert not compare_manifests(baseline, candidate)["comparable"]
 
 
 def test_run_comparison_rejects_unapproved_system_change():
     baseline = {
-        "suite_id": "a", "suite_version": "1", "split": "working", "data_snapshot": "1",
+        "suite_id": "a", "suite_version": "1", "exposure": "working", "purpose": None, "data_snapshot": "1",
         "configuration": {"model": "x", "trials_per_case": 1, "runner": "context-policy"},
         "system_fingerprint": {"tree": {"files": {"context.yaml": "before", "CLAUDE.md": "same"}}},
     }
@@ -321,7 +475,7 @@ def test_run_comparison_rejects_unapproved_system_change():
 
 def test_controlled_engine_comparison_allows_only_engine_change_and_keeps_unknown_cost():
     baseline = {
-        "suite_id": "a", "suite_version": "1", "split": "working", "data_snapshot": "1",
+        "suite_id": "a", "suite_version": "1", "exposure": "working", "purpose": None, "data_snapshot": "1",
         "configuration": {"model": "a", "trials_per_case": 1, "runner": "a",
                           "data_fingerprint": {"x": 1}, "context_fingerprint": "same",
                           "tool_configuration": {"read": True}},
@@ -347,7 +501,7 @@ def test_controlled_engine_comparison_allows_only_engine_change_and_keeps_unknow
 
 def test_engine_comparison_reports_score_movement_even_when_both_runs_complete():
     baseline = {
-        "suite_id": "a", "suite_version": "1", "split": "working", "data_snapshot": "1",
+        "suite_id": "a", "suite_version": "1", "exposure": "working", "purpose": None, "data_snapshot": "1",
         "configuration": {"model": "a", "runner": "a", "trials_per_case": 1},
         "evaluator_fingerprint": {"controller": "1", "public_manifest_digest": "x"},
         "system_fingerprint": {"tree": {"files": {"CLAUDE.md": "same"}}},
@@ -416,7 +570,7 @@ def test_remote_grader_contract_does_not_return_answers():
 
     client = RemoteGraderClient("https://grader.example", "token", opener=opener)
     result = client.grade(
-        {"run_id": "run", "suite_id": "s", "suite_version": "1", "split": "heldout", "system_fingerprint": {}, "data_snapshot": "v1"},
+        {"run_id": "run", "suite_id": "s", "suite_version": "1", "exposure": "heldout", "purpose": "capability", "system_fingerprint": {}, "data_snapshot": "v1"},
         [{"trial_id": "t", "case_id": "c", "case_version": "1", "output_digest": "d", "structured_result": {"answer": 5}}],
     )
     assert result["grades"][0]["status"] == "pass"
@@ -430,7 +584,7 @@ def test_remote_grader_rejects_answer_leak():
     client = RemoteGraderClient("https://grader.example", "token", opener=opener)
     with pytest.raises(ValueError, match="exposed private"):
         client.grade(
-            {"run_id": "run", "suite_id": "s", "suite_version": "1", "split": "heldout", "system_fingerprint": {}, "data_snapshot": "v1"},
+            {"run_id": "run", "suite_id": "s", "suite_version": "1", "exposure": "heldout", "purpose": "capability", "system_fingerprint": {}, "data_snapshot": "v1"},
             [],
         )
 
@@ -441,14 +595,14 @@ def test_controller_persists_remote_grades(tmp_path):
     (project / "CLAUDE.md").write_text("instructions")
     private = tmp_path / "private.yaml"
     public = tmp_path / "public.yaml"
-    case = verified_case(split="heldout")
+    case = verified_case(exposure="heldout")
     write_suite(private, case)
     publish_manifest(private, public)
     controller = EvaluationController(project, tmp_path / "runs")
     manifest = controller.run_public_suite(
         public,
         lambda workspace, public_case, trial: {"status": "completed", "structured_result": {"answer": 100}},
-        split="heldout",
+        exposure="heldout",
     )
 
     class Client:

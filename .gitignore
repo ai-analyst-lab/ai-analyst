@@ -172,6 +172,9 @@ V3-TEST-RESULTS.md
 !data/luxury-hotels/*.csv
 !data/experiments/
 !data/experiments/*.csv
+!data/evals/examples/chart-judge/reviewed-set/human-labels.csv
+!data/evals/examples/chart-judge/captured/initial-verdicts.csv
+!data/evals/examples/chart-judge/captured/revised-verdicts.csv
 
 # maintainer-local lint terms
 scripts/repo_lint_private_terms.txt
