@@ -1,0 +1,5 @@
+chart,grader,reason
+chart-01.png,pass,"The increase from about 0.08M to about 0.45M supports roughly 447 percent growth."
+chart-04.png,fail,"The title only names revenue by month and states no takeaway."
+chart-11.png,pass,"The increase from about 0.08M to about 0.45M supports roughly 447 percent growth."
+chart-13.png,fail,"The title claims 900 percent growth, but the visible values support roughly 447 percent."

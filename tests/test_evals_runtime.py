@@ -1,13 +1,16 @@
+import csv
 import json
 import io
 from pathlib import Path
 import sys
 import time
+from types import SimpleNamespace
 
 import pytest
 import yaml
 
 from helpers.evals.cases import load_suite, publish_manifest
+from helpers.evals.cli import command_run_reliability
 from helpers.evals.candidates import propose, verify
 from helpers.evals.comparison import compare_engine_runs, compare_manifests
 from helpers.evals.controller import EvaluationController
@@ -145,6 +148,74 @@ def test_week3_course_core_is_verified_representative_and_answer_free():
     public_text = Path("data/evals/public/week3-novamart.yaml").read_text()
     for forbidden in ("expected:", "reference_query:", "reproduction:"):
         assert forbidden not in public_text
+
+
+def test_narrow_chart_title_development_set_has_a_real_revision_signal():
+    root = Path("data/evals/examples/chart-judge")
+    development = yaml.safe_load((root / "narrow-title-development-set.yaml").read_text())
+
+    def labels(path):
+        with path.open(newline="") as handle:
+            return {row["chart"]: row[next(key for key in row if key != "chart" and key != "reason")] for row in csv.DictReader(handle)}
+
+    human = labels(root / "reviewed-set/narrow-title-human-labels.csv")
+    initial = labels(root / "captured/narrow-title-v1-verdicts.csv")
+    revised = labels(root / "captured/narrow-title-v2-verdicts.csv")
+
+    assert development["charts"] == list(human)
+    assert set(initial) == set(human) == set(revised)
+    assert [chart for chart in human if initial[chart] != human[chart]] == ["chart-13.png"]
+    assert revised == human
+    assert "magnitude" in (root / "captured/narrow-title-rubric-v2.md").read_text()
+
+
+def test_reliability_trials_can_omit_named_context_without_touching_source(tmp_path, monkeypatch):
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "visible.txt").write_text("visible")
+    (source / ".env").write_text("LOCAL_ONLY=1")
+    hidden = source / ".knowledge" / "metrics" / "retention.yaml"
+    hidden.parent.mkdir(parents=True)
+    hidden.write_text("answer: hidden")
+    output = tmp_path / "output"
+    observed = []
+
+    def fake_run(self, workspace, prompt):
+        workspace = Path(workspace)
+        observed.append(workspace)
+        assert (workspace / "visible.txt").is_file()
+        assert not (workspace / ".env").exists()
+        assert not (workspace / ".knowledge/metrics/retention.yaml").exists()
+        return {
+            "status": "completed",
+            "structured_result": {
+                "headline": "25%",
+                "measured": "a chosen definition",
+                "definition_source": "trial choice",
+            },
+            "errors": [],
+        }
+
+    monkeypatch.setattr(ClaudeCommand, "run", fake_run)
+    command_run_reliability(
+        SimpleNamespace(
+            allow_code=False,
+            model="claude-opus-4-6",
+            timeout=30,
+            project_root=str(source),
+            output=str(output),
+            hide_path=[".knowledge/metrics/retention.yaml"],
+            question="What is retention?",
+            trials=2,
+            unit="rate",
+            absolute=0.01,
+            relative=None,
+        )
+    )
+
+    assert len(observed) == 2
+    payload = json.loads((output / "trials.json").read_text())
+    assert payload["hidden_paths"] == [".knowledge/metrics/retention.yaml"]
 
 
 @pytest.mark.parametrize(

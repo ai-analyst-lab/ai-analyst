@@ -23,6 +23,8 @@ It does not answer whether the result is correct. A wrong analysis can repeat pe
 
 The deterministic CLI is available at `python3 -m helpers.evals.cli run-reliability`. Use it when the task can be executed noninteractively. Use `--model claude-opus-4-6`. Add `--allow-code` only when the task genuinely requires local code or data access.
 
+When the evaluation is intentionally measuring behavior before a known context artifact exists, use one or more `--hide-path` arguments to omit those named artifacts from every fresh trial workspace. Record every omitted path in the report. Never hide context merely to manufacture variation, and never describe a hidden-path run as the behavior of the full current system.
+
 ## Report
 
 Lead with:

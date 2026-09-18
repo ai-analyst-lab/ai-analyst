@@ -9,6 +9,8 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import shutil
+import tempfile
 from typing import Any
 
 from .cases import publish_manifest
@@ -57,13 +59,36 @@ def command_run_reliability(args) -> None:
     allowed = ("Read", "Glob", "Grep", "Bash") if args.allow_code else ("Read", "Glob", "Grep")
     command = ClaudeCommand(model=args.model, timeout_seconds=args.timeout, allowed_tools=allowed)
     runs = []
+    project_root = Path(args.project_root).resolve()
+    output_directory = Path(args.output).resolve()
+    hidden_paths = tuple(Path(path) for path in args.hide_path)
+    for path in hidden_paths:
+        if path.is_absolute() or ".." in path.parts:
+            raise ValueError(f"hide path must stay inside the project: {path}")
     prompt = (
         "Answer one analytics question using the active project and data. Do not read prior "
         "reliability results. Return JSON with headline, measured, and definition_source. "
         f"Question: {args.question}"
     )
     for trial in range(1, args.trials + 1):
-        result = command.run(args.project_root, prompt)
+        with tempfile.TemporaryDirectory(prefix=f"ai-analyst-reliability-{trial}-") as temporary:
+            workspace = Path(temporary) / "project"
+
+            def ignore(directory: str, names: list[str]) -> set[str]:
+                relative_directory = Path(directory).resolve().relative_to(project_root)
+                ignored = set()
+                for name in names:
+                    relative = relative_directory / name
+                    if name in {".git", ".venv", "working", "runs", "outputs", "__pycache__"}:
+                        ignored.add(name)
+                    elif name in {".env", ".mcp.json"} or name.endswith((".pyc", ".pyo")):
+                        ignored.add(name)
+                    elif any(relative == hidden or hidden in relative.parents for hidden in hidden_paths):
+                        ignored.add(name)
+                return ignored
+
+            shutil.copytree(project_root, workspace, ignore=ignore)
+            result = command.run(workspace, prompt)
         structured = result.get("structured_result", {})
         runs.append(
             {
@@ -77,6 +102,7 @@ def command_run_reliability(args) -> None:
         )
     source = {
         "question": args.question,
+        "hidden_paths": [str(path) for path in hidden_paths],
         "decision_tolerance": {
             "unit": args.unit,
             "absolute": args.absolute,
@@ -84,7 +110,7 @@ def command_run_reliability(args) -> None:
         },
         "runs": runs,
     }
-    directory = Path(args.output)
+    directory = output_directory
     _write_bundle(source, directory, "trials")
     report = measure_reliability(
         runs,
@@ -293,6 +319,12 @@ def build_parser() -> argparse.ArgumentParser:
     run_reliability.add_argument("--model", default="claude-opus-4-6")
     run_reliability.add_argument("--timeout", type=int, default=600)
     run_reliability.add_argument("--allow-code", action="store_true")
+    run_reliability.add_argument(
+        "--hide-path",
+        action="append",
+        default=[],
+        help="Relative project path omitted from every fresh trial workspace. Repeat as needed.",
+    )
     run_reliability.set_defaults(func=command_run_reliability)
 
     triangulate = sub.add_parser("triangulate")

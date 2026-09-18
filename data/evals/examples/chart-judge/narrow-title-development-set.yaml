@@ -1,0 +1,13 @@
+schema_version: "1.0"
+set_id: chart-title-support-live-four
+purpose: Fixed four-chart development set for the Session 6 live judge exercise
+criterion: Does the chart title state a takeaway that is supported by the values visible in the chart?
+charts:
+  - chart-01.png
+  - chart-04.png
+  - chart-11.png
+  - chart-13.png
+notes:
+  - The set contains two reviewed passes and two reviewed failures.
+  - Students label the charts before opening the reviewed labels or captured verdicts.
+  - This is a development exercise, not a held-out test or completed calibration.

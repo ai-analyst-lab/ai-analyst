@@ -1,0 +1,5 @@
+chart,human,reason
+chart-01.png,pass,"The title states a specific increase and the visible January and December values support it."
+chart-04.png,fail,"The title names the subject but does not state a takeaway."
+chart-11.png,pass,"The title states a specific increase and the plotted values support it."
+chart-13.png,fail,"The title claims 900 percent growth, but the visible values support roughly 447 percent."
