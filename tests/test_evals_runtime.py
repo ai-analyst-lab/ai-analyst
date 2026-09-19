@@ -187,10 +187,12 @@ def test_reliability_trials_can_omit_named_context_without_touching_source(tmp_p
         assert not (workspace / ".env").exists()
         assert not (workspace / ".knowledge/metrics/retention.yaml").exists()
         assert "chosen_population" in json_schema["required"]
+        assert "reported_value" in json_schema["required"]
         return {
             "status": "completed",
             "structured_result": {
                 "headline": "25%",
+                "reported_value": "25%",
                 "measured": "a chosen definition",
                 "definition_source": "trial choice",
             },
@@ -220,6 +222,8 @@ def test_reliability_trials_can_omit_named_context_without_touching_source(tmp_p
     assert payload["hidden_paths"] == [".knowledge/metrics/retention.yaml"]
     assert payload["parallelism"] == 2
     assert [run["trial"] for run in payload["runs"]] == [1, 2]
+    report = json.loads((output / "reliability.json").read_text())
+    assert report["records"][0]["raw"] == "25%"
 
 
 @pytest.mark.parametrize(

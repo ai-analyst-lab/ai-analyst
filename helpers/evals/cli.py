@@ -71,6 +71,7 @@ def command_run_reliability(args) -> None:
             raise ValueError(f"hide path must stay inside the project: {path}")
     reliability_fields = (
         "headline",
+        "reported_value",
         "measured",
         "definition_source",
         "chosen_population",
@@ -84,7 +85,9 @@ def command_run_reliability(args) -> None:
         "Answer one analytics question using the active project and data. Do not read prior "
         "reliability results. Return JSON with these fields: "
         + ", ".join(reliability_fields)
-        + ". Choose and report the analytical definition you actually used. "
+        + ". Choose and report the analytical definition you actually used. reported_value "
+        "must contain only the primary scalar and its unit or symbol, such as 25.1%, $3.2M, "
+        "or 1409. Use null when there is no primary scalar. "
         + f"Question: {args.question}"
     )
     reliability_schema = {
@@ -144,6 +147,7 @@ def command_run_reliability(args) -> None:
     _write_bundle(source, directory, "trials")
     report = measure_reliability(
         runs,
+        value_field="reported_value",
         unit_hint=args.unit,
         absolute_tolerance=args.absolute,
         relative_tolerance=args.relative,
