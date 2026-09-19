@@ -44,8 +44,14 @@ def _write_bundle(payload: Any, output_dir: str | Path, stem: str) -> Path:
 def command_reliability(args) -> None:
     source = _json(args.input)
     tolerance = source.get("decision_tolerance", {})
+    value_field = (
+        "reported_value"
+        if any("reported_value" in run for run in source.get("runs", []))
+        else "headline"
+    )
     report = measure_reliability(
         source.get("runs", []),
+        value_field=value_field,
         unit_hint=args.unit or tolerance.get("unit"),
         absolute_tolerance=args.absolute if args.absolute is not None else tolerance.get("absolute"),
         relative_tolerance=args.relative if args.relative is not None else tolerance.get("relative"),

@@ -1,12 +1,94 @@
 {
   "question": "What is NovaMart's retention rate?",
-  "decision_tolerance": {"absolute": 0.01, "unit": "rate"},
-  "runs": [
-    {"trial": 1, "status": "completed", "headline": "31.2%", "measured": "users with any event 30 days after signup", "definition_source": "my own choice"},
-    {"trial": 2, "status": "completed", "headline": "18.7%", "measured": "users with a second session within 30 days", "definition_source": "my own choice"},
-    {"trial": 3, "status": "completed", "headline": "9.4%", "measured": "users with a repeat completed purchase within 30 days", "definition_source": "my own choice"},
-    {"trial": 4, "status": "completed", "headline": "18.7%", "measured": "users with a second session within 30 days", "definition_source": "my own choice"},
-    {"trial": 5, "status": "unparseable", "headline": "It depends", "measured": "no single definition selected", "definition_source": "my own choice"}
+  "capture_status": "verified current-model preflight",
+  "captured_at": "2026-09-18",
+  "system_revision": "439de481236d329b8065d6ccf4264402c9ec53ca",
+  "model": "claude-opus-4-6",
+  "data_snapshot": "sha256:311be56bc7bd070f54724e9c10a16ff484aa1cbcfabd1d1ca72c0873e8a1ce38",
+  "execution": {
+    "trials": 5,
+    "parallelism": 5,
+    "wall_seconds": 134.66
+  },
+  "hidden_paths": [
+    ".knowledge/datasets/novamart/metrics/membership_retention.yaml",
+    ".knowledge/datasets/novamart/proposals/conflicting-retention-definition.yaml",
+    "data/context-examples/session-7-retention-brief.yaml"
   ],
-  "capture_status": "illustrative fallback pending replacement by a verified live capture"
+  "decision_tolerance": {
+    "absolute": 0.02,
+    "unit": "rate"
+  },
+  "runs": [
+    {
+      "trial": 1,
+      "status": "completed",
+      "duration_seconds": 99.98,
+      "headline": "NovaMart's paid membership retention rate is 81.6%, with annual plans (88.4%) outperforming monthly (77.1%)",
+      "reported_value": "81.6%",
+      "measured": "Share of paid non-trial memberships that are still active.",
+      "chosen_population": "All 1,727 paid memberships.",
+      "return_behavior": "Point-in-time active status rather than a cohort return event.",
+      "time_window": "End-of-dataset snapshot.",
+      "unit_of_analysis": "Membership record.",
+      "exclusions": "Excluded 3,786 trial memberships.",
+      "definition_source": "Analyst-defined because the reviewed membership-retention file was unavailable in the pre-definition workspace."
+    },
+    {
+      "trial": 2,
+      "status": "completed",
+      "duration_seconds": 113.68,
+      "headline": "NovaMart paid membership retention rate is 81.6%, with 1,409 of 1,727 paid memberships still active",
+      "reported_value": "81.6%",
+      "measured": "Share of paid membership records with active status.",
+      "chosen_population": "All 1,727 paid memberships.",
+      "return_behavior": "Point-in-time active status rather than a cohort return event.",
+      "time_window": "End-of-dataset snapshot.",
+      "unit_of_analysis": "Membership record.",
+      "exclusions": "Excluded 3,786 trial memberships.",
+      "definition_source": "Analyst-defined after rejecting the legacy active-member rate because it includes trial records."
+    },
+    {
+      "trial": 3,
+      "status": "completed",
+      "duration_seconds": 122.70,
+      "headline": "NovaMart's paid-membership retention rate is 81.59%, with annual plans (88.4%) retaining better than monthly (77.1%)",
+      "reported_value": "81.59%",
+      "measured": "Share of paid memberships with active status at the end of the data period.",
+      "chosen_population": "All 1,727 paid memberships.",
+      "return_behavior": "Point-in-time active status rather than a cohort return event.",
+      "time_window": "End-of-dataset snapshot.",
+      "unit_of_analysis": "Membership record.",
+      "exclusions": "Excluded 3,786 trial memberships.",
+      "definition_source": "Analyst-constructed because the reviewed membership-retention file was unavailable in the pre-definition workspace."
+    },
+    {
+      "trial": 4,
+      "status": "completed",
+      "duration_seconds": 106.80,
+      "headline": "NovaMart's paid membership retention rate is 81.6%",
+      "reported_value": "81.6%",
+      "measured": "Share of paid membership records with active status.",
+      "chosen_population": "All 1,727 paid memberships.",
+      "return_behavior": "Active memberships over active plus cancelled memberships.",
+      "time_window": "End-of-dataset snapshot.",
+      "unit_of_analysis": "Membership record.",
+      "exclusions": "Excluded 3,786 trial memberships.",
+      "definition_source": "Analyst-defined after rejecting the legacy active-member rate because it includes trial records."
+    },
+    {
+      "trial": 5,
+      "status": "completed",
+      "duration_seconds": 134.59,
+      "headline": "NovaMart's paid membership retention rate is 81.6%, with annual plans (88.4%) retaining better than monthly (77.1%)",
+      "reported_value": "81.6%",
+      "measured": "Share of paid NovaMart Plus memberships with active status.",
+      "chosen_population": "All 1,727 paid memberships.",
+      "return_behavior": "Point-in-time active status rather than a cohort return event.",
+      "time_window": "End-of-dataset snapshot.",
+      "unit_of_analysis": "Membership record.",
+      "exclusions": "Excluded 3,786 trial memberships.",
+      "definition_source": "Analyst-chosen because the reviewed membership-retention file was unavailable in the pre-definition workspace."
+    }
+  ]
 }

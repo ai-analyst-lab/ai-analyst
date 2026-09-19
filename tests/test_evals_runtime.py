@@ -10,7 +10,7 @@ import pytest
 import yaml
 
 from helpers.evals.cases import load_suite, publish_manifest
-from helpers.evals.cli import command_run_reliability
+from helpers.evals.cli import command_reliability, command_run_reliability
 from helpers.evals.candidates import propose, verify
 from helpers.evals.comparison import compare_engine_runs, compare_manifests
 from helpers.evals.controller import EvaluationController
@@ -224,6 +224,38 @@ def test_reliability_trials_can_omit_named_context_without_touching_source(tmp_p
     assert [run["trial"] for run in payload["runs"]] == [1, 2]
     report = json.loads((output / "reliability.json").read_text())
     assert report["records"][0]["raw"] == "25%"
+
+
+def test_saved_reliability_prefers_structured_value_over_numbers_in_headline(tmp_path):
+    source = tmp_path / "trials.json"
+    source.write_text(
+        json.dumps(
+            {
+                "question": "What is retention?",
+                "decision_tolerance": {"unit": "rate", "absolute": 0.01},
+                "runs": [
+                    {
+                        "trial": 1,
+                        "status": "completed",
+                        "headline": "90-day retention is 25.1%",
+                        "reported_value": "25.1%",
+                    }
+                ],
+            }
+        )
+    )
+    output = tmp_path / "report"
+    command_reliability(
+        SimpleNamespace(
+            input=str(source),
+            output=str(output),
+            unit=None,
+            absolute=None,
+            relative=None,
+        )
+    )
+    report = json.loads((output / "reliability.json").read_text())
+    assert report["records"][0]["normalized"] == pytest.approx(0.251)
 
 
 @pytest.mark.parametrize(
