@@ -208,6 +208,7 @@ def test_reliability_trials_can_omit_named_context_without_touching_source(tmp_p
             hide_path=[".knowledge/metrics/retention.yaml"],
             question="What is retention?",
             trials=2,
+            parallelism=2,
             unit="rate",
             absolute=0.01,
             relative=None,
@@ -217,6 +218,8 @@ def test_reliability_trials_can_omit_named_context_without_touching_source(tmp_p
     assert len(observed) == 2
     payload = json.loads((output / "trials.json").read_text())
     assert payload["hidden_paths"] == [".knowledge/metrics/retention.yaml"]
+    assert payload["parallelism"] == 2
+    assert [run["trial"] for run in payload["runs"]] == [1, 2]
 
 
 @pytest.mark.parametrize(

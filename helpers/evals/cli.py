@@ -7,10 +7,12 @@ recording and calculations. The commands are also useful for testing and review.
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 from pathlib import Path
 import shutil
 import tempfile
+import time
 from typing import Any
 
 from .cases import publish_manifest
@@ -58,7 +60,9 @@ def command_run_reliability(args) -> None:
     """Launch fresh Claude sessions, then measure their behavior in code."""
     allowed = ("Read", "Glob", "Grep", "Bash") if args.allow_code else ("Read", "Glob", "Grep")
     command = ClaudeCommand(model=args.model, timeout_seconds=args.timeout, allowed_tools=allowed)
-    runs = []
+    if args.trials < 1:
+        raise ValueError("trials must be at least 1")
+    parallelism = min(max(1, args.parallelism), args.trials)
     project_root = Path(args.project_root).resolve()
     output_directory = Path(args.output).resolve()
     hidden_paths = tuple(Path(path) for path in args.hide_path)
@@ -89,7 +93,8 @@ def command_run_reliability(args) -> None:
         "required": list(reliability_fields),
         "additionalProperties": True,
     }
-    for trial in range(1, args.trials + 1):
+    def run_trial(trial: int) -> dict[str, Any]:
+        started = time.monotonic()
         with tempfile.TemporaryDirectory(prefix=f"ai-analyst-reliability-{trial}-") as temporary:
             workspace = Path(temporary) / "project"
 
@@ -113,12 +118,21 @@ def command_run_reliability(args) -> None:
             "trial": trial,
             "status": result.get("status", "unknown"),
             "errors": result.get("errors", []),
+            "duration_seconds": round(time.monotonic() - started, 2),
         }
         record.update({field: structured.get(field) for field in reliability_fields})
-        runs.append(record)
+        return record
+
+    runs = []
+    with ThreadPoolExecutor(max_workers=parallelism) as pool:
+        futures = {pool.submit(run_trial, trial): trial for trial in range(1, args.trials + 1)}
+        for future in as_completed(futures):
+            runs.append(future.result())
+    runs.sort(key=lambda record: record["trial"])
     source = {
         "question": args.question,
         "hidden_paths": [str(path) for path in hidden_paths],
+        "parallelism": parallelism,
         "decision_tolerance": {
             "unit": args.unit,
             "absolute": args.absolute,
@@ -329,6 +343,12 @@ def build_parser() -> argparse.ArgumentParser:
     run_reliability.add_argument("--project-root", default=".")
     run_reliability.add_argument("--output", required=True)
     run_reliability.add_argument("--trials", type=int, default=5)
+    run_reliability.add_argument(
+        "--parallelism",
+        type=int,
+        default=5,
+        help="Maximum number of fresh trials to run concurrently.",
+    )
     run_reliability.add_argument("--unit")
     run_reliability.add_argument("--absolute", type=float)
     run_reliability.add_argument("--relative", type=float)
