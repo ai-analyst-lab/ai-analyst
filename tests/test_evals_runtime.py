@@ -180,12 +180,13 @@ def test_reliability_trials_can_omit_named_context_without_touching_source(tmp_p
     output = tmp_path / "output"
     observed = []
 
-    def fake_run(self, workspace, prompt):
+    def fake_run(self, workspace, prompt, json_schema=None):
         workspace = Path(workspace)
         observed.append(workspace)
         assert (workspace / "visible.txt").is_file()
         assert not (workspace / ".env").exists()
         assert not (workspace / ".knowledge/metrics/retention.yaml").exists()
+        assert "chosen_population" in json_schema["required"]
         return {
             "status": "completed",
             "structured_result": {

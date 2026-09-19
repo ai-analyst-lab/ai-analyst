@@ -65,11 +65,30 @@ def command_run_reliability(args) -> None:
     for path in hidden_paths:
         if path.is_absolute() or ".." in path.parts:
             raise ValueError(f"hide path must stay inside the project: {path}")
+    reliability_fields = (
+        "headline",
+        "measured",
+        "definition_source",
+        "chosen_population",
+        "return_behavior",
+        "time_window",
+        "unit_of_analysis",
+        "exclusions",
+        "method",
+    )
     prompt = (
         "Answer one analytics question using the active project and data. Do not read prior "
-        "reliability results. Return JSON with headline, measured, and definition_source. "
-        f"Question: {args.question}"
+        "reliability results. Return JSON with these fields: "
+        + ", ".join(reliability_fields)
+        + ". Choose and report the analytical definition you actually used. "
+        + f"Question: {args.question}"
     )
+    reliability_schema = {
+        "type": "object",
+        "properties": {field: {"type": ["number", "string", "null"]} for field in reliability_fields},
+        "required": list(reliability_fields),
+        "additionalProperties": True,
+    }
     for trial in range(1, args.trials + 1):
         with tempfile.TemporaryDirectory(prefix=f"ai-analyst-reliability-{trial}-") as temporary:
             workspace = Path(temporary) / "project"
@@ -88,18 +107,15 @@ def command_run_reliability(args) -> None:
                 return ignored
 
             shutil.copytree(project_root, workspace, ignore=ignore)
-            result = command.run(workspace, prompt)
+            result = command.run(workspace, prompt, json_schema=reliability_schema)
         structured = result.get("structured_result", {})
-        runs.append(
-            {
-                "trial": trial,
-                "status": result.get("status", "unknown"),
-                "headline": structured.get("headline"),
-                "measured": structured.get("measured"),
-                "definition_source": structured.get("definition_source"),
-                "errors": result.get("errors", []),
-            }
-        )
+        record = {
+            "trial": trial,
+            "status": result.get("status", "unknown"),
+            "errors": result.get("errors", []),
+        }
+        record.update({field: structured.get(field) for field in reliability_fields})
+        runs.append(record)
     source = {
         "question": args.question,
         "hidden_paths": [str(path) for path in hidden_paths],
