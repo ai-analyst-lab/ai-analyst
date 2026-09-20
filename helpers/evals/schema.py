@@ -48,6 +48,10 @@ def utc_now() -> str:
 class EvaluationCase:
     case_id: str
     task: str
+    intended_user: str | None = None
+    decision: str | None = None
+    consequence_if_wrong: str | None = None
+    human_review_boundary: str | None = None
     exposure: str = "working"
     purpose: str = "capability"
     case_version: str = "1"

@@ -7,6 +7,8 @@ description: Compare a narrow model grader with frozen human labels and inspect 
 
 Freeze the human labels before running the grader. Use one narrow criterion with a written rubric and structured output. The grader must be able to return `unknown` or request human review.
 
+Keep human labels outside the judge workspace. Use `python3 -m helpers.evals.cli run-isolated-judge` to create a fresh child workspace containing only the named examples and current rubric. Run every revised rubric in a different fresh child. A child must not receive human labels, prior verdicts, captured verdicts, or later rubric versions. Preserve the isolation record with the verdicts.
+
 Use `helpers.evals.judges.evaluate_alignment` for the confusion table and disagreement set. Repeat at least one unchanged boundary example and use `repeated_label_stability` to measure scoring stability.
 
 Inspect:

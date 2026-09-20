@@ -1,0 +1,118 @@
+"""Run one narrow model judge inside an auditable file-limited workspace."""
+
+from __future__ import annotations
+
+import csv
+import json
+from pathlib import Path
+import shutil
+import tempfile
+from typing import Any, Callable
+
+from .workspace import ClaudeCommand
+
+
+FORBIDDEN_NAME_FRAGMENTS = (
+    "human-label",
+    "human_label",
+    "answer-key",
+    "answer_key",
+    "captured-verdict",
+    "captured_verdict",
+    "prior-verdict",
+    "prior_verdict",
+)
+
+
+def run_isolated_judge(
+    *,
+    charts: list[str | Path],
+    rubric: str | Path,
+    output_dir: str | Path,
+    version: str,
+    model: str = "claude-opus-4-6",
+    timeout: int = 600,
+    runner_factory: Callable[..., ClaudeCommand] = ClaudeCommand,
+) -> dict[str, Any]:
+    if not charts:
+        raise ValueError("at least one chart is required")
+    chart_paths = [Path(path).resolve() for path in charts]
+    rubric_path = Path(rubric).resolve()
+    sources = chart_paths + [rubric_path]
+    if len({path.name for path in sources}) != len(sources):
+        raise ValueError("judge input file names must be unique")
+    for path in sources:
+        if not path.is_file() or path.is_symlink():
+            raise ValueError(f"judge input is missing or unsafe: {path}")
+        lowered = path.name.casefold()
+        if any(fragment in lowered for fragment in FORBIDDEN_NAME_FRAGMENTS):
+            raise ValueError(f"judge input name may expose review evidence: {path.name}")
+
+    output = Path(output_dir).resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    schema = {
+        "type": "object",
+        "properties": {
+            "verdicts": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "chart": {"type": "string"},
+                        "title_claim": {"type": "string"},
+                        "visible_evidence": {"type": "string"},
+                        "reason": {"type": "string"},
+                        "verdict": {"type": "string", "enum": ["pass", "fail", "unknown"]},
+                    },
+                    "required": ["chart", "title_claim", "visible_evidence", "reason", "verdict"],
+                    "additionalProperties": False,
+                },
+            }
+        },
+        "required": ["verdicts"],
+        "additionalProperties": False,
+    }
+
+    with tempfile.TemporaryDirectory(prefix=f"ai-analyst-judge-{version}-") as temporary:
+        workspace = Path(temporary).resolve()
+        for chart in chart_paths:
+            shutil.copy2(chart, workspace / chart.name)
+        shutil.copy2(rubric_path, workspace / "rubric.md")
+        files = sorted(path.name for path in workspace.iterdir() if path.is_file())
+        expected = sorted([path.name for path in chart_paths] + ["rubric.md"])
+        if files != expected:
+            raise ValueError(f"judge workspace contains unexpected files: {files}")
+
+        prompt = (
+            "Read rubric.md and evaluate every PNG file in this directory. "
+            "Use only visible chart content and the rubric. Return one verdict record per chart. "
+            "Do not infer hidden data, analytical methods, or human labels."
+        )
+        command = runner_factory(model=model, timeout_seconds=timeout, allowed_tools=("Read", "Glob"))
+        result = command.run(workspace, prompt, json_schema=schema)
+
+    isolation = {
+        "version": version,
+        "model": model,
+        "allowed_files": expected,
+        "allowed_tools": ["Read", "Glob"],
+        "session_persistence": False,
+        "human_labels_available": False,
+        "prior_verdicts_available": False,
+        "captured_verdicts_available": False,
+        "status": result.get("status", "unknown"),
+        "errors": result.get("errors", []),
+    }
+    (output / f"judge-{version}-isolation.json").write_text(
+        json.dumps(isolation, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    verdicts = (result.get("structured_result") or {}).get("verdicts", [])
+    verdict_path = output / f"judge-{version}-verdicts.csv"
+    with verdict_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=["chart", "title_claim", "visible_evidence", "reason", "verdict"],
+        )
+        writer.writeheader()
+        writer.writerows(verdicts)
+    return {"isolation": isolation, "verdicts": verdicts, "verdict_path": str(verdict_path)}

@@ -32,6 +32,14 @@ For a reviewed working suite with local references, lock the trial outputs first
 with `python3 -m helpers.evals.cli grade-suite`. Pass the run ID, public manifest, and reviewed
 reference file. Never copy the reference file into the trial workspace.
 
+## Design before running
+
+When a user is creating a new case, interview them for the intended user, decision, consequence if wrong, observable criteria, independent reference plan, grader per criterion, human-review boundary, task and risk slices, and lifecycle status. Preserve the user's decisions rather than silently choosing for them.
+
+Keep a new case `proposed` until its reference and graders receive independent review. Validate its structure with `python3 -m helpers.evals.cli validate-case`. Structural validation does not verify the reference or promote the case.
+
+When a user is assembling a proposed set from a candidate pool, require an explicit selection, at least one rejected candidate with a reason, and named missing coverage. Validate it with `python3 -m helpers.evals.cli validate-suite`. Do not replace the user's proposed set with a canonical set during comparison.
+
 ## Compare a change
 
 Hold the suite, data snapshot, model, evaluator, tools, and trial count fixed. Name one intended system change. If more than one material input changed, label the comparison confounded rather than attributing the score movement.

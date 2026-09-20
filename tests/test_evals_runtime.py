@@ -14,8 +14,10 @@ from helpers.evals.cli import command_reliability, command_run_reliability
 from helpers.evals.candidates import propose, verify
 from helpers.evals.comparison import compare_engine_runs, compare_manifests
 from helpers.evals.controller import EvaluationController
+from helpers.evals.design import validate_proposed_case, validate_proposed_suite
 from helpers.evals.graders.numeric import grade_numeric
 from helpers.evals.judges import evaluate_alignment, repeated_label_stability
+from helpers.evals.judge_runner import run_isolated_judge
 from helpers.evals.normalization import normalize_number, values_within_tolerance
 from helpers.evals.records import RunStore
 from helpers.evals.remote import RemoteGraderClient
@@ -120,6 +122,138 @@ def test_public_loader_rejects_answer_leak(tmp_path):
     write_suite(path, verified_case())
     with pytest.raises(ValueError, match="private reference"):
         load_suite(path)
+
+
+def test_student_proposed_case_requires_human_decisions(tmp_path):
+    path = tmp_path / "case.yaml"
+    path.write_text(
+        yaml.safe_dump(
+            {
+                "suite_id": "student-case",
+                "cases": [
+                    {
+                        "case_id": "student-order-value",
+                        "task": "Report completed order value.",
+                        "intended_user": "finance operations manager",
+                        "decision": "whether the monthly commerce report can be shared",
+                        "consequence_if_wrong": "leadership receives an incorrect operating total",
+                        "human_review_boundary": "a person reviews business interpretation",
+                        "status": "proposed",
+                        "truth_evidence": "independent order-grain query planned",
+                        "success_criteria": [
+                            {"id": "value", "type": "numeric", "description": "correct value"}
+                        ],
+                        "graders": [
+                            {
+                                "id": "value",
+                                "criterion": "value",
+                                "type": "numeric",
+                                "field": "answer",
+                                "reason": "the value is exact and reproducible",
+                            }
+                        ],
+                        "slices": {"task": "descriptive", "risk": "fanout"},
+                    }
+                ],
+            },
+            sort_keys=False,
+        )
+    )
+    result = validate_proposed_case(path)
+    assert result["valid"] is True
+    assert result["status"] == "proposed"
+    assert result["reference_status"] == "planned_not_verified"
+
+
+def test_student_proposed_case_cannot_claim_verified(tmp_path):
+    path = tmp_path / "case.yaml"
+    case = verified_case().to_dict(public=True)
+    path.write_text(yaml.safe_dump({"suite_id": "verified", "cases": [case]}, sort_keys=False))
+    with pytest.raises(ValueError, match="must remain proposed"):
+        validate_proposed_case(path)
+
+
+def test_student_proposed_suite_requires_selection_rejection_and_gaps(tmp_path):
+    pool = tmp_path / "pool.yaml"
+    manifest = tmp_path / "manifest.yaml"
+    candidates = [
+        {
+            "case_id": f"candidate-{index}",
+            "task": f"Task {index}",
+            "status": "proposed",
+            "slices": {
+                "task": "descriptive" if index < 3 else "routing",
+                "risk": "population" if index % 2 else "fanout",
+            },
+        }
+        for index in range(1, 5)
+    ]
+    pool.write_text(yaml.safe_dump({"suite_id": "pool", "cases": candidates}, sort_keys=False))
+    manifest.write_text(
+        yaml.safe_dump(
+            {
+                "suite_id": "student-set",
+                "selection": {
+                    "rejected": [{"case_id": "candidate-4", "reason": "lower priority now"}],
+                    "missing_coverage": ["forecasting"],
+                },
+                "cases": candidates[:3],
+            },
+            sort_keys=False,
+        )
+    )
+    result = validate_proposed_suite(manifest, candidate_pool=pool)
+    assert result["valid"] is True
+    assert result["case_count"] == 3
+    assert result["selected_case_ids"] == ["candidate-1", "candidate-2", "candidate-3"]
+    assert result["missing_coverage"] == ["forecasting"]
+
+
+def test_isolated_judge_copies_only_charts_and_current_rubric(tmp_path):
+    charts = []
+    for index in range(1, 3):
+        path = tmp_path / f"chart-{index}.png"
+        path.write_bytes(b"not-a-real-png")
+        charts.append(path)
+    rubric = tmp_path / "rubric-v2.md"
+    rubric.write_text("Judge one visible property.")
+    observed = {}
+
+    class FakeCommand:
+        def __init__(self, **kwargs):
+            observed["kwargs"] = kwargs
+
+        def run(self, workspace, prompt, json_schema=None):
+            observed["files"] = sorted(path.name for path in Path(workspace).iterdir())
+            return {
+                "status": "completed",
+                "structured_result": {
+                    "verdicts": [
+                        {
+                            "chart": chart.name,
+                            "title_claim": "claim",
+                            "visible_evidence": "evidence",
+                            "reason": "reason",
+                            "verdict": "pass",
+                        }
+                        for chart in charts
+                    ]
+                },
+                "errors": [],
+            }
+
+    result = run_isolated_judge(
+        charts=charts,
+        rubric=rubric,
+        output_dir=tmp_path / "output",
+        version="v2",
+        runner_factory=FakeCommand,
+    )
+    assert observed["files"] == ["chart-1.png", "chart-2.png", "rubric.md"]
+    assert observed["kwargs"]["allowed_tools"] == ("Read", "Glob")
+    assert result["isolation"]["human_labels_available"] is False
+    assert result["isolation"]["prior_verdicts_available"] is False
+    assert (tmp_path / "output/judge-v2-verdicts.csv").is_file()
 
 
 def test_week5_engine_suite_is_public_and_matches_working_references():

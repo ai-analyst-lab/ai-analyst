@@ -17,6 +17,8 @@ from typing import Any
 
 from .cases import publish_manifest
 from .controller import EvaluationController
+from .design import validate_proposed_case, validate_proposed_suite
+from .judge_runner import run_isolated_judge
 from .judges import evaluate_alignment, repeated_label_stability
 from .records import write_json
 from .reliability import measure_reliability
@@ -195,6 +197,31 @@ def command_judge(args) -> None:
         "stability": repeated_label_stability(source.get("repeated_labels", [])),
     }
     _write_bundle(payload, args.output, "grader-alignment")
+
+
+def command_validate_case(args) -> None:
+    path = write_json(args.output, validate_proposed_case(args.manifest))
+    print(path)
+
+
+def command_validate_suite(args) -> None:
+    path = write_json(
+        args.output,
+        validate_proposed_suite(args.manifest, candidate_pool=args.candidate_pool),
+    )
+    print(path)
+
+
+def command_run_judge(args) -> None:
+    result = run_isolated_judge(
+        charts=args.chart,
+        rubric=args.rubric,
+        output_dir=args.output,
+        version=args.version,
+        model=args.model,
+        timeout=args.timeout,
+    )
+    print(result["verdict_path"])
 
 
 def command_publish(args) -> None:
@@ -387,6 +414,26 @@ def build_parser() -> argparse.ArgumentParser:
     judge.add_argument("--input", required=True)
     judge.add_argument("--output", required=True)
     judge.set_defaults(func=command_judge)
+
+    validate_case = sub.add_parser("validate-case")
+    validate_case.add_argument("--manifest", required=True)
+    validate_case.add_argument("--output", required=True)
+    validate_case.set_defaults(func=command_validate_case)
+
+    validate_suite = sub.add_parser("validate-suite")
+    validate_suite.add_argument("--manifest", required=True)
+    validate_suite.add_argument("--candidate-pool", required=True)
+    validate_suite.add_argument("--output", required=True)
+    validate_suite.set_defaults(func=command_validate_suite)
+
+    run_judge = sub.add_parser("run-isolated-judge")
+    run_judge.add_argument("--chart", action="append", required=True)
+    run_judge.add_argument("--rubric", required=True)
+    run_judge.add_argument("--output", required=True)
+    run_judge.add_argument("--version", required=True)
+    run_judge.add_argument("--model", default="claude-opus-4-6")
+    run_judge.add_argument("--timeout", type=int, default=600)
+    run_judge.set_defaults(func=command_run_judge)
 
     publish = sub.add_parser("publish-manifest")
     publish.add_argument("--private", required=True)
