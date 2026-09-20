@@ -330,6 +330,14 @@ def test_isolated_judge_copies_only_charts_and_current_rubric(tmp_path):
     assert set(result["isolation"]["input_hashes"]) == {
         "chart-1.png", "chart-2.png", "rubric.md"
     }
+    assert result["isolation"]["fresh_workspace_id"].startswith("ai-analyst-judge-v2-")
+    assert result["isolation"]["forbidden_name_scan"]["status"] == "passed"
+    assert result["isolation"]["output_sha256"]
+    assert result["isolation"]["duration_seconds"] >= 0
+    assert {item["path"] for item in result["isolation"]["workspace_inventory"]} == {
+        "chart-1.png", "chart-2.png", "rubric.md"
+    }
+    assert all(item["sha256"] for item in result["isolation"]["workspace_inventory"])
     assert (tmp_path / "output/judge-v2-verdicts.csv").is_file()
 
 

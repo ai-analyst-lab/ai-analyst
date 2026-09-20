@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 import shutil
 import tempfile
+import time
 from typing import Any, Callable
 
 from .workspace import ClaudeCommand
@@ -74,8 +75,10 @@ def run_isolated_judge(
         "additionalProperties": False,
     }
 
+    run_started = time.monotonic()
     with tempfile.TemporaryDirectory(prefix=f"ai-analyst-judge-{version}-") as temporary:
         workspace = Path(temporary).resolve()
+        fresh_workspace_id = workspace.name
         for chart in chart_paths:
             shutil.copy2(chart, workspace / chart.name)
         shutil.copy2(rubric_path, workspace / "rubric.md")
@@ -114,6 +117,22 @@ def run_isolated_judge(
                 json.dumps(sanitized_argv, separators=(",", ":")).encode("utf-8")
             ).hexdigest()
         result = command.run(workspace, prompt, json_schema=schema)
+        duration_seconds = round(time.monotonic() - run_started, 3)
+
+        execution_metadata = result.get("execution_metadata") or {}
+        workspace_inventory = execution_metadata.get("workspace_inventory") or [
+            {
+                "path": name,
+                "sha256": input_hashes[name],
+                "bytes": (workspace / name).stat().st_size,
+            }
+            for name in expected
+        ]
+
+    structured_result = result.get("structured_result") or {}
+    output_sha256 = hashlib.sha256(
+        json.dumps(structured_result, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
 
     isolation = {
         "version": version,
@@ -135,7 +154,15 @@ def run_isolated_judge(
         "prompt_sha256": prompt_sha256,
         "rubric_sha256": rubric_sha256,
         "input_hashes": input_hashes,
-        "workspace_inventory": expected,
+        "workspace_inventory": workspace_inventory,
+        "fresh_workspace_id": fresh_workspace_id,
+        "forbidden_name_scan": {
+            "status": "passed",
+            "checked_files": expected,
+            "forbidden_fragments": list(FORBIDDEN_NAME_FRAGMENTS),
+        },
+        "output_sha256": output_sha256,
+        "duration_seconds": duration_seconds,
         "session_persistence": False,
         "human_labels_available": False,
         "prior_verdicts_available": False,
@@ -146,7 +173,7 @@ def run_isolated_judge(
     (output / f"judge-{version}-isolation.json").write_text(
         json.dumps(isolation, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    verdicts = (result.get("structured_result") or {}).get("verdicts", [])
+    verdicts = structured_result.get("verdicts", [])
     verdict_path = output / f"judge-{version}-verdicts.csv"
     with verdict_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(
