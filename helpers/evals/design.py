@@ -41,11 +41,23 @@ def validate_proposed_case(path: str | Path) -> dict[str, Any]:
     if missing:
         raise ValueError(f"proposed case is missing design decisions: {', '.join(missing)}")
 
+    criterion_ids = [criterion.get("id") for criterion in case.success_criteria]
+    if any(not criterion_id for criterion_id in criterion_ids):
+        raise ValueError("every proposed-case success criterion must have an id")
+    if len(set(criterion_ids)) != len(criterion_ids):
+        raise ValueError("proposed-case success criterion ids must be unique")
+
     grader_criteria = [grader.get("criterion") for grader in case.graders]
     if any(not criterion for criterion in grader_criteria):
         raise ValueError("every proposed-case grader must name the criterion it evaluates")
     if any(not grader.get("reason") for grader in case.graders):
         raise ValueError("every proposed-case grader must explain why it is appropriate")
+    missing_graders = sorted(set(criterion_ids) - set(grader_criteria))
+    unknown_criteria = sorted(set(grader_criteria) - set(criterion_ids))
+    if missing_graders:
+        raise ValueError(f"success criteria without a grader: {missing_graders}")
+    if unknown_criteria:
+        raise ValueError(f"graders reference unknown success criteria: {unknown_criteria}")
 
     return {
         "valid": True,

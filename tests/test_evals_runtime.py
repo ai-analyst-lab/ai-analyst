@@ -173,6 +173,45 @@ def test_student_proposed_case_cannot_claim_verified(tmp_path):
         validate_proposed_case(path)
 
 
+def test_student_proposed_case_requires_grader_for_every_criterion(tmp_path):
+    path = tmp_path / "case.yaml"
+    path.write_text(
+        yaml.safe_dump(
+            {
+                "suite_id": "student-case",
+                "cases": [
+                    {
+                        "case_id": "student-order-value",
+                        "task": "Report completed order value.",
+                        "intended_user": "finance operations manager",
+                        "decision": "whether to share the monthly report",
+                        "consequence_if_wrong": "an incorrect total reaches leadership",
+                        "human_review_boundary": "a person reviews interpretation",
+                        "status": "proposed",
+                        "truth_evidence": "independent order-grain query planned",
+                        "success_criteria": [
+                            {"id": "value", "type": "numeric", "description": "correct value"},
+                            {"id": "language", "type": "exact", "description": "safe wording"},
+                        ],
+                        "graders": [
+                            {
+                                "id": "value",
+                                "criterion": "value",
+                                "type": "numeric",
+                                "reason": "the value is reproducible",
+                            }
+                        ],
+                        "slices": {"task": "descriptive", "risk": "fanout"},
+                    }
+                ],
+            },
+            sort_keys=False,
+        )
+    )
+    with pytest.raises(ValueError, match="success criteria without a grader"):
+        validate_proposed_case(path)
+
+
 def test_student_proposed_suite_requires_selection_rejection_and_gaps(tmp_path):
     pool = tmp_path / "pool.yaml"
     manifest = tmp_path / "manifest.yaml"
