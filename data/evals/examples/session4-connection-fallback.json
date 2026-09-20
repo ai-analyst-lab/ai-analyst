@@ -1,0 +1,29 @@
+{
+  "record_status": "course-provided observed evidence, not student execution",
+  "observed_at": "2026-09-16T19:39:17.277619",
+  "connection_type": "snowflake",
+  "connection_name": "novamart-snowflake",
+  "database": "BOOTCAMP_DB",
+  "schema": "NOVAMART",
+  "warehouse": "BOOTCAMP_WH",
+  "role": "BOOTCAMP_STUDENT",
+  "user": "BOOTCAMP_STUDENT_AGENT",
+  "query_id": "connecti_03cb3252",
+  "query": "SELECT COUNT(*) AS row_count FROM NOVAMART.ORDERS",
+  "result": {
+    "row_count": 47199
+  },
+  "status": "completed",
+  "secrets_included": false,
+  "establishes": [
+    "the configured course identity reached the intended Snowflake database and schema",
+    "the role could execute this read query",
+    "the orders table returned 47199 rows at the recorded time"
+  ],
+  "does_not_establish": [
+    "data freshness",
+    "field-level data quality",
+    "metric meaning",
+    "correctness of a later analysis"
+  ]
+}

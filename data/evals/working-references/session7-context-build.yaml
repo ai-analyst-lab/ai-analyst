@@ -14,7 +14,7 @@ cases:
     workspace_dirs: [working/session-7-context-store]
     context_policy_test: {type: context-structure, dataset: novamart, context_dir: working/session-7-context-store}
   success_criteria: [{type: exact, description: The context package passes the deterministic structure validator.}]
-  allowed_tools: [read_data]
+  allowed_capabilities: [read_data]
   required_behavior: [Use the context package validator.]
   forbidden_behavior: []
   expected: pass
@@ -45,7 +45,7 @@ cases:
       legacy_item: metric:legacy_active_member_rate
       today: '2026-09-06'
   success_criteria: [{type: exact, description: The reviewed membership-retention contract is supplied for the question.}]
-  allowed_tools: [read_data]
+  allowed_capabilities: [read_data]
   required_behavior: [Use the deterministic context manifest.]
   forbidden_behavior: []
   expected: current_only
@@ -79,7 +79,7 @@ cases:
         window: end of the available period
         rejected: [active users, converted trials, trailing activity window]
   success_criteria: [{type: exact, description: The contract preserves the reviewed meaning and rejected alternatives.}]
-  allowed_tools: [read_data]
+  allowed_capabilities: [read_data]
   required_behavior: [Compare the contract fields with the reviewed course brief.]
   forbidden_behavior: []
   expected: pass

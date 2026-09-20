@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import signal
 import shutil
@@ -190,8 +191,11 @@ class ClaudeCommand:
         json_schema: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Run one noninteractive trial inside an already sanitized workspace."""
+        argv = self.argv(prompt, json_schema=json_schema)
+        input_inventory = _file_inventory(workspace)
+        started_at = __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(timespec="seconds")
         process = subprocess.Popen(
-            self.argv(prompt, json_schema=json_schema),
+            argv,
             cwd=Path(workspace),
             text=True,
             stdout=subprocess.PIPE,
@@ -206,7 +210,7 @@ class ClaudeCommand:
             stdout, stderr = process.communicate(timeout=self.timeout_seconds)
         except subprocess.TimeoutExpired:
             _terminate_process_tree(process)
-            return {
+            result = {
                 "status": "error",
                 "raw_output": "",
                 "structured_result": {},
@@ -217,8 +221,12 @@ class ClaudeCommand:
                     }
                 ],
             }
+            result["execution_metadata"] = self.execution_metadata(
+                workspace, prompt, json_schema, argv, started_at, input_inventory
+            )
+            return result
         if process.returncode != 0:
-            return {
+            result = {
                 "status": "error",
                 "raw_output": stdout,
                 "structured_result": {},
@@ -230,24 +238,89 @@ class ClaudeCommand:
                     }
                 ],
             }
+            result["execution_metadata"] = self.execution_metadata(
+                workspace, prompt, json_schema, argv, started_at, input_inventory
+            )
+            return result
         try:
             envelope = json.loads(stdout)
         except json.JSONDecodeError as exc:
-            return {
+            result = {
                 "status": "error",
                 "raw_output": stdout,
                 "structured_result": {},
                 "errors": [{"type": "invalid_json", "detail": str(exc)}],
             }
+            result["execution_metadata"] = self.execution_metadata(
+                workspace, prompt, json_schema, argv, started_at, input_inventory
+            )
+            return result
         result = envelope.get("structured_output", envelope.get("result", envelope))
         structured = result if isinstance(result, dict) else {"answer": result}
-        return {
+        result = {
             "status": "completed",
             "raw_output": stdout,
             "structured_result": structured,
             "errors": [],
             "cost_usd": envelope.get("total_cost_usd"),
         }
+        result["execution_metadata"] = self.execution_metadata(
+            workspace, prompt, json_schema, argv, started_at, input_inventory
+        )
+        return result
+
+    def execution_metadata(
+        self,
+        workspace: str | Path,
+        prompt: str,
+        json_schema: dict[str, Any] | None,
+        argv: list[str],
+        started_at: str,
+        input_inventory: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Return a reconstructable record without storing the raw prompt in argv."""
+        prompt_hash = _sha256_text(prompt)
+        schema_text = json.dumps(json_schema or {}, sort_keys=True, separators=(",", ":"))
+        sanitized = list(argv)
+        if sanitized:
+            sanitized[-1] = f"<prompt sha256:{prompt_hash}>"
+        if "--json-schema" in sanitized:
+            index = sanitized.index("--json-schema") + 1
+            sanitized[index] = f"<schema sha256:{_sha256_text(schema_text)}>"
+        final_inventory = _file_inventory(workspace)
+        command_text = json.dumps(sanitized, separators=(",", ":"))
+        return {
+            "sanitized_argv": sanitized,
+            "command_sha256": _sha256_text(command_text),
+            "prompt_sha256": prompt_hash,
+            "json_schema_sha256": _sha256_text(schema_text),
+            "effective_process_tools": list(self.allowed_tools),
+            "input_file_hashes": input_inventory,
+            "workspace_inventory": final_inventory,
+            "started_at": started_at,
+            "finished_at": __import__("datetime").datetime.now(
+                __import__("datetime").timezone.utc
+            ).isoformat(timespec="seconds"),
+        }
+
+
+def _sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _file_inventory(workspace: str | Path) -> list[dict[str, Any]]:
+    root = Path(workspace).resolve()
+    files = []
+    for path in sorted(candidate for candidate in root.rglob("*") if candidate.is_file()):
+        relative = str(path.relative_to(root)).replace("\\", "/")
+        files.append(
+            {
+                "path": relative,
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                "bytes": path.stat().st_size,
+            }
+        )
+    return files
 
 
 def _terminate_process_tree(process: subprocess.Popen[str]) -> None:

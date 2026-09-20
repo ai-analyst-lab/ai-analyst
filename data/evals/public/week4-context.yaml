@@ -25,7 +25,7 @@ cases:
   - type: exact
     description: A general retention question receives the reviewed current definition
       without the legacy dashboard definition.
-  allowed_tools:
+  allowed_capabilities:
   - read_data
   required_behavior:
   - Use the deterministic context manifest rather than guessing from filenames.
@@ -66,7 +66,7 @@ cases:
   success_criteria:
   - type: exact
     description: The existing total-revenue execution route does not change.
-  allowed_tools:
+  allowed_capabilities:
   - read_data
   required_behavior:
   - Use the metric router rather than inferring from the metric name.
@@ -116,7 +116,7 @@ cases:
   - type: exact
     description: Explicit historical intent can still receive the legacy definition
       alongside the current definition.
-  allowed_tools:
+  allowed_capabilities:
   - read_data
   required_behavior:
   - Use the deterministic context manifest rather than guessing from filenames.

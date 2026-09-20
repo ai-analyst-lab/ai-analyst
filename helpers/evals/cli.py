@@ -31,6 +31,20 @@ from helpers.engines.config import build_engine, load_engine_config
 from helpers.engines.schema import EngineBlocked, EngineError, engine_descriptor, normalize_result
 
 
+def effective_process_tools(
+    allowed_capabilities: list[str], execution_ceiling: list[str]
+) -> tuple[tuple[str, ...], list[str]]:
+    """Translate analytical permissions into the actual Claude tools for one trial."""
+    required: set[str] = set()
+    if "read_data" in allowed_capabilities:
+        required.update({"Read", "Glob", "Grep"})
+    if "run_read_only_query" in allowed_capabilities:
+        required.add("Bash")
+    ordered = tuple(tool for tool in ("Read", "Glob", "Grep", "Bash") if tool in required)
+    blocked = sorted(required - set(execution_ceiling))
+    return ordered, blocked
+
+
 def _json(path: str | Path) -> Any:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
@@ -236,8 +250,9 @@ def command_run_suite(args) -> None:
         config_path = Path(args.engine_config or Path(args.project_root) / "config" / "engines.yaml")
         selected_engine = build_engine(load_engine_config(config_path), args.engine)
         selected_descriptor = engine_descriptor(selected_engine)
-    allowed = ("Read", "Glob", "Grep", "Bash") if args.allow_code else ("Read", "Glob", "Grep")
-    command = ClaudeCommand(model=args.model, timeout_seconds=args.timeout, allowed_tools=allowed)
+    execution_ceiling = ["Read", "Glob", "Grep"]
+    if args.allow_code:
+        execution_ceiling.append("Bash")
     project_root = Path(args.project_root).resolve()
     data_hints = []
     for raw in args.data:
@@ -250,6 +265,32 @@ def command_run_suite(args) -> None:
             data_hints.append(str(Path("inputs") / "data" / source.name))
 
     def claude_runner(workspace, case, trial_number):
+        effective_tools, blocked_tools = effective_process_tools(
+            case.allowed_capabilities, execution_ceiling
+        )
+        if blocked_tools:
+            return {
+                "status": "blocked",
+                "structured_result": {},
+                "errors": [{
+                    "type": "execution_ceiling",
+                    "detail": (
+                        "case capabilities require process tools blocked by the operator ceiling: "
+                        + ", ".join(blocked_tools)
+                    ),
+                }],
+                "effective_process_tools": [],
+                "execution_metadata": {
+                    "effective_process_tools": [],
+                    "required_process_tools": list(effective_tools),
+                    "blocked_process_tools": blocked_tools,
+                },
+            }
+        command = ClaudeCommand(
+            model=args.model,
+            timeout_seconds=args.timeout,
+            allowed_tools=effective_tools,
+        )
         fields = []
         for grader in case.graders:
             if grader.get("field"):
@@ -313,6 +354,10 @@ def command_run_suite(args) -> None:
                 "engine_fingerprint": receipt.get("engine") or selected_descriptor,
                 "receipt_paths": [path for path in (receipt.get("raw_envelope_path"),) if path],
                 "artifact_paths": receipt.get("artifact_paths") or [str(output_path)],
+                "effective_process_tools": receipt.get("effective_process_tools") or [],
+                "execution_metadata": receipt.get("execution_metadata") or {
+                    "effective_process_tools": receipt.get("effective_process_tools") or [],
+                },
             }
         except EngineBlocked as exc:
             return {
@@ -350,6 +395,8 @@ def command_run_suite(args) -> None:
         allowed_changed_paths=args.allowed_changed_path,
         runner_name=runner_name,
         engine_fingerprint=selected_descriptor,
+        parallelism=args.parallelism,
+        execution_ceiling=execution_ceiling,
     )
     render_run_summary(manifest.to_dict(), Path(args.runs_root) / manifest.run_id / "report.html")
     print(manifest.run_id)
@@ -448,6 +495,7 @@ def build_parser() -> argparse.ArgumentParser:
     run_suite.add_argument("--purpose", choices=("capability", "regression"))
     run_suite.add_argument("--case-id", action="append", default=[])
     run_suite.add_argument("--trials", type=int, default=1)
+    run_suite.add_argument("--parallelism", type=int, default=1)
     run_suite.add_argument("--model", default="claude-opus-4-6")
     run_suite.add_argument("--engine", help="Engine name from config/engines.yaml")
     run_suite.add_argument("--engine-config", help="Path to an engine configuration YAML file")

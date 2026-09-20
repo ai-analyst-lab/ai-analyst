@@ -16,7 +16,7 @@ cases:
     success_criteria:
       - type: numeric
         description: Completed order value matches the independently recomputed value.
-    allowed_tools: [read_data, run_read_only_query]
+    allowed_capabilities: [read_data, run_read_only_query]
     expected: 3150899.34
     tolerance:
       absolute: 0.01
@@ -49,7 +49,7 @@ cases:
     success_criteria:
       - type: numeric
         description: The distinct completed purchaser count matches the independently recomputed value.
-    allowed_tools: [read_data, run_read_only_query]
+    allowed_capabilities: [read_data, run_read_only_query]
     expected: 27205
     tolerance:
       absolute: 0
@@ -82,7 +82,7 @@ cases:
     success_criteria:
       - type: numeric
         description: The mean response score matches the independently recomputed value.
-    allowed_tools: [read_data, run_read_only_query]
+    allowed_capabilities: [read_data, run_read_only_query]
     expected: 8.2583
     tolerance:
       absolute: 0.0001

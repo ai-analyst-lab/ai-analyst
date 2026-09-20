@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 from pathlib import Path
 import shutil
@@ -89,6 +90,29 @@ def run_isolated_judge(
             "Do not infer hidden data, analytical methods, or human labels."
         )
         command = runner_factory(model=model, timeout_seconds=timeout, allowed_tools=("Read", "Glob"))
+        prompt_sha256 = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+        rubric_sha256 = hashlib.sha256((workspace / "rubric.md").read_bytes()).hexdigest()
+        input_hashes = {
+            path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in sorted(workspace.iterdir())
+            if path.is_file()
+        }
+        sanitized_argv = []
+        command_sha256 = None
+        if hasattr(command, "argv"):
+            argv = command.argv(prompt, json_schema=schema)
+            sanitized_argv = list(argv)
+            if sanitized_argv:
+                sanitized_argv[-1] = f"<prompt sha256:{prompt_sha256}>"
+            if "--json-schema" in sanitized_argv:
+                index = sanitized_argv.index("--json-schema") + 1
+                schema_hash = hashlib.sha256(
+                    json.dumps(schema, sort_keys=True, separators=(",", ":")).encode("utf-8")
+                ).hexdigest()
+                sanitized_argv[index] = f"<schema sha256:{schema_hash}>"
+            command_sha256 = hashlib.sha256(
+                json.dumps(sanitized_argv, separators=(",", ":")).encode("utf-8")
+            ).hexdigest()
         result = command.run(workspace, prompt, json_schema=schema)
 
     isolation = {
@@ -96,6 +120,22 @@ def run_isolated_judge(
         "model": model,
         "allowed_files": expected,
         "allowed_tools": ["Read", "Glob"],
+        "effective_process_tools": (
+            (result.get("execution_metadata") or {}).get("effective_process_tools")
+            or ["Read", "Glob"]
+        ),
+        "sanitized_argv": (
+            (result.get("execution_metadata") or {}).get("sanitized_argv")
+            or sanitized_argv
+        ),
+        "command_sha256": (
+            (result.get("execution_metadata") or {}).get("command_sha256")
+            or command_sha256
+        ),
+        "prompt_sha256": prompt_sha256,
+        "rubric_sha256": rubric_sha256,
+        "input_hashes": input_hashes,
+        "workspace_inventory": expected,
         "session_persistence": False,
         "human_labels_available": False,
         "prior_verdicts_available": False,

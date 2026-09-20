@@ -21,7 +21,8 @@ from .statuses import (
     require_member,
 )
 
-SCHEMA_VERSION = "1.1"
+SCHEMA_VERSION = "1.2"
+ALLOWED_CAPABILITIES = frozenset({"read_data", "run_read_only_query"})
 
 
 def _migrate_legacy_split(values: dict[str, Any]) -> dict[str, Any]:
@@ -59,7 +60,7 @@ class EvaluationCase:
     truth_basis: str | None = None
     data_scope: dict[str, Any] = field(default_factory=dict)
     success_criteria: list[dict[str, Any]] = field(default_factory=list)
-    allowed_tools: list[str] = field(default_factory=list)
+    allowed_capabilities: list[str] = field(default_factory=list)
     required_behavior: list[str] = field(default_factory=list)
     forbidden_behavior: list[str] = field(default_factory=list)
     expected: Any = None
@@ -93,6 +94,11 @@ class EvaluationCase:
             raise ValueError(f"unsupported tolerance keys: {sorted(unknown_tolerance)}")
         if any(float(v) < 0 for v in self.tolerance.values()):
             raise ValueError("tolerances cannot be negative")
+        unknown_capabilities = set(self.allowed_capabilities) - ALLOWED_CAPABILITIES
+        if unknown_capabilities:
+            raise ValueError(
+                f"unsupported allowed_capabilities: {sorted(unknown_capabilities)}"
+            )
         if self.status == "verified":
             missing = [
                 name
@@ -111,6 +117,9 @@ class EvaluationCase:
     @classmethod
     def from_dict(cls, raw: dict[str, Any]) -> "EvaluationCase":
         values = _migrate_legacy_split(dict(raw))
+        legacy_tools = values.pop("allowed_tools", None)
+        if "allowed_capabilities" not in values and legacy_tools is not None:
+            values["allowed_capabilities"] = legacy_tools
         if values.get("verified_at") is not None and not isinstance(values["verified_at"], str):
             values["verified_at"] = values["verified_at"].isoformat()
         return cls(**values)
@@ -140,7 +149,11 @@ class TrialRecord:
     parameters: dict[str, Any] = field(default_factory=dict)
     system_fingerprint: dict[str, Any] = field(default_factory=dict)
     data_fingerprint: dict[str, Any] = field(default_factory=dict)
+    declared_capabilities: list[str] = field(default_factory=list)
+    effective_process_tools: list[str] = field(default_factory=list)
+    execution_ceiling: list[str] = field(default_factory=list)
     tools: list[str] = field(default_factory=list)
+    command_record: dict[str, Any] = field(default_factory=dict)
     connectors: list[str] = field(default_factory=list)
     started_at: str | None = None
     finished_at: str | None = None

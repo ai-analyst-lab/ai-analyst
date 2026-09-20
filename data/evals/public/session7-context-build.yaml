@@ -20,7 +20,7 @@ cases:
   success_criteria:
   - type: exact
     description: The context package passes the deterministic structure validator.
-  allowed_tools: [read_data]
+  allowed_capabilities: [read_data]
   required_behavior: [Use the context package validator.]
   forbidden_behavior: []
   tolerance: {}
@@ -56,7 +56,7 @@ cases:
   success_criteria:
   - type: exact
     description: The reviewed membership-retention contract is supplied for the question.
-  allowed_tools: [read_data]
+  allowed_capabilities: [read_data]
   required_behavior: [Use the deterministic context manifest.]
   forbidden_behavior: []
   tolerance: {}
@@ -98,7 +98,7 @@ cases:
   success_criteria:
   - type: exact
     description: The contract preserves the reviewed meaning and rejected alternatives.
-  allowed_tools: [read_data]
+  allowed_capabilities: [read_data]
   required_behavior: [Compare the contract fields with the reviewed course brief.]
   forbidden_behavior: []
   tolerance: {}

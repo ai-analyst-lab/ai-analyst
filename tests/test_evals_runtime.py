@@ -10,7 +10,7 @@ import pytest
 import yaml
 
 from helpers.evals.cases import load_suite, publish_manifest
-from helpers.evals.cli import command_reliability, command_run_reliability
+from helpers.evals.cli import command_reliability, command_run_reliability, effective_process_tools
 from helpers.evals.candidates import propose, verify
 from helpers.evals.comparison import compare_engine_runs, compare_manifests
 from helpers.evals.controller import EvaluationController
@@ -85,6 +85,39 @@ def test_case_migrates_legacy_split_without_conflating_dimensions(
     assert case.exposure == expected_exposure
     assert case.purpose == expected_purpose
     assert "split" not in case.to_dict()
+
+
+def test_case_migrates_legacy_tools_to_analytical_capabilities():
+    case = EvaluationCase.from_dict(
+        {
+            "case_id": "legacy-tools",
+            "task": "Test",
+            "allowed_tools": ["read_data", "run_read_only_query"],
+        }
+    )
+    assert case.allowed_capabilities == ["read_data", "run_read_only_query"]
+    assert "allowed_tools" not in case.to_dict()
+
+
+def test_case_rejects_unknown_analytical_capability():
+    with pytest.raises(ValueError, match="unsupported allowed_capabilities"):
+        EvaluationCase(
+            case_id="unsafe",
+            task="Test",
+            allowed_capabilities=["arbitrary_shell"],
+        )
+
+
+def test_process_tools_are_derived_per_case_and_ceiling_cannot_add_capability():
+    tools, blocked = effective_process_tools([], ["Read", "Glob", "Grep", "Bash"])
+    assert tools == ()
+    assert blocked == []
+
+    tools, blocked = effective_process_tools(
+        ["read_data", "run_read_only_query"], ["Read", "Glob", "Grep"]
+    )
+    assert tools == ("Read", "Glob", "Grep", "Bash")
+    assert blocked == ["Bash"]
 
 
 def test_run_manifest_migrates_legacy_split():
@@ -292,6 +325,11 @@ def test_isolated_judge_copies_only_charts_and_current_rubric(tmp_path):
     assert observed["kwargs"]["allowed_tools"] == ("Read", "Glob")
     assert result["isolation"]["human_labels_available"] is False
     assert result["isolation"]["prior_verdicts_available"] is False
+    assert result["isolation"]["prompt_sha256"]
+    assert result["isolation"]["rubric_sha256"]
+    assert set(result["isolation"]["input_hashes"]) == {
+        "chart-1.png", "chart-2.png", "rubric.md"
+    }
     assert (tmp_path / "output/judge-v2-verdicts.csv").is_file()
 
 
@@ -319,6 +357,20 @@ def test_week3_course_core_is_verified_representative_and_answer_free():
     assert len({case.slices.get("risk") for case in public_cases}) >= 5
     assert any(case.human_review_required for case in public_cases)
     public_text = Path("data/evals/public/week3-novamart.yaml").read_text()
+    for forbidden in ("expected:", "reference_query:", "reproduction:"):
+        assert forbidden not in public_text
+
+
+def test_week3_customer_support_transfer_is_verified_and_answer_free():
+    _, public_cases = load_suite("data/evals/public/week3-customer-support-transfer.yaml")
+    _, private_cases = load_suite(
+        "data/evals/working-references/week3-customer-support-transfer.yaml",
+        allow_private=True,
+    )
+    assert [case.case_id for case in public_cases] == [case.case_id for case in private_cases]
+    assert public_cases[0].allowed_capabilities == ["read_data", "run_read_only_query"]
+    assert private_cases[0].expected == 9747
+    public_text = Path("data/evals/public/week3-customer-support-transfer.yaml").read_text()
     for forbidden in ("expected:", "reference_query:", "reproduction:"):
         assert forbidden not in public_text
 
@@ -658,6 +710,43 @@ def test_controller_runs_public_then_grades_locked_output(tmp_path):
     assert graded.configuration["grade_status_counts"] == {"pass": 1}
     assert graded.case_summary["revenue-1"]["blocking_pass"]
     assert graded.case_summary["revenue-1"]["final_status"] == "passed"
+
+
+def test_controller_records_actual_tools_and_bounded_parallelism(tmp_path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "CLAUDE.md").write_text("answer carefully")
+    case = verified_case(allowed_capabilities=["read_data"])
+    private = tmp_path / "private.yaml"
+    public = tmp_path / "public.yaml"
+    write_suite(private, case)
+    publish_manifest(private, public)
+
+    def runner(workspace, selected_case, trial_number):
+        return {
+            "status": "completed",
+            "structured_result": {"answer": 100},
+            "execution_metadata": {
+                "effective_process_tools": ["Read", "Glob", "Grep"],
+                "prompt_sha256": "prompt",
+            },
+        }
+
+    controller = EvaluationController(project, tmp_path / "runs")
+    manifest = controller.run_public_suite(
+        public,
+        runner,
+        trials_per_case=2,
+        parallelism=8,
+        execution_ceiling=["Read", "Glob", "Grep", "Bash"],
+    )
+    assert manifest.configuration["requested_parallelism"] == 8
+    assert manifest.configuration["effective_parallelism"] == 2
+    assert manifest.configuration["actual_process_tools"] == ["Glob", "Grep", "Read"]
+    store = RunStore(tmp_path / "runs", manifest.run_id)
+    records = [store.load_locked_trial(path.stem) for path in store.trials_dir.glob("*.json")]
+    assert all(record.declared_capabilities == ["read_data"] for record in records)
+    assert all(record.effective_process_tools == ["Read", "Glob", "Grep"] for record in records)
 
 
 def test_human_review_requirement_survives_automated_pass(tmp_path):

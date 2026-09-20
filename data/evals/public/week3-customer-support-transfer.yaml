@@ -1,0 +1,59 @@
+suite_id: week3-customer-support-transfer
+suite_version: '1'
+data_snapshot: sha256:311be56bc7bd070f54724e9c10a16ff484aa1cbcfabd1d1ca72c0873e8a1ce38
+purpose: Required transfer check for the Week 3 evaluation method
+visibility: public-task-manifest
+cases:
+  - case_id: nova-support-created-q4-001
+    task: >-
+      How many NovaMart support tickets were created from 2024-10-01 inclusive
+      to 2025-01-01 exclusive? Return the count as answer. Also state that this
+      created-ticket count is not a historical month-end backlog or a measure of
+      customer satisfaction.
+    intended_user: NovaMart customer-support manager
+    decision: whether the Q4 operating review can report the volume of newly created tickets
+    consequence_if_wrong: the support team plans from an incorrect measure of incoming work
+    human_review_boundary: a person decides what the count implies for staffing or product action
+    exposure: working
+    purpose: capability
+    case_version: '1'
+    status: verified
+    truth_basis: computed
+    data_scope:
+      dataset: novamart_practice
+      tables: [support_tickets]
+    success_criteria:
+      - id: created-ticket-count
+        type: numeric
+        description: The Q4 created-ticket count matches the independent calculation.
+      - id: interpretation-boundary
+        type: structured
+        description: The result preserves the stated limits on interpretation.
+    allowed_capabilities: [read_data, run_read_only_query]
+    forbidden_behavior:
+      - Do not call the created-ticket count a historical month-end backlog.
+      - Do not infer customer satisfaction from ticket count alone.
+    tolerance:
+      absolute: 0
+    graders:
+      - id: created-ticket-count
+        criterion: created-ticket-count
+        type: numeric
+        field: answer
+        unit: count
+      - id: interpretation-boundary
+        criterion: interpretation-boundary
+        type: structured
+        required_fields: [answer, limitation]
+        role: blocking
+    slices:
+      task: descriptive
+      risk: population
+      source: support_tickets
+    data_snapshot: sha256:311be56bc7bd070f54724e9c10a16ff484aa1cbcfabd1d1ca72c0873e8a1ce38
+    truth_evidence: Independently recomputed from created_at at the ticket grain and reviewed for the course.
+    author: AI Analyst Lab
+    reviewed_by: Shane Butler
+    verified_at: '2026-09-20T00:00:00+00:00'
+    has_private_reference: true
+    schema_version: '1.2'

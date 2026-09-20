@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 import uuid
 from collections import Counter, defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Callable, Protocol
 
@@ -67,6 +68,8 @@ class EvaluationController:
         allowed_changed_paths: list[str] | None = None,
         runner_name: str = "claude",
         engine_fingerprint: dict[str, Any] | None = None,
+        parallelism: int = 1,
+        execution_ceiling: list[str] | None = None,
     ) -> RunManifest:
         metadata, all_cases = load_suite(manifest_path, allow_private=False)
         cases = [case for case in all_cases if case.exposure == exposure]
@@ -103,6 +106,7 @@ class EvaluationController:
         run_id = new_run_id()
         store = RunStore(self.runs_root, run_id)
         requested = len(cases) * trials_per_case
+        effective_parallelism = min(max(1, parallelism), requested)
         manifest = RunManifest(
             run_id=run_id,
             suite_id=metadata.get("suite_id", Path(manifest_path).stem),
@@ -126,12 +130,16 @@ class EvaluationController:
                 "intended_change": intended_change,
                 "allowed_changed_paths": sorted(allowed_changed_paths or []),
                 "runner": runner_name,
+                "requested_parallelism": parallelism,
+                "effective_parallelism": effective_parallelism,
+                "execution_ceiling": sorted(execution_ceiling or []),
             },
         )
         store.save_manifest(manifest)
         store.event("run_started", requested_trials=requested)
         status_counts: Counter[str] = Counter()
 
+        pending = []
         for case in cases:
             for trial_number in range(1, trials_per_case + 1):
                 trial_id = f"{case.case_id}-t{trial_number}-{uuid.uuid4().hex[:6]}"
@@ -150,13 +158,31 @@ class EvaluationController:
                     engine_fingerprint=engine_fingerprint or {},
                     system_fingerprint=system,
                     data_fingerprint=data,
-                    tools=case.allowed_tools,
+                    declared_capabilities=case.allowed_capabilities,
+                    execution_ceiling=sorted(execution_ceiling or []),
                     started_at=utc_now(),
                 )
                 store.event("trial_started", trial_id=trial_id, case_id=case.case_id)
-                started = time.monotonic()
+                pending.append((trial, workspace, case, trial_number))
+
+        def execute(item):
+            trial, workspace, case, trial_number = item
+            started = time.monotonic()
+            result: dict[str, Any]
+            try:
+                result = runner(workspace, case, trial_number) or {}
+            except Exception as exc:
+                result = {
+                    "status": "error",
+                    "errors": [{"type": type(exc).__name__, "detail": str(exc)}],
+                }
+            return trial, result, round((time.monotonic() - started) * 1000)
+
+        with ThreadPoolExecutor(max_workers=effective_parallelism) as pool:
+            futures = [pool.submit(execute, item) for item in pending]
+            for future in as_completed(futures):
+                trial, result, latency_ms = future.result()
                 try:
-                    result = runner(workspace, case, trial_number) or {}
                     trial.status = result.get("status", "completed")
                     trial.raw_output = result.get("raw_output")
                     trial.structured_result = result.get("structured_result") or {}
@@ -167,16 +193,32 @@ class EvaluationController:
                     trial.receipt_paths = result.get("receipt_paths") or []
                     trial.trace_paths = result.get("trace_paths") or []
                     trial.artifact_paths = result.get("artifact_paths") or []
+                    trial.command_record = result.get("execution_metadata") or {}
+                    trial.command_record.setdefault(
+                        "public_task_sha256", payload_digest(case.to_dict(public=True))
+                    )
+                    trial.command_record.setdefault("system_fingerprint", system)
+                    trial.command_record.setdefault("data_fingerprint", data)
+                    trial.effective_process_tools = list(
+                        trial.command_record.get("effective_process_tools")
+                        or result.get("effective_process_tools")
+                        or []
+                    )
+                    trial.tools = list(trial.effective_process_tools)
                 except Exception as exc:
-                    trial.status = "error"
+                    trial.status = "invalid"
                     trial.errors = [{"type": type(exc).__name__, "detail": str(exc)}]
                 trial.finished_at = utc_now()
-                trial.latency_ms = round((time.monotonic() - started) * 1000)
+                trial.latency_ms = latency_ms
                 store.lock_trial(trial)
                 status_counts[trial.status] += 1
 
         manifest.completed_trials = sum(status_counts.values())
         manifest.status_counts = dict(status_counts)
+        actual_process_tools: set[str] = set()
+        for path in sorted(store.trials_dir.glob("*.json")):
+            actual_process_tools.update(store.load_locked_trial(path.stem).effective_process_tools)
+        manifest.configuration["actual_process_tools"] = sorted(actual_process_tools)
         manifest.finished_at = utc_now()
         store.save_manifest(manifest)
         store.event("run_completed", status_counts=dict(status_counts))
