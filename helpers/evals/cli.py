@@ -73,6 +73,7 @@ def command_reliability(args) -> None:
         unit_hint=args.unit or tolerance.get("unit"),
         absolute_tolerance=args.absolute if args.absolute is not None else tolerance.get("absolute"),
         relative_tolerance=args.relative if args.relative is not None else tolerance.get("relative"),
+        question=source.get("question"),
     )
     report["question"] = source.get("question")
     directory = Path(args.output)
@@ -213,6 +214,7 @@ def command_run_reliability(args) -> None:
         unit_hint=args.unit,
         absolute_tolerance=args.absolute,
         relative_tolerance=args.relative,
+        question=args.question,
     )
     report["question"] = args.question
     _write_bundle(report, directory, "reliability")

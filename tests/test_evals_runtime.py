@@ -564,6 +564,39 @@ def test_reliability_ignores_cosmetic_definition_key_words():
     assert list(result["definition_groups"]) == ["repeat_purchase_completed_orders"]
 
 
+def test_reliability_ignores_question_words_in_definition_labels():
+    result = measure_reliability(
+        [
+            {
+                "reported_value": "21.3%",
+                "definition_key": "category_share_completed_line_total",
+                "headline": "Worth investigating",
+                "status": "completed",
+            },
+            {
+                "reported_value": "21.33%",
+                "definition_key": "electronics_pct_completed_line_total_q4_2024",
+                "headline": "Not a priority",
+                "status": "completed",
+            },
+        ],
+        value_field="reported_value",
+        unit_hint="rate",
+        absolute_tolerance=0.001,
+        question=(
+            "What percentage of completed-order value in Q4 2024 came from "
+            "the Electronics category?"
+        ),
+    )
+    assert result["verdict"] == "stable_within_tolerance"
+    assert result["numerical_comparison_valid"] is True
+    assert list(result["definition_groups"]) == ["line_total"]
+    assert [record["headline"] for record in result["records"]] == [
+        "Worth investigating",
+        "Not a priority",
+    ]
+
+
 def test_trial_lock_detects_tampering(tmp_path):
     store = RunStore(tmp_path, "run")
     trial = TrialRecord(

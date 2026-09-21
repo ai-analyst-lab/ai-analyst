@@ -30,6 +30,15 @@ def render_reliability(report: dict[str, Any], output: str | Path) -> Path:
             f"| {row['trial']} | {row['status']} | {row.get('raw')} | {row.get('normalized')} | {measured} |"
         )
     lines.extend(["", f"> {report['claim']}"])
+    headlines = [
+        (row.get("trial"), row.get("headline"))
+        for row in report["records"]
+        if row.get("headline")
+    ]
+    if headlines:
+        lines.extend(["", "## Trial conclusions", ""])
+        for trial, headline in headlines:
+            lines.append(f"- **Trial {trial}:** {str(headline).replace(chr(10), ' ')}")
     if report.get("definition_groups"):
         lines.extend(["", "## Definition groups", ""])
         for key, group in report["definition_groups"].items():

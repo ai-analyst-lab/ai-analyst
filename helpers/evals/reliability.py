@@ -10,17 +10,33 @@ from typing import Any
 from .normalization import normalize_number, values_within_tolerance
 
 
-_GENERIC_DEFINITION_TOKENS = {"definition", "metric", "rate", "retention"}
+_GENERIC_DEFINITION_TOKENS = {
+    "definition",
+    "metric",
+    "pct",
+    "percentage",
+    "proportion",
+    "rate",
+    "retention",
+    "share",
+}
 
 
-def _canonical_definition_key(value: Any) -> str | None:
+def _canonical_definition_key(value: Any, *, question: str | None = None) -> str | None:
     """Normalize cosmetic label differences without merging analytical choices."""
     if value is None:
         return None
+    question_tokens = {
+        token
+        for token in re.split(r"[^a-z0-9]+", (question or "").lower())
+        if len(token) > 1
+    }
     tokens = [
         token
         for token in re.split(r"[^a-z0-9]+", str(value).lower())
-        if token and token not in _GENERIC_DEFINITION_TOKENS
+        if token
+        and token not in _GENERIC_DEFINITION_TOKENS
+        and token not in question_tokens
     ]
     return "_".join(tokens) or None
 
@@ -32,6 +48,7 @@ def measure_reliability(
     unit_hint: str | None = None,
     absolute_tolerance: float | None = None,
     relative_tolerance: float | None = None,
+    question: str | None = None,
 ) -> dict[str, Any]:
     """Measure repeated behavior without claiming correctness."""
     records = []
@@ -50,8 +67,11 @@ def measure_reliability(
                 "normalized": parsed.value,
                 "unit": parsed.unit,
                 "measured": trial.get("measured"),
-                "definition_key": _canonical_definition_key(raw_definition_key),
+                "definition_key": _canonical_definition_key(
+                    raw_definition_key, question=question
+                ),
                 "definition_key_raw": raw_definition_key,
+                "headline": trial.get("headline"),
                 "definition_source": trial.get("definition_source"),
                 "chosen_population": trial.get("chosen_population"),
                 "return_behavior": trial.get("return_behavior"),
