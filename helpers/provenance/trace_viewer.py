@@ -8,6 +8,7 @@ collapsible SQL), and surfaces unmatched findings + orphan queries rather than h
 from __future__ import annotations
 
 import html
+import re
 from pathlib import Path
 
 _CSS = """
@@ -24,7 +25,32 @@ details summary{cursor:pointer;font-size:13px;color:#2563eb} pre{background:#0f1
 .warn{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:6px;padding:10px;margin:8px 0}
 .ok{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:6px;padding:10px;margin:8px 0}
 table{border-collapse:collapse;width:100%;font-size:13px} td,th{border-bottom:1px solid #eee;padding:5px 8px;text-align:left}
+.action{border:1px solid #e5e5e5;border-radius:8px;margin:10px 0;background:#fafafa}
+.action summary{padding:10px 12px;color:#1a1a1a;font-size:14px}
+.action-body{padding:0 12px 12px}.action-meta{color:#666;font-size:12px;margin-bottom:8px}
+.action-label{font-weight:600;margin-top:8px}.action-value{white-space:pre-wrap;overflow-wrap:anywhere;background:#fff;border-radius:5px;padding:8px;font-family:monospace;font-size:12px}
+.status-success{color:#166534}.status-error{color:#991b1b}
 """
+
+
+_ACTION_SECRET_PATTERNS = (
+    re.compile(r"\b(?:xox[pbarso]-|sk-|ghp_|AKIA)[A-Za-z0-9._-]+"),
+    re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._~+/=-]+"),
+    re.compile(
+        r"(?i)(\b(?:password|passwd|api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|private[_-]?key|snowflake_token|slack_user_token)\b\s*[:=]\s*)([^\s,;]+)"
+    ),
+)
+
+
+def _redact_action_text(value) -> str:
+    """Remove common credential shapes before action details enter shareable HTML."""
+    text = str(value or "")
+    for index, pattern in enumerate(_ACTION_SECRET_PATTERNS):
+        if index == 2:
+            text = pattern.sub(r"\1[REDACTED]", text)
+        else:
+            text = pattern.sub("[REDACTED]", text)
+    return text
 
 
 def _q_block(q):
@@ -92,6 +118,28 @@ def render_trace(provenance, out_path, title="Provenance trace"):
     timeline = ('<table><thead><tr><th>query</th><th>when</th><th>result</th><th>sql</th></tr>'
                 f'</thead><tbody>{trows}</tbody></table>')
 
+    actions = sorted(provenance.get("actions") or [], key=lambda a: a.get("timestamp") or "")
+    action_blocks = []
+    for index, action in enumerate(actions, start=1):
+        timestamp = html.escape(str(action.get("timestamp") or "Time not recorded"))
+        tool = html.escape(str(action.get("tool") or "Tool not recorded"))
+        method = html.escape(str(action.get("method") or "action"))
+        summary = html.escape(str(action.get("summary") or tool))
+        status_raw = str(action.get("status") or "unknown")
+        status = html.escape(status_raw)
+        status_class = "status-success" if status_raw == "success" else "status-error" if status_raw == "error" else ""
+        inputs = html.escape(_redact_action_text(action.get("inputs") or "Not recorded"))
+        output = html.escape(_redact_action_text(action.get("output_summary") or "Not recorded"))
+        action_blocks.append(
+            f'<details class="action"><summary><strong>{index}. {summary}</strong> '
+            f'<span class="{status_class}">[{status}]</span></summary>'
+            f'<div class="action-body"><div class="action-meta">{timestamp} · {tool} · {method}</div>'
+            f'<div class="action-label">Input</div><div class="action-value">{inputs}</div>'
+            f'<div class="action-label">Recorded output</div><div class="action-value">{output}</div>'
+            f'</div></details>'
+        )
+    actions_html = "".join(action_blocks) or "<p>No matching actions were recorded for this analysis.</p>"
+
     warns = ""
     if provenance.get("unmatched_findings"):
         warns += ('<div class="warn">Unmatched findings (no query linked): '
@@ -106,7 +154,9 @@ def render_trace(provenance, out_path, title="Provenance trace"):
            f'<h2>Analysis</h2><p><strong>Question:</strong> {question}</p>'
            f'<p><strong>Decision:</strong> {decision}</p>{warns}'
            f'<h2>Findings → the query that produced each</h2>{findings_html}'
-           f'<h2>Query timeline</h2>{timeline}</body></html>')
+           f'<h2>Query timeline</h2>{timeline}'
+           f'<h2>Action timeline</h2><p class="meta">Actions recorded under this analysis ID. Expand an action to inspect its input and recorded output.</p>'
+           f'{actions_html}</body></html>')
     Path(out_path).write_text(doc)
     return str(out_path)
 

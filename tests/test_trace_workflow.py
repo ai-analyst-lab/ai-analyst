@@ -34,7 +34,11 @@ def test_trace_builds_receipt_and_shareable_html(tmp_path):
         "timestamp": "2026-09-21T10:00:00",
         "analysis_id": aid,
         "tool": "Bash",
+        "method": "shell",
         "summary": "Ran analysis",
+        "inputs": "SNOWFLAKE_TOKEN=secret-value python3 analysis.py",
+        "output_summary": "Completed successfully with Bearer " + ("a" * 16),
+        "status": "success",
     }
     (tmp_path / "action_log_2026-09-21.jsonl").write_text(json.dumps(action) + "\n")
 
@@ -54,6 +58,13 @@ def test_trace_builds_receipt_and_shareable_html(tmp_path):
     assert "How many completed orders were there?" in rendered
     assert "Whether to investigate the change" in rendered
     assert "6048" in rendered
+    assert "Action timeline" in rendered
+    assert "Ran analysis" in rendered
+    assert "python3 analysis.py" in rendered
+    assert "Completed successfully" in rendered
+    assert "secret-value" not in rendered
+    assert ("a" * 16) not in rendered
+    assert rendered.count("[REDACTED]") == 2
     receipt = json.loads((tmp_path / f"trace_receipt_{aid}.json").read_text())
     assert receipt["analysis_id"] == aid
     assert receipt["action_count"] == 1
