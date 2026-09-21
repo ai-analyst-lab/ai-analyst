@@ -13,12 +13,12 @@ def test_trace_builds_receipt_and_shareable_html(tmp_path):
         working_dir=tmp_path,
         question="How many completed orders were there?",
         intended_decision="Whether to investigate the change",
-        dataset="novamart",
+        dataset="example",
         output_dir=tmp_path / "shared",
     )
     query_log.set_log_dir(tmp_path)
     query_log.append_entry(
-        "novamart",
+        "example",
         "2026-09-21",
         "connection_manager",
         0,
@@ -27,7 +27,7 @@ def test_trace_builds_receipt_and_shareable_html(tmp_path):
         analysis_id=aid,
         result_value=6048,
     )
-    qid = query_log.read_log("novamart", "2026-09-21")[0]["query_id"]
+    qid = query_log.read_log("example", "2026-09-21")[0]["query_id"]
     record_finding(6048, "Completed orders", [qid], aid, tmp_path)
 
     action = {
@@ -42,7 +42,7 @@ def test_trace_builds_receipt_and_shareable_html(tmp_path):
     shared.parent.mkdir()
     result = build_trace(
         aid,
-        "novamart",
+        "example",
         "2026-09-21",
         working_dir=tmp_path,
         out_path=shared,
