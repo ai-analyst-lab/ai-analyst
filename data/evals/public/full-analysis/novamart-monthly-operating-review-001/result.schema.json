@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NovaMart monthly operating review result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["case_id", "period", "monthly_results", "october_to_december", "final_answer", "methodology", "artifacts"],
+  "properties": {
+    "case_id": {"const": "novamart-monthly-operating-review-001"},
+    "period": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end_exclusive"],
+      "properties": {
+        "start": {"const": "2024-10-01"},
+        "end_exclusive": {"const": "2025-01-01"}
+      }
+    },
+    "monthly_results": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["month", "completed_order_count", "completed_order_value", "average_completed_order_value"],
+        "properties": {
+          "month": {"enum": ["2024-10", "2024-11", "2024-12"]},
+          "completed_order_count": {"type": "integer", "minimum": 0},
+          "completed_order_value": {"type": "number", "minimum": 0},
+          "average_completed_order_value": {"type": "number", "minimum": 0}
+        }
+      }
+    },
+    "october_to_december": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "completed_order_count_absolute_change",
+        "completed_order_count_percent_change",
+        "completed_order_value_absolute_change",
+        "completed_order_value_percent_change",
+        "average_completed_order_value_absolute_change",
+        "average_completed_order_value_percent_change"
+      ],
+      "properties": {
+        "completed_order_count_absolute_change": {"type": "integer"},
+        "completed_order_count_percent_change": {"type": "number"},
+        "completed_order_value_absolute_change": {"type": "number"},
+        "completed_order_value_percent_change": {"type": "number"},
+        "average_completed_order_value_absolute_change": {"type": "number"},
+        "average_completed_order_value_percent_change": {"type": "number"}
+      }
+    },
+    "final_answer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["conclusion", "recommended_next_step", "supporting_facts", "important_limitation"],
+      "properties": {
+        "conclusion": {"type": "string", "minLength": 1},
+        "recommended_next_step": {"type": "string", "minLength": 1},
+        "supporting_facts": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "important_limitation": {"type": "string", "minLength": 1}
+      }
+    },
+    "methodology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["analysis_type", "population", "date_field", "filters", "calculation_summary", "validation_checks", "assumptions"],
+      "properties": {
+        "analysis_type": {"const": "descriptive"},
+        "population": {"type": "string", "minLength": 1},
+        "date_field": {"type": "string", "minLength": 1},
+        "filters": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "calculation_summary": {"type": "string", "minLength": 1},
+        "validation_checks": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "assumptions": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["monthly_results", "brief", "chart", "chart_data", "calculation"],
+      "properties": {
+        "monthly_results": {"const": "monthly-results.csv"},
+        "brief": {"const": "brief.md"},
+        "chart": {"const": "chart.png"},
+        "chart_data": {"const": "chart-data.csv"},
+        "calculation": {"const": "calculation.sql"}
+      }
+    }
+  }
+}

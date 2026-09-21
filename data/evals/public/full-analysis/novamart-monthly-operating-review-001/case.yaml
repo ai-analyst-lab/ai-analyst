@@ -1,0 +1,54 @@
+case_id: novamart-monthly-operating-review-001
+case_version: "1"
+status: proposed
+audience: NovaMart general manager
+decision: >-
+  Determine which factor contributed more to the October-to-December change in
+  completed-order value, then decide what the general manager should investigate next.
+data_scope:
+  platform: Snowflake
+  database: BOOTCAMP_DB
+  schema: NOVAMART
+  table: ORDERS
+  date_field: order_date
+  start: "2024-10-01"
+  end_exclusive: "2025-01-01"
+  status_filter: completed
+task: >-
+  Prepare a concise monthly operating review of NovaMart completed orders for
+  October, November, and December 2024. Use Snowflake as the data source. Count
+  only orders whose status is exactly completed. Use order_date from October 1,
+  2024 inclusive through January 1, 2025 exclusive. Report monthly completed-order
+  count, completed-order value using total_amount, and average completed-order
+  value. Compare October with December. Determine whether completed-order count or
+  average completed-order value contributed more to the net change in
+  completed-order value. Recommend the next investigation that follows from the
+  primary contributor, acknowledge any offsetting movement, and state one important
+  limitation. Do not call total_amount revenue and do not claim that this descriptive
+  analysis proves causation.
+required_outputs:
+  - result.json
+  - monthly-results.csv
+  - brief.md
+  - chart.png
+  - chart-data.csv
+  - calculation.sql
+result_schema: result.schema.json
+private_grading:
+  required: true
+  reference_in_student_repository: false
+  headline_gates:
+    - output_contract
+    - deterministic_accuracy
+    - final_answer_judge
+  diagnostic_only:
+    - source_selection
+    - date_boundary
+    - status_filter
+    - query_correctness
+    - methodology_choice
+    - validation_checks
+    - query_to_finding_linkage
+    - limitation_quality
+    - trace_completeness
+    - chart_quality
