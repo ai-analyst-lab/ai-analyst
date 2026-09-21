@@ -21,7 +21,9 @@ It does not answer whether the result is correct. A wrong analysis can repeat pe
 6. Report exact agreement and agreement within the named tolerance separately.
 7. State what changed if this is a comparison with an earlier run.
 
-The deterministic CLI is available at `python3 -m helpers.evals.cli run-reliability`. Use it when the task can be executed noninteractively. It runs five fresh trials concurrently by default. Use `--model claude-opus-4-6`. Add `--allow-code` when the task requires a query. Lower parallelism only when account limits require it.
+The deterministic CLI is available at `python3 -m helpers.evals.cli run-reliability`. Use it when the task can be executed noninteractively. For the standard run, explicitly pass `--trials 5 --parallelism 5 --model claude-opus-4-6`. Add `--allow-code` when the task requires a query. Do not lower parallelism preemptively or infer an account limit. Lower it only after the five-way run returns an actual concurrency or rate-limit error, and tell the user what failed before retrying.
+
+Run the reliability command as one foreground task. Read its progress messages as trials finish. Do not create separate sleep commands or polling shells merely to wait for it.
 
 The runner automatically gives each trial a clean view of the current analytical system. It excludes old outputs, test fixtures, future course examples, and inactive dataset packages. Connection credentials remain outside the workspace and are passed through the process environment. Do not ask the user to manage excluded paths or trial workspaces.
 

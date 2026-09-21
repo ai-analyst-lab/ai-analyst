@@ -193,7 +193,12 @@ def command_run_reliability(args) -> None:
     with ThreadPoolExecutor(max_workers=parallelism) as pool:
         futures = {pool.submit(run_trial, trial): trial for trial in range(1, args.trials + 1)}
         for future in as_completed(futures):
-            runs.append(future.result())
+            record = future.result()
+            runs.append(record)
+            print(
+                f"Reliability trial {record['trial']} of {args.trials}: {record['status']}",
+                flush=True,
+            )
     runs.sort(key=lambda record: record["trial"])
     source = {
         "question": args.question,
