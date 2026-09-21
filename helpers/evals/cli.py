@@ -15,6 +15,8 @@ import tempfile
 import time
 from typing import Any
 
+from dotenv import load_dotenv
+
 from .cases import publish_manifest
 from .controller import EvaluationController
 from .design import validate_proposed_case, validate_proposed_suite
@@ -87,6 +89,22 @@ def command_run_reliability(args) -> None:
     parallelism = min(max(1, args.parallelism), args.trials)
     project_root = Path(args.project_root).resolve()
     output_directory = Path(args.output).resolve()
+    # Connection credentials stay outside every trial workspace, but the child
+    # process still needs them when the active dataset is remote. Loading the
+    # project .env into this process lets Claude query the approved source
+    # without copying a secret-bearing file into an inspectable workspace.
+    load_dotenv(project_root / ".env", override=False)
+    active_dataset = None
+    active_path = project_root / ".knowledge" / "active.yaml"
+    if active_path.exists():
+        for line in active_path.read_text(encoding="utf-8").splitlines():
+            if line.strip().startswith("active_dataset:"):
+                active_dataset = line.split(":", 1)[1].strip().strip("'\"")
+                break
+    venv_python = (
+        project_root / ".venv" / ("Scripts/python.exe" if __import__("os").name == "nt" else "bin/python")
+    )
+    python_executable = str(venv_python) if venv_python.exists() else __import__("sys").executable
     hidden_paths = tuple(Path(path) for path in args.hide_path)
     for path in hidden_paths:
         if path.is_absolute() or ".." in path.parts:
@@ -95,6 +113,7 @@ def command_run_reliability(args) -> None:
         "headline",
         "reported_value",
         "measured",
+        "definition_key",
         "definition_source",
         "chosen_population",
         "return_behavior",
@@ -109,7 +128,12 @@ def command_run_reliability(args) -> None:
         + ", ".join(reliability_fields)
         + ". Choose and report the analytical definition you actually used. reported_value "
         "must contain only the primary scalar and its unit or symbol, such as 25.1%, $3.2M, "
-        "or 1409. Use null when there is no primary scalar. "
+        "or 1409. Use null when there is no primary scalar. definition_key must be a short "
+        "snake_case label that distinguishes materially different populations, return behaviors, "
+        "windows, or units, such as repeat_purchase_completed_orders. "
+        f"When Python is needed, use this interpreter: {python_executable}. "
+        "Use the active remote data source and verify the remote connection before querying. "
+        "Do not use a local data copy or silently fall back to one. "
         + f"Question: {args.question}"
     )
     reliability_schema = {
@@ -131,6 +155,22 @@ def command_run_reliability(args) -> None:
                     if name in {".git", ".venv", "working", "runs", "outputs", "__pycache__"}:
                         ignored.add(name)
                     elif name in {".env", ".mcp.json"} or name.endswith((".pyc", ".pyo")):
+                        ignored.add(name)
+                    # Reliability trials receive the active analytical system,
+                    # not future course answers, old captures, or test fixtures.
+                    elif not relative_directory.parts and name == "tests":
+                        ignored.add(name)
+                    elif relative_directory == Path("data") and name in {
+                        "context-examples",
+                        "evals",
+                        "practice",
+                    }:
+                        ignored.add(name)
+                    elif (
+                        relative_directory == Path(".knowledge/datasets")
+                        and active_dataset
+                        and name != active_dataset
+                    ):
                         ignored.add(name)
                     elif any(relative == hidden or hidden in relative.parents for hidden in hidden_paths):
                         ignored.add(name)

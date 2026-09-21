@@ -30,6 +30,16 @@ def render_reliability(report: dict[str, Any], output: str | Path) -> Path:
             f"| {row['trial']} | {row['status']} | {row.get('raw')} | {row.get('normalized')} | {measured} |"
         )
     lines.extend(["", f"> {report['claim']}"])
+    if report.get("definition_groups"):
+        lines.extend(["", "## Definition groups", ""])
+        for key, group in report["definition_groups"].items():
+            values = ", ".join(str(value) for value in group.get("values", []))
+            lines.append(f"- **{key}:** {group.get('count', 0)} trial(s); values: {values}")
+    if not report.get("numerical_comparison_valid", True):
+        lines.extend([
+            "",
+            "> Numerical agreement is not calculated across different analytical definitions.",
+        ])
     path = Path(output)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")

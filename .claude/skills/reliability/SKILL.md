@@ -17,13 +17,15 @@ It does not answer whether the result is correct. A wrong analysis can repeat pe
 2. Use five fresh trials unless the user chooses another count. The trials must not share answers.
 3. Preserve completed, failed, blocked, error, and unparseable trials separately.
 4. Save the raw output from every trial.
-5. Use `helpers.evals.reliability.measure_reliability` for the calculation. Do not estimate agreement yourself.
+5. Use the repository's deterministic reliability runner. It creates five independent workspaces, uses the active data source, preserves every result, and calculates the comparison.
 6. Report exact agreement and agreement within the named tolerance separately.
 7. State what changed if this is a comparison with an earlier run.
 
-The deterministic CLI is available at `python3 -m helpers.evals.cli run-reliability`. Use it when the task can be executed noninteractively. It runs fresh trials concurrently by default so one slow trial does not turn a five-trial evaluation into a long serial wait. Use `--model claude-opus-4-6`. Add `--allow-code` only when the task genuinely requires local code or data access. Lower `--parallelism` only when account limits require it.
+The deterministic CLI is available at `python3 -m helpers.evals.cli run-reliability`. Use it when the task can be executed noninteractively. It runs five fresh trials concurrently by default. Use `--model claude-opus-4-6`. Add `--allow-code` when the task requires a query. Lower parallelism only when account limits require it.
 
-When the evaluation is intentionally measuring behavior before a known context artifact exists, use one or more `--hide-path` arguments to omit those named artifacts from every fresh trial workspace. Record every omitted path in the report. Never hide context merely to manufacture variation, and never describe a hidden-path run as the behavior of the full current system.
+The runner automatically gives each trial a clean view of the current analytical system. It excludes old outputs, test fixtures, future course examples, and inactive dataset packages. Connection credentials remain outside the workspace and are passed through the process environment. Do not ask the user to manage excluded paths or trial workspaces.
+
+If the current system already contains a reviewed definition for the question, report that fact. Do not hide current context merely to manufacture variation.
 
 ## Report
 

@@ -527,6 +527,43 @@ def test_reliability_separates_exact_tolerance_and_failures():
     assert result["verdict"] == "variable"
 
 
+def test_reliability_does_not_compare_different_defined_quantities():
+    result = measure_reliability(
+        [
+            {"reported_value": "34.9%", "definition_key": "completed_orders", "status": "completed"},
+            {"reported_value": "36.5%", "definition_key": "non_cancelled_orders", "status": "completed"},
+        ],
+        value_field="reported_value",
+        unit_hint="rate",
+    )
+    assert result["verdict"] == "definitions_differ"
+    assert result["numerical_comparison_valid"] is False
+    assert result["exact_agreement"]["rate"] is None
+    assert result["tolerance_agreement"]["rate"] is None
+
+
+def test_reliability_ignores_cosmetic_definition_key_words():
+    result = measure_reliability(
+        [
+            {
+                "reported_value": "34.86%",
+                "definition_key": "repeat_purchase_completed_orders",
+                "status": "completed",
+            },
+            {
+                "reported_value": "34.86%",
+                "definition_key": "retention_repeat_purchase_completed_orders_rate",
+                "status": "completed",
+            },
+        ],
+        value_field="reported_value",
+        unit_hint="rate",
+    )
+    assert result["verdict"] == "exactly_stable"
+    assert result["numerical_comparison_valid"] is True
+    assert list(result["definition_groups"]) == ["repeat_purchase_completed_orders"]
+
+
 def test_trial_lock_detects_tampering(tmp_path):
     store = RunStore(tmp_path, "run")
     trial = TrialRecord(
@@ -1003,3 +1040,69 @@ def test_controller_persists_remote_grades(tmp_path):
     graded = controller.grade_remote(manifest.run_id, Client())
     assert graded.configuration["grading_boundary"] == "course-controlled"
     assert graded.configuration["grade_status_counts"] == {"pass": 1}
+
+
+def test_reliability_trial_excludes_future_course_answers_and_local_data(tmp_path, monkeypatch):
+    project = tmp_path / "project"
+    (project / ".knowledge/datasets/current/metrics").mkdir(parents=True)
+    (project / ".knowledge/datasets/future/metrics").mkdir(parents=True)
+    (project / "data/context-examples").mkdir(parents=True)
+    (project / "data/evals").mkdir(parents=True)
+    (project / "data/practice").mkdir(parents=True)
+    (project / "tests").mkdir(parents=True)
+    (project / ".claude/skills").mkdir(parents=True)
+    (project / "helpers").mkdir()
+    (project / "CLAUDE.md").write_text("instructions")
+    (project / ".knowledge/active.yaml").write_text("active_dataset: current\nuse_remote: true\n")
+    (project / ".knowledge/datasets/current/metrics/index.yaml").write_text("[]\n")
+    (project / ".knowledge/datasets/future/metrics/retention.yaml").write_text("answer: 99\n")
+    (project / "data/context-examples/retention.yaml").write_text("answer: 99\n")
+    (project / "data/evals/retention.yaml").write_text("answer: 99\n")
+    (project / "data/practice/local.duckdb").write_bytes(b"local")
+    (project / "tests/test_retention.py").write_text("EXPECTED = 99\n")
+    (project / ".env").write_text("SNOWFLAKE_TOKEN=secret\nAAP_USE_REMOTE=1\n")
+
+    def fake_run(self, workspace, prompt, json_schema=None):
+        root = Path(workspace)
+        assert (root / ".knowledge/datasets/current").exists()
+        assert not (root / ".knowledge/datasets/future").exists()
+        assert not (root / "data/context-examples").exists()
+        assert not (root / "data/evals").exists()
+        assert not (root / "data/practice").exists()
+        assert not (root / "tests").exists()
+        assert not (root / ".env").exists()
+        return {
+            "status": "completed",
+            "structured_result": {
+                "headline": "35%",
+                "reported_value": "35%",
+                "measured": "repeat purchase",
+                "definition_source": "analyst chosen",
+                "chosen_population": "buyers",
+                "return_behavior": "second purchase",
+                "time_window": "one year",
+                "unit_of_analysis": "customer",
+                "exclusions": "cancelled orders",
+                "method": "read-only remote query",
+            },
+            "errors": [],
+        }
+
+    monkeypatch.setattr(ClaudeCommand, "run", fake_run)
+    args = SimpleNamespace(
+        question="What is retention?",
+        project_root=str(project),
+        output=str(tmp_path / "output"),
+        trials=1,
+        parallelism=1,
+        unit=None,
+        absolute=None,
+        relative=None,
+        model="claude-opus-4-6",
+        timeout=60,
+        allow_code=True,
+        hide_path=[],
+    )
+    command_run_reliability(args)
+    result = json.loads((tmp_path / "output/trials.json").read_text())
+    assert result["runs"][0]["status"] == "completed"
