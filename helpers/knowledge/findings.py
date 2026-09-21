@@ -36,7 +36,17 @@ def read_findings(analysis_id, working_dir=None) -> list[dict]:
     return out
 
 
-def record_finding(value, text, query_ids=None, analysis_id=None, working_dir=None) -> dict:
+def record_finding(
+    value,
+    text,
+    query_ids=None,
+    analysis_id=None,
+    working_dir=None,
+    *,
+    kind="reported",
+    calculation=None,
+    source_finding_ids=None,
+) -> dict:
     """Append a finding with a stable finding_id ({analysis_id}.f{NN}, sequential within the analysis).
 
     value: the reported number. text: the claim in words. query_ids: the queries it came from, if the
@@ -50,6 +60,9 @@ def record_finding(value, text, query_ids=None, analysis_id=None, working_dir=No
         "value": value,
         "text": text,
         "query_ids": query_ids or [],
+        "kind": kind,
+        "calculation": calculation,
+        "source_finding_ids": source_finding_ids or [],
         "timestamp": datetime.now().isoformat(),
     }
     p = _path(analysis_id, working_dir)

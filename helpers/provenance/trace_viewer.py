@@ -22,6 +22,7 @@ h1{font-size:24px} h2{font-size:19px;margin-top:28px;border-bottom:2px solid #ee
 .qid{font-family:monospace;font-size:12px;color:#666} .qmeta{font-size:13px;color:#555}
 details summary{cursor:pointer;font-size:13px;color:#2563eb} pre{background:#0f172a;color:#e2e8f0;padding:10px;border-radius:6px;overflow-x:auto;font-size:13px}
 .warn{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:6px;padding:10px;margin:8px 0}
+.ok{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:6px;padding:10px;margin:8px 0}
 table{border-collapse:collapse;width:100%;font-size:13px} td,th{border-bottom:1px solid #eee;padding:5px 8px;text-align:left}
 """
 
@@ -32,8 +33,16 @@ def _q_block(q):
     tables = ", ".join(q.get("tables_accessed") or [])
     meta = (f"tables: {html.escape(tables)} · rows: {q.get('row_count')} · "
             f"result: {html.escape(str(q.get('result_value')))}")
+    preview = q.get("result_preview") or []
+    preview_html = ""
+    if preview:
+        preview_html = (
+            '<details><summary>Recorded result preview</summary><pre>'
+            + html.escape(__import__("json").dumps(preview, indent=2, default=str))
+            + "</pre></details>"
+        )
     return (f'<div class="q"><span class="qid">{qid}</span> <span class="qmeta">{meta}</span>'
-            f'<details><summary>SQL</summary><pre>{sql}</pre></details></div>')
+            f'<details><summary>SQL</summary><pre>{sql}</pre></details>{preview_html}</div>')
 
 
 def render_trace(provenance, out_path, title="Provenance trace"):
@@ -44,12 +53,16 @@ def render_trace(provenance, out_path, title="Provenance trace"):
     for l in provenance.get("links", []):
         links_by_f.setdefault(l["finding_id"], []).append(l)
     aid = html.escape(str(provenance.get("analysis_id", "")))
+    analysis = provenance.get("analysis") or {}
+    question = html.escape(str(analysis.get("question") or "Not recorded"))
+    decision = html.escape(str(analysis.get("intended_decision") or "Not recorded"))
 
     conf_counts = {}
     for l in provenance.get("links", []):
         conf_counts[l["confidence"]] = conf_counts.get(l["confidence"], 0) + 1
     conf_str = ", ".join(f"{c} {n}" for c, n in conf_counts.items()) or "none"
-    meta = (f"analysis {aid} · {len(findings)} findings · {len(qindex)} queries · links: {conf_str}")
+    meta = (f"analysis {aid} · {len(findings)} findings · {len(qindex)} queries · "
+            f"{len(provenance.get('actions') or [])} actions · links: {conf_str}")
 
     blocks = []
     for f in findings:
@@ -64,7 +77,10 @@ def render_trace(provenance, out_path, title="Provenance trace"):
         blocks.append(
             f'<div class="finding"><div class="fval">{html.escape(str(f.get("value")))}</div>'
             f'<div class="ftext">{html.escape(str(f.get("text", "")))}</div>'
-            f'<div class="fid">{html.escape(str(fid))}</div>{qhtml}</div>')
+            f'<div class="fid">{html.escape(str(fid))}</div>'
+            + (f'<div class="qmeta">calculation: {html.escape(str(f.get("calculation")))}</div>'
+               if f.get("calculation") else "")
+            + f'{qhtml}</div>')
     findings_html = "".join(blocks) or "<p>No findings recorded.</p>"
 
     qs = sorted(provenance.get("query_entries", []), key=lambda q: q.get("timestamp") or "")
@@ -86,7 +102,9 @@ def render_trace(provenance, out_path, title="Provenance trace"):
 
     doc = (f'<!doctype html><html><head><meta charset="utf-8"><title>{html.escape(title)}</title>'
            f'<style>{_CSS}</style></head><body>'
-           f'<h1>{html.escape(title)}</h1><p class="meta">{meta}</p>{warns}'
+           f'<h1>{html.escape(title)}</h1><p class="meta">{meta}</p>'
+           f'<h2>Analysis</h2><p><strong>Question:</strong> {question}</p>'
+           f'<p><strong>Decision:</strong> {decision}</p>{warns}'
            f'<h2>Findings → the query that produced each</h2>{findings_html}'
            f'<h2>Query timeline</h2>{timeline}</body></html>')
     Path(out_path).write_text(doc)

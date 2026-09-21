@@ -16,7 +16,9 @@ The `analyst-core` skill carries the contract; these are its load-bearing rules.
 3. **Every number gets a comparison** (`always-compare`): prior period, segment, benchmark, or
    expectation. A naked number is not a finding.
 4. **Trace findings to rows.** Cite the table, the filter, the query. Log every data-touching
-   query (automatic through `ConnectionManager`; by hand only if you bypass it).
+   query (automatic through `ConnectionManager`; by hand only if you bypass it). After framing and
+   before the first query, start a fresh analysis record. Before presenting, register reported
+   findings with their supporting query IDs. Never reuse an analysis ID from an earlier task.
 5. **Evaluate before presenting.** Use evidence that matches the claim and consequence. Keep
    correctness, stability, provenance, methodological support, and safety separate. A blocking
    failure halts. Never average unlike evidence into one confidence score.

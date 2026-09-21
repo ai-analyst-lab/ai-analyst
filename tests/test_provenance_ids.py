@@ -16,6 +16,22 @@ def test_analysis_context_create_stable_clear(tmp_path):
     assert ac.current_analysis_id(create=False, working_dir=tmp_path) is None
 
 
+def test_start_analysis_records_framing_and_durable_copy(tmp_path):
+    aid = ac.start_analysis(
+        working_dir=tmp_path,
+        question="What changed?",
+        intended_decision="Whether to investigate",
+        dataset="example",
+        output_dir="working/example",
+    )
+    current = ac.current_analysis(working_dir=tmp_path)
+    durable = ac.analysis_record(aid, working_dir=tmp_path)
+    assert current == durable
+    assert durable["question"] == "What changed?"
+    assert durable["intended_decision"] == "Whether to investigate"
+    assert durable["dataset"] == "example"
+
+
 def test_query_id_is_collision_free(tmp_path):
     set_log_dir(tmp_path)
     ids = {append_entry("ds", "2026-06-27", "auto-hook", 0, "p", f"select {i}")["query_id"]

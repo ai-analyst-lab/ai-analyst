@@ -106,6 +106,15 @@ def test_build_entry_tolerates_garbage():
     assert "timestamp" in e
 
 
+def test_build_entry_includes_active_analysis_id(tmp_path):
+    from helpers.knowledge.analysis_context import start_analysis
+
+    working = tmp_path / "working"
+    aid = start_analysis(working_dir=working, question="q", intended_decision="d")
+    entry = build_entry({"tool_name": "Read", "tool_input": {}, "cwd": str(tmp_path)})
+    assert entry["analysis_id"] == aid
+
+
 def test_long_input_is_truncated():
     big = "x" * 5000
     e = build_entry({"tool_name": "Bash", "tool_input": {"command": big}})

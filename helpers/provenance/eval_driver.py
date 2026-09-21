@@ -57,7 +57,7 @@ def _active_dataset(project_root: str | Path = REPO_ROOT) -> str:
     p = Path(project_root) / ".knowledge" / "active.yaml"
     if p.exists():
         data = yaml.safe_load(p.read_text()) or {}
-        return data.get("dataset") or data.get("active") or "default"
+        return data.get("active_dataset") or data.get("dataset") or data.get("active") or "default"
     return "default"
 
 

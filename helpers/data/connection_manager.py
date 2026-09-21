@@ -20,6 +20,7 @@ Usage:
         tables = mgr.list_tables()
 """
 
+import json
 import os
 import re
 import time
@@ -522,6 +523,26 @@ class ConnectionManager:
             except Exception:
                 result_value = None
 
+            # Preserve enough structured output to verify multi-row analytical
+            # findings without turning the query log into a data export.  The
+            # preview is intentionally bounded; row_count records the full size.
+            result_columns = []
+            result_preview = []
+            result_truncated = False
+            try:
+                if df is not None:
+                    result_columns = [str(c) for c in df.columns]
+                    preview_limit = 20
+                    preview_json = df.head(preview_limit).to_json(
+                        orient="records", date_format="iso", default_handler=str
+                    )
+                    result_preview = json.loads(preview_json)
+                    result_truncated = len(df) > preview_limit
+            except Exception:
+                result_columns = []
+                result_preview = []
+                result_truncated = False
+
             tables = re.findall(r'(?:from|join)\s+([A-Za-z0-9_.]+)', sql or "", flags=re.IGNORECASE)
 
             analysis_id = None
@@ -543,6 +564,9 @@ class ConnectionManager:
                 tables_accessed=tables or None,
                 result_summary=(f"{len(df)} rows returned" if df is not None else ""),
                 result_value=result_value,
+                result_columns=result_columns,
+                result_preview=result_preview,
+                result_truncated=result_truncated,
                 row_count=(len(df) if df is not None else None),
                 execution_ms=execution_ms,
                 analysis_id=analysis_id,

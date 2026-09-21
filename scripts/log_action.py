@@ -22,6 +22,7 @@ Each entry captures:
     output_summary   brief summary of the key output, when available
     status           success | error
     session_id       hook session id, when provided
+    analysis_id      current analysis id, when one has been started
 
 Usage (hook mode — reads hook JSON from stdin):
     cat hook_input.json | python3 scripts/log_action.py
@@ -195,6 +196,16 @@ def build_entry(hook_data: dict) -> dict:
         if tool_response.get("interrupted") or tool_response.get("is_error") or tool_response.get("error"):
             status = "error"
 
+    analysis_id = None
+    try:
+        from helpers.knowledge.analysis_context import current_analysis_id
+
+        cwd = hd.get("cwd")
+        working_dir = (Path(cwd) / "working") if cwd else project_root() / "working"
+        analysis_id = current_analysis_id(create=False, working_dir=working_dir)
+    except Exception:
+        analysis_id = None
+
     return {
         "timestamp": datetime.now().isoformat(timespec="seconds"),
         "tool": tool,
@@ -204,6 +215,7 @@ def build_entry(hook_data: dict) -> dict:
         "output_summary": output_summary,
         "status": status,
         "session_id": hd.get("session_id"),
+        "analysis_id": analysis_id,
     }
 
 

@@ -30,6 +30,17 @@ before presenting.
    non-interactive runs too: end the turn on the questions. A clearly framed
    request skips straight to work.
 
+1.5. **Start a new provenance record.** After the question and decision are
+   clear, and before the first data query, begin a new analysis with
+   `python3 scripts/analysis_trace.py start`. Pass the exact question, intended
+   decision, active dataset, and output directory. The command keeps the active
+   marker and logs in the canonical top-level `working/` directory while saving
+   the final HTML in the requested output directory. Do not pass the output
+   directory as `working_dir`, create another `current-analysis.json`, copy the
+   marker, or set `AI_ANALYST_QUERY_LOG_DIR` for an interactive analysis. Never
+   reuse the current id from a previous task. Report the new `analysis_id` in
+   the final Checks section.
+
 2. **Profile data before trusting it.** Before analyzing any file or table,
    check what is actually there: row counts, date ranges, null rates, duplicate
    keys, obvious anomalies. Use the data-profiling and data-quality-check
@@ -64,6 +75,10 @@ before presenting.
 5. **Trace numbers to source.** Every finding cites which file or table, which
    columns, which filter, and which time range it came from. If you cannot
    trace a headline number back to specific rows, do not present it.
+   Before presenting, register every reported number with
+   `helpers.knowledge.findings.record_finding`, including the exact query IDs.
+   For a calculated value such as a percentage change, also record the formula
+   and the source finding IDs.
 
 6. **Parts must sum to totals.** When you break a total into segments, add the
    segments back up. A mismatch means double counting, dropped rows, or a bad

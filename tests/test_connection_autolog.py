@@ -48,6 +48,21 @@ def test_query_autologs_at_execution(tmp_path, monkeypatch):
     assert e["connection_type"] == "duckdb"
 
 
+def test_query_autologs_bounded_multirow_result_preview(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "working").mkdir(exist_ok=True)
+    monkeypatch.setattr(query_log, "_EXPLICIT_LOG_DIR", tmp_path)
+    monkeypatch.setattr(query_log, "_AUTOLOG_ENABLED", True)
+
+    cm = _cm(_mk_db(tmp_path))
+    cm.query("select total, total + 1 as next_total from orders")
+
+    entry = _today_entries(tmp_path)[0]
+    assert entry["result_columns"] == ["total", "next_total"]
+    assert entry["result_preview"] == [{"total": 42, "next_total": 43}]
+    assert entry["result_truncated"] is False
+
+
 def test_query_log_false_suppresses(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "working").mkdir(exist_ok=True)

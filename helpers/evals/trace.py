@@ -15,7 +15,11 @@ REQUIRED_RECEIPT_FIELDS = (
 
 def inspect_receipt(receipt: dict[str, Any]) -> dict[str, Any]:
     missing = [field for field in REQUIRED_RECEIPT_FIELDS if not receipt.get(field)]
-    query = str(receipt.get("query") or "")
+    raw_query = receipt.get("query") or ""
+    if isinstance(raw_query, list):
+        query = "\n".join(str(value) for value in raw_query)
+    else:
+        query = str(raw_query)
     query_checks = {
         "has_population_filter": any(token in query.casefold() for token in ("where", "having")),
         "has_join": " join " in f" {query.casefold()} ",
@@ -29,6 +33,9 @@ def inspect_receipt(receipt: dict[str, Any]) -> dict[str, Any]:
         risks.append("A join and aggregation appear together. Verify grain and fan-out before using the total.")
     if not query_checks["has_population_filter"]:
         risks.append("No population filter is visible in the recorded query.")
+    snapshot = receipt.get("data_snapshot")
+    if isinstance(snapshot, dict) and snapshot.get("source_freshness") in (None, "", "not recorded"):
+        risks.append("The source freshness or last-loaded time was not recorded.")
     return {
         "receipt_complete": not missing,
         "missing_fields": missing,

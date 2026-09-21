@@ -51,6 +51,20 @@ def test_cited_beats_value_match():
     assert rec["orphan_queries"] == ["q9"]
 
 
+def test_value_match_reads_structured_result_preview():
+    findings = [{"finding_id": "x.f01", "value": 6048, "timestamp": "t2"}]
+    queries = [{
+        "query_id": "q1",
+        "result_value": None,
+        "result_preview": [{"month": "2024-11", "completed_orders": 6048}],
+        "timestamp": "t1",
+    }]
+    rec = reconcile(findings, queries)
+    assert rec["links"] == [
+        {"finding_id": "x.f01", "query_id": "q1", "confidence": "value-match"}
+    ]
+
+
 def test_reconcile_analysis_writes_provenance_file(tmp_path):
     from helpers.provenance import query_log as ql
     ql.set_log_dir(tmp_path)

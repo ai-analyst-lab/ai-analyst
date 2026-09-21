@@ -109,6 +109,9 @@ def append_entry(
     columns_accessed: list[str] | None = None,
     result_summary: str = "",
     result_value: str | float | None = None,
+    result_columns: list[str] | None = None,
+    result_preview: list[dict] | None = None,
+    result_truncated: bool = False,
     row_count: int | None = None,
     execution_ms: float = 0.0,
     claim_ids: list[str] | None = None,
@@ -135,6 +138,9 @@ def append_entry(
         columns_accessed: List of column names referenced.
         result_summary: Brief text description of the result.
         result_value: The key number(s) produced.
+        result_columns: Ordered result column names when captured.
+        result_preview: A bounded preview of result rows for multi-value evidence.
+        result_truncated: Whether rows were omitted from the preview.
         row_count: Number of rows returned.
         execution_ms: Query execution time in milliseconds.
         claim_ids: Finding/claim IDs this query supports (filled later).
@@ -174,6 +180,9 @@ def append_entry(
         "columns_accessed": columns_accessed or [],
         "result_summary": result_summary,
         "result_value": result_value,
+        "result_columns": result_columns or [],
+        "result_preview": result_preview or [],
+        "result_truncated": bool(result_truncated),
         "row_count": row_count,
         "execution_ms": execution_ms,
         "claim_ids": claim_ids or [],

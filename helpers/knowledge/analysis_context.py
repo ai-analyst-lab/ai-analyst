@@ -1,9 +1,10 @@
-"""Current-analysis context (provenance infra, 0.8a).
+"""Current-analysis context.
 
-A small, stable id for the analysis in flight, persisted to working/current-analysis.json so every
-logged query and action can be stamped with it — the provenance grouping key — without any agent
-bookkeeping. The query hook reads it at fire time (creating one on the first query of a session);
-the reconciler later groups a run's queries and findings by it. See PROVENANCE-IDS-SPEC.md.
+A small, stable id for the analysis in flight, persisted to
+``working/current-analysis.json`` so every logged query and action can be
+stamped with the same provenance grouping key.  Starting an analysis also
+writes an immutable ``working/analysis_<id>.json`` record.  The latter keeps
+the question and decision available after another analysis becomes current.
 """
 from __future__ import annotations
 
@@ -32,12 +33,63 @@ def current_analysis_id(create=True, working_dir=None):
     return start_analysis(working_dir=working_dir) if create else None
 
 
-def start_analysis(working_dir=None):
-    """Begin a fresh analysis: mint a new id, persist it, return it."""
+def current_analysis(working_dir=None) -> dict | None:
+    """Return the current analysis record, or ``None`` when none is active."""
+    p = _path(working_dir)
+    if not p.exists():
+        return None
+    try:
+        value = json.loads(p.read_text())
+        return value if isinstance(value, dict) else None
+    except Exception:
+        return None
+
+
+def analysis_record(analysis_id, working_dir=None) -> dict | None:
+    """Return the durable record for ``analysis_id`` when it exists."""
+    base = Path(working_dir) if working_dir else Path("working")
+    p = base / f"analysis_{analysis_id}.json"
+    if not p.exists():
+        current = current_analysis(working_dir)
+        if current and current.get("analysis_id") == analysis_id:
+            return current
+        return None
+    try:
+        value = json.loads(p.read_text())
+        return value if isinstance(value, dict) else None
+    except Exception:
+        return None
+
+
+def start_analysis(
+    working_dir=None,
+    *,
+    question=None,
+    intended_decision=None,
+    dataset=None,
+    output_dir=None,
+):
+    """Begin a fresh analysis and persist its identity and framing.
+
+    Calling this function always creates a new id.  It must be called at the
+    start of a distinct analytical task rather than relying on an id left by a
+    previous conversation.
+    """
     aid = f"an_{datetime.now().strftime('%Y%m%d')}_{uuid.uuid4().hex[:4]}"
     p = _path(working_dir)
     p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(json.dumps({"analysis_id": aid, "started_at": datetime.now().isoformat()}))
+    record = {
+        "analysis_id": aid,
+        "started_at": datetime.now().isoformat(),
+        "question": question,
+        "intended_decision": intended_decision,
+        "dataset": dataset,
+        "output_dir": str(output_dir) if output_dir else None,
+    }
+    p.write_text(json.dumps(record, indent=2, default=str) + "\n")
+    (p.parent / f"analysis_{aid}.json").write_text(
+        json.dumps(record, indent=2, default=str) + "\n"
+    )
     return aid
 
 
