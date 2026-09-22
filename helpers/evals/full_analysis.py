@@ -20,7 +20,7 @@ import yaml
 from .controller import new_run_id
 from .fingerprints import file_digest, payload_digest, system_fingerprint
 from .records import write_json
-from helpers.knowledge.analysis_context import start_analysis
+from helpers.knowledge.analysis_context import current_analysis
 
 
 SCHEMA_VERSION = "1"
@@ -247,14 +247,6 @@ def start_run(
         if source.is_file():
             shutil.copy2(source, public_copy / name)
 
-    analysis_id = start_analysis(
-        working_dir=project_root / "working",
-        question=case["task"],
-        intended_decision=case.get("decision"),
-        dataset="novamart",
-        output_dir=draft,
-    )
-
     public_files = [
         {
             "path": path.name,
@@ -293,7 +285,7 @@ def start_run(
         "case_version": str(case["case_version"]),
         "status": "draft",
         "draft_path": str(draft),
-        "analysis_id": analysis_id,
+        "analysis_id": None,
         "artifact_bundle_digest": None,
         "created_at": utc_now(),
     }
@@ -304,6 +296,12 @@ def start_run(
     instructions = f"""# Run {run_id}
 
 Read `trials/{trial_id}/public-case/README.md` and `case.yaml`.
+
+Before querying data, start one analysis trace whose output directory is exactly:
+
+`{draft}`
+
+Use that same analysis ID for every query, finding, receipt, and trace artifact in this trial. Do not start a second analysis trace.
 
 Complete the analysis with AI Analyst and save exactly these six files in:
 
@@ -328,14 +326,53 @@ Do not place reference answers or grader files in this run directory.
         "task_path": str(public_copy / "case.yaml"),
         "instructions_path": str(run_root / "RUN-INSTRUCTIONS.md"),
         "exposure": exposure,
-        "analysis_id": analysis_id,
+        "analysis_id": None,
     }
+
+
+def _analysis_id_for_lock(
+    *, project_root: Path, trial_root: Path, requested_analysis_id: str | None
+) -> str | None:
+    """Resolve the analysis that actually produced this trial's draft.
+
+    Evaluation setup creates the immutable run boundary, while the analytical
+    workflow creates the analysis boundary when work begins. The link is valid
+    only when the analysis output directory is this exact trial draft.
+    """
+    draft = (trial_root / "draft").resolve()
+    if requested_analysis_id:
+        record_path = project_root / "working" / f"analysis_{requested_analysis_id}.json"
+        if not record_path.is_file():
+            raise ValueError(f"analysis record does not exist: {record_path}")
+        record = _read_json(record_path)
+    else:
+        record = current_analysis(working_dir=project_root / "working")
+        if not record:
+            raise ValueError(
+                "no active analysis trace exists; start one with the trial draft as its output directory"
+            )
+        requested_analysis_id = record.get("analysis_id")
+    if not requested_analysis_id:
+        raise ValueError("analysis record is missing analysis_id")
+    output_dir = record.get("output_dir")
+    if not output_dir:
+        raise ValueError("analysis record is missing output_dir")
+    observed = Path(output_dir).expanduser()
+    if not observed.is_absolute():
+        observed = project_root / observed
+    if observed.resolve() != draft:
+        raise ValueError(
+            "active analysis belongs to a different output directory: "
+            f"{observed.resolve()} != {draft}"
+        )
+    return str(requested_analysis_id)
 
 
 def _validate_result_contract(draft: Path, case_id: str) -> dict[str, Any]:
     files = {path.name for path in draft.iterdir() if path.is_file() and not path.name.startswith(".")}
     missing = sorted(set(REQUIRED_OUTPUTS) - files)
-    extra = sorted(files - set(REQUIRED_OUTPUTS))
+    system_evidence = {name for name in files if re.fullmatch(r"trace_an_[^.]+\.html", name)}
+    extra = sorted(files - set(REQUIRED_OUTPUTS) - system_evidence)
     if missing or extra:
         raise ValueError(f"draft output mismatch: missing={missing}, extra={extra}")
 
@@ -487,6 +524,7 @@ def lock_run(
     trial_id: str | None = None,
     analysis_id: str | None = None,
     verify_data_snapshot: bool = True,
+    allow_incomplete_trace: bool = False,
 ) -> dict[str, Any]:
     project_root = Path(project_root).resolve()
     runs_root = (
@@ -501,7 +539,11 @@ def lock_run(
     trial = _read_json(trial_path)
     if trial.get("status") != "draft":
         raise ValueError(f"trial cannot be locked from status {trial.get('status')}")
-    analysis_id = analysis_id or trial.get("analysis_id")
+    analysis_id = _analysis_id_for_lock(
+        project_root=project_root,
+        trial_root=trial_root,
+        requested_analysis_id=analysis_id or trial.get("analysis_id"),
+    )
     draft = trial_root / "draft"
     _validate_result_contract(draft, trial["case_id"])
     if verify_data_snapshot:
@@ -512,6 +554,17 @@ def lock_run(
             "snapshot_id": manifest.get("data_snapshot"),
             "reason": "explicit test-only or recovery bypass",
         }
+
+    trace_manifest = _copy_trace_evidence(
+        project_root=project_root,
+        trial_root=trial_root,
+        analysis_id=analysis_id,
+    )
+    if not trace_manifest["complete"] and not allow_incomplete_trace:
+        raise ValueError(
+            "trace is incomplete; create the missing evidence before locking: "
+            + ", ".join(trace_manifest["missing"])
+        )
 
     submission = trial_root / "submission"
     if submission.exists():
@@ -543,11 +596,6 @@ def lock_run(
         except OSError:
             pass
 
-    trace_manifest = _copy_trace_evidence(
-        project_root=project_root,
-        trial_root=trial_root,
-        analysis_id=analysis_id,
-    )
     trial.update(
         {
             "status": "locked",
@@ -697,6 +745,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Test and recovery use only. A skipped fingerprint is not eligible for trusted grading.",
     )
+    lock.add_argument(
+        "--allow-incomplete-trace",
+        action="store_true",
+        help="Recovery use only. Trusted course runs require a complete trace.",
+    )
 
     verify = sub.add_parser("verify")
     verify.add_argument("--run-id", required=True)
@@ -740,6 +793,7 @@ def main() -> None:
                 trial_id=args.trial_id,
                 analysis_id=args.analysis_id,
                 verify_data_snapshot=not args.skip_data_snapshot_verification,
+                allow_incomplete_trace=args.allow_incomplete_trace,
             )
         )
     elif args.command == "verify":

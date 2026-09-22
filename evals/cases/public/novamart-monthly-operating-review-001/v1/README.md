@@ -6,6 +6,8 @@ Prepare the monthly operating review defined in `case.yaml`. Save all six requir
 
 The case evaluates the finished analytical output. It does not require one specific internal agent path. Use the existing AI Analyst system, Snowflake connection, skills, validation, and trace capabilities as appropriate.
 
+Before querying data, start one analysis trace with the generated trial draft as its output directory. Use that same analysis ID throughout the trial. A run cannot lock until the analysis record, query log, action log, receipt, provenance, and trace HTML are complete.
+
 ## Required files
 
 - `result.json`

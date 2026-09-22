@@ -43,18 +43,19 @@ Full-analysis cases live under `evals/cases/public/`. They produce a complete an
      --case evals/cases/public/novamart-monthly-operating-review-001/v1
    ```
 
-2. Read the generated `RUN-INSTRUCTIONS.md`, public case, and result schema. The start command creates the analysis ID and the trial's `draft/` directory.
-3. Perform the analysis through the existing AI Analyst system. Save exactly the six requested files in that draft directory. Do not inspect any course reference repository before the first run is locked.
-4. Register the reported findings, build the existing trace, and confirm the trace HTML path.
-5. Lock the run:
+2. Read the generated `RUN-INSTRUCTIONS.md`, public case, and result schema. The start command creates the trial's `draft/` directory but does not begin the analysis trace.
+3. Before querying data, start exactly one analysis trace with the trial draft as its output directory. Keep that analysis ID for every query, finding, receipt, and trace artifact in the trial.
+4. Perform the analysis through the existing AI Analyst system. Save exactly the six requested files in that draft directory. Do not inspect any course reference repository before the first run is locked.
+5. Register the reported findings, build the trace, and confirm the trace HTML path. Do not start a second analysis trace.
+6. Lock the run:
 
    ```bash
    python3 -m helpers.evals.full_analysis lock --run-id <run-id>
    ```
 
-   Locking verifies the Snowflake snapshot, validates the output contract, copies the six-file bundle, hashes every artifact, and snapshots the analysis record, query log, action log, provenance, receipt, and trace HTML. Never modify the locked submission.
-6. After the course evaluation repository is released, run its grader against the locked run. Read the resulting `student-report.md` and individual grade records.
-7. Diagnose failures using the saved trace. Start any changed system as a new development run:
+   Locking verifies the Snowflake snapshot, validates the output contract, requires a complete trace, copies the six-file bundle, hashes every artifact, and snapshots the analysis record, query log, action log, provenance, receipt, and trace HTML. Never modify the locked submission.
+7. After the course evaluation repository is released, run its grader against the locked run. Read the resulting `student-report.md` and individual grade records.
+8. Diagnose failures using the saved trace. Start any changed system as a new development run:
 
    ```bash
    python3 -m helpers.evals.full_analysis start \
@@ -63,7 +64,7 @@ Full-analysis cases live under `evals/cases/public/`. They produce a complete an
      --intended-change "<one concrete system change>"
    ```
 
-8. After grading the candidate, compare the two immutable runs:
+9. After grading the candidate, compare the two immutable runs:
 
    ```bash
    python3 -m helpers.evals.full_analysis compare \
