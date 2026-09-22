@@ -1,6 +1,8 @@
+schema_version: "1"
 case_id: novamart-monthly-operating-review-001
 case_version: "1"
 status: proposed
+exposure: development
 audience: NovaMart general manager
 decision: >-
   Determine which factor contributed more to the October-to-December change in
@@ -14,6 +16,10 @@ data_scope:
   start: "2024-10-01"
   end_exclusive: "2025-01-01"
   status_filter: completed
+  snapshot_id: novamart-orders-2026-09-21-v1
+  snapshot_fingerprint:
+    method: sha256_of_pipe_delimited_row_count_min_date_max_date_distinct_order_count_total_amount_sum
+    sha256: e3878063bee620c1706f346d12ffbbec2665b5d50448102afa2ae22304ff1c2f
 task: >-
   Prepare a concise monthly operating review of NovaMart completed orders for
   October, November, and December 2024. Use Snowflake as the data source. Count
@@ -34,8 +40,7 @@ required_outputs:
   - chart-data.csv
   - calculation.sql
 result_schema: result.schema.json
-private_grading:
-  required: true
+grading_contract:
   reference_in_student_repository: false
   headline_gates:
     - output_contract

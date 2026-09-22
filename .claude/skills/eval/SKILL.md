@@ -32,6 +32,47 @@ For a reviewed working suite with local references, lock the trial outputs first
 with `python3 -m helpers.evals.cli grade-suite`. Pass the run ID, public manifest, and reviewed
 reference file. Never copy the reference file into the trial workspace.
 
+## Run a full-analysis development case
+
+Full-analysis cases live under `evals/cases/public/`. They produce a complete analysis bundle rather than one scalar answer.
+
+1. Start a new run. For the Session 6 case:
+
+   ```bash
+   python3 -m helpers.evals.full_analysis start \
+     --case evals/cases/public/novamart-monthly-operating-review-001/v1
+   ```
+
+2. Read the generated `RUN-INSTRUCTIONS.md`, public case, and result schema. The start command creates the analysis ID and the trial's `draft/` directory.
+3. Perform the analysis through the existing AI Analyst system. Save exactly the six requested files in that draft directory. Do not inspect any course reference repository before the first run is locked.
+4. Register the reported findings, build the existing trace, and confirm the trace HTML path.
+5. Lock the run:
+
+   ```bash
+   python3 -m helpers.evals.full_analysis lock --run-id <run-id>
+   ```
+
+   Locking verifies the Snowflake snapshot, validates the output contract, copies the six-file bundle, hashes every artifact, and snapshots the analysis record, query log, action log, provenance, receipt, and trace HTML. Never modify the locked submission.
+6. After the course evaluation repository is released, run its grader against the locked run. Read the resulting `student-report.md` and individual grade records.
+7. Diagnose failures using the saved trace. Start any changed system as a new development run:
+
+   ```bash
+   python3 -m helpers.evals.full_analysis start \
+     --case evals/cases/public/novamart-monthly-operating-review-001/v1 \
+     --baseline-run-id <baseline-run-id> \
+     --intended-change "<one concrete system change>"
+   ```
+
+8. After grading the candidate, compare the two immutable runs:
+
+   ```bash
+   python3 -m helpers.evals.full_analysis compare \
+     --before-run-id <baseline-run-id> \
+     --after-run-id <candidate-run-id>
+   ```
+
+The shared course answers make these development cases. A genuinely held-out set must remain outside the system and be graded through a course-controlled boundary.
+
 ## Design before running
 
 When a user is creating a new case, interview them for the intended user, decision, consequence if wrong, observable criteria, independent reference plan, grader per criterion, human-review boundary, task and risk slices, and lifecycle status. Preserve the user's decisions rather than silently choosing for them.
