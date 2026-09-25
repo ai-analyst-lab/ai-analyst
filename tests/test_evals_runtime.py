@@ -20,6 +20,7 @@ from helpers.evals.judges import evaluate_alignment, repeated_label_stability
 from helpers.evals.judge_runner import run_isolated_judge
 from helpers.evals.normalization import normalize_number, values_within_tolerance
 from helpers.evals.records import RunStore
+from helpers.evals.reports import render_run_summary
 from helpers.evals.remote import RemoteGraderClient
 from helpers.evals.reliability import measure_reliability
 from helpers.evals.schema import EvaluationCase, RunManifest, TrialRecord
@@ -155,6 +156,56 @@ def test_public_loader_rejects_answer_leak(tmp_path):
     write_suite(path, verified_case())
     with pytest.raises(ValueError, match="private reference"):
         load_suite(path)
+
+
+def test_session6_focused_sql_manifest_has_eight_public_cases_without_answers():
+    path = Path("evals/focused/public/session6-sql-development.yaml")
+    text = path.read_text(encoding="utf-8")
+    assert "expected:" not in text
+    assert "reproduction:" not in text
+    metadata, cases = load_suite(path, allow_private=False)
+    assert metadata["suite_id"] == "session6-sql-development"
+    assert len(cases) == 8
+    assert {case.slices["complexity"] for case in cases} == {"low", "medium", "high"}
+    assert {case.slices["data_shape"] for case in cases} == {"single_table", "multi_table"}
+    assert all(case.has_private_reference for case in cases)
+
+
+def test_run_summary_shows_cases_accuracy_and_slices(tmp_path):
+    manifest = {
+        "run_id": "run-1",
+        "suite_id": "focused",
+        "suite_version": "1",
+        "exposure": "working",
+        "purpose": "capability",
+        "completed_trials": 2,
+        "requested_trials": 2,
+        "configuration": {"grade_status_counts": {"pass": 1, "fail": 1}},
+        "case_summary": {
+            "case-a": {
+                "final_status": "passed",
+                "grades": ["pass"],
+                "slices": {"domain": "operations", "complexity": "low", "data_shape": "single_table", "risk": "population"},
+            },
+            "case-b": {
+                "final_status": "failed",
+                "grades": ["fail"],
+                "slices": {"domain": "marketing", "complexity": "high", "data_shape": "multi_table", "risk": "join_grain"},
+            },
+        },
+        "slice_summary": {
+            "domain:operations": {"pass": 1},
+            "domain:marketing": {"fail": 1},
+        },
+    }
+    path = render_run_summary(manifest, tmp_path / "report.html")
+    text = path.read_text(encoding="utf-8")
+    assert "Focused case accuracy" in text
+    assert "1 of 2" in text
+    assert "50.0%" in text
+    assert "case-a" in text and "case-b" in text
+    assert "join grain" in text
+    assert "focused calculation cases only" in text
 
 
 def test_student_proposed_case_requires_human_decisions(tmp_path):
@@ -341,50 +392,39 @@ def test_isolated_judge_copies_only_charts_and_current_rubric(tmp_path):
     assert (tmp_path / "output/judge-v2-verdicts.csv").is_file()
 
 
-def test_week5_engine_suite_is_public_and_matches_working_references():
-    _, public_cases = load_suite("data/evals/public/week5-engine.yaml")
-    _, private_cases = load_suite(
-        "data/evals/working-references/week5-engine.yaml", allow_private=True
-    )
-    assert [case.case_id for case in public_cases] == [case.case_id for case in private_cases]
+def test_week5_engine_suite_is_public_and_answer_free():
+    _, public_cases = load_suite("evals/focused/public/week5-engine.yaml")
     assert len(public_cases) == 3
     assert all(case.exposure == "working" for case in public_cases)
     assert all(case.purpose in {"capability", "regression"} for case in public_cases)
+    public_text = Path("evals/focused/public/week5-engine.yaml").read_text()
+    for forbidden in ("expected:", "reference_query:", "reproduction:"):
+        assert forbidden not in public_text
 
 
 def test_week3_course_core_is_verified_representative_and_answer_free():
-    _, public_cases = load_suite("data/evals/public/week3-novamart.yaml")
-    _, private_cases = load_suite(
-        "data/evals/working-references/week3-novamart.yaml", allow_private=True
-    )
-    assert [case.case_id for case in public_cases] == [case.case_id for case in private_cases]
+    _, public_cases = load_suite("evals/focused/public/week3-novamart.yaml")
     assert len(public_cases) == 7
     assert all(case.status == "verified" for case in public_cases)
     assert {case.purpose for case in public_cases} == {"capability", "regression"}
     assert len({case.slices.get("task") for case in public_cases}) >= 4
     assert len({case.slices.get("risk") for case in public_cases}) >= 5
     assert any(case.human_review_required for case in public_cases)
-    public_text = Path("data/evals/public/week3-novamart.yaml").read_text()
+    public_text = Path("evals/focused/public/week3-novamart.yaml").read_text()
     for forbidden in ("expected:", "reference_query:", "reproduction:"):
         assert forbidden not in public_text
 
 
 def test_week3_customer_support_transfer_is_verified_and_answer_free():
-    _, public_cases = load_suite("data/evals/public/week3-customer-support-transfer.yaml")
-    _, private_cases = load_suite(
-        "data/evals/working-references/week3-customer-support-transfer.yaml",
-        allow_private=True,
-    )
-    assert [case.case_id for case in public_cases] == [case.case_id for case in private_cases]
+    _, public_cases = load_suite("evals/focused/public/week3-customer-support-transfer.yaml")
     assert public_cases[0].allowed_capabilities == ["read_data", "run_read_only_query"]
-    assert private_cases[0].expected == 9747
-    public_text = Path("data/evals/public/week3-customer-support-transfer.yaml").read_text()
+    public_text = Path("evals/focused/public/week3-customer-support-transfer.yaml").read_text()
     for forbidden in ("expected:", "reference_query:", "reproduction:"):
         assert forbidden not in public_text
 
 
 def test_narrow_chart_title_development_set_has_a_real_revision_signal():
-    root = Path("data/evals/examples/chart-judge")
+    root = Path("evals/examples/chart-judge")
     development = yaml.safe_load((root / "narrow-title-development-set.yaml").read_text())
 
     def labels(path):
@@ -634,11 +674,11 @@ def test_sanitized_workspace_excludes_answer_files_and_history(tmp_path):
 
 def test_sanitized_workspace_copies_only_declared_case_fixture(tmp_path):
     source = tmp_path / "source"
-    fixture = source / "data" / "evals" / "examples" / "note.md"
+    fixture = source / "evals" / "examples" / "note.md"
     fixture.parent.mkdir(parents=True)
     fixture.write_text("business note")
     (source / "CLAUDE.md").write_text("instructions")
-    case = verified_case(data_scope={"workspace_files": ["data/evals/examples/note.md"]})
+    case = verified_case(data_scope={"workspace_files": ["evals/examples/note.md"]})
     workspace = tmp_path / "workspace"
     SanitizedWorkspaceBuilder(source).build(workspace, case)
     assert (workspace / "inputs" / "note.md").read_text() == "business note"

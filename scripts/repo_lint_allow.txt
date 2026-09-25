@@ -15,9 +15,14 @@ CHANGELOG.md:novamart          # historical entry documenting removal of the bun
 .knowledge/active.yaml:novamart                         # default synthetic course context
 .knowledge/datasets/novamart/:novamart                  # reviewed public synthetic context
 data/context-examples/:novamart                         # public context exercises
-data/evals/examples/:novamart                           # public evaluation examples
-data/evals/public/:novamart                             # public task manifests
-data/evals/working-references/:novamart                 # visible development references, not held-out truth
+evals/examples/:novamart                           # public evaluation examples
+evals/focused/public/:novamart                             # public task manifests
+evals/focused/working-references/:novamart                 # visible development references, not held-out truth
+.claude/skills/eval/SKILL.md:novamart                     # public synthetic full-analysis example
+evals/cases/public/:novamart                              # public synthetic full-analysis cases
+evals/cases/public/:bootcamp                              # public synthetic Snowflake database name
+evals/suites/:novamart                                    # public synthetic suite members
+tests/test_full_analysis_evals.py:novamart                 # public synthetic full-analysis fixtures
 docs/PIPELINE-VERIFICATION.md:novamart                   # public rehearsal description
 examples/analyst-v1/:novamart                           # bounded public operating example
 helpers/evals/context_runner.py:novamart                # default for the public context exercise

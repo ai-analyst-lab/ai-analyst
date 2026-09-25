@@ -1,0 +1,5 @@
+# Week 1 through Week 3 use only the analyst's local, intentionally sparse
+# context. Week 4 introduces a separate shared context store and decides how
+# that store is retrieved. Do not point this file at a populated team store
+# before the Week 3 baseline evaluations are complete.
+source: local

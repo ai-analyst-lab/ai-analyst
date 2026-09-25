@@ -1,9 +1,11 @@
 # .knowledge/ -- Persistent Memory Layer
 
-The `.knowledge/` directory is the AI Analyst's long-term memory. It stores
-everything learned across sessions: dataset schemas, business context, user
-corrections, reusable query patterns, and analysis history. Skills and agents
-read from it at session start and write to it at analysis end.
+The `.knowledge/` directory contains analyst-local state and the pointer that
+selects a context source. Shared business definitions, semantic models,
+verified examples, and team corrections belong in a separate context store.
+The course begins with intentionally sparse local context so evaluations can
+show what the system does not yet know. Week 4 builds and connects the shared
+store.
 
 ---
 
@@ -11,6 +13,7 @@ read from it at session start and write to it at analysis end.
 
 ```
 .knowledge/
+├── context-source.yaml         — select local context or a separate shared store
 ├── active.yaml                 — pointer to the current dataset
 ├── setup-state.yaml            — onboarding interview progress tracker
 ├── datasets/                   — per-dataset brain (schema, metrics, quirks)
@@ -49,9 +52,10 @@ read from it at session start and write to it at analysis end.
 ## Subsystem Details
 
 ### 1. Datasets (`datasets/`)
-Per-dataset "brain": `manifest.yaml`, `schema.md`, `quirks.md`, and optional
-`metrics/` folder. Populated by `/connect-data` and Data Profiling skill.
-Profiling output (`last_profile.md`) is gitignored; schemas are committed.
+Per-dataset technical context such as connection metadata and a discovered
+schema. Business definitions, semantic relationships, verified examples, and
+team corrections should be maintained in the separate context store rather
+than copied into this repository.
 
 ### 2. Corrections (`corrections/`)
 Analyst mistake log with severity, category, SQL before/after, and prevention
@@ -109,7 +113,7 @@ Templates committed; user-generated content gitignored.
 At session start, the Knowledge Bootstrap skill runs this sequence:
 
 1. Read `active.yaml` to find the active dataset
-2. Load `datasets/{active}/manifest.yaml`, `schema.md`, and `quirks.md`
+2. Resolve `context-source.yaml`, then load the selected dataset context
 3. Load `user/profile.md` for communication preferences
 4. Load `corrections/index.yaml` to surface recent mistake patterns
 5. Load `organizations/{org}/` for business context if configured

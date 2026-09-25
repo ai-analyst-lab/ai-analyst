@@ -1,1 +1,2 @@
-active_dataset: novamart
+active_dataset: "novamart-snowflake"
+use_remote: true

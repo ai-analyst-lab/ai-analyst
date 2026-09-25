@@ -1,7 +1,0 @@
-suite_id: session-6-development
-suite_version: "1"
-purpose: development
-cases:
-  - case_id: novamart-monthly-operating-review-001
-    case_version: "1"
-    path: ../cases/public/novamart-monthly-operating-review-001/v1

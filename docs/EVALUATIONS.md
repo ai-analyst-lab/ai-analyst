@@ -87,7 +87,7 @@ Blocking failures cannot be averaged away by strong diagnostic scores.
 
 Model graders must be tested against human-labeled examples. Report their pass, fail, and unknown disagreements and repeated-label stability. Call this grader alignment. Do not call it statistical calibration unless the test actually establishes calibration.
 
-The file `data/evals/examples/grader-false-fail.json` records a real case where the analyst behaved correctly but an exact grader failed it because the output contract was underspecified.
+The file `evals/examples/grader-false-fail.json` records a real case where the analyst behaved correctly but an exact grader failed it because the output contract was underspecified.
 
 ## Comparing a change
 

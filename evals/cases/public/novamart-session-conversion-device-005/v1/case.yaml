@@ -1,0 +1,83 @@
+schema_version: '1'
+case_id: novamart-session-conversion-device-005
+case_version: '1'
+status: proposed
+exposure: development
+slices:
+  domain: product
+  task_type: funnel_review
+  complexity: high
+  data_shape: multi_table
+  primary_risk: unreliable_field
+audience: NovaMart product analytics lead
+decision: Compare observed Q4 completed-order session rates across devices.
+data_scope:
+  platform: Snowflake
+  database: BOOTCAMP_DB
+  schema: NOVAMART
+  tables:
+  - SESSIONS
+  - ORDERS
+  snapshot_id: novamart-all-tables-2026-09-24-v1
+  snapshot_fingerprint:
+    method: sha256_of_ordered_table_row_counts
+    sha256: fdeb62d623a6200aa9f3d5c05408be1ffe4714d25084f5e17b8558a24c05d3a3
+    query: "SELECT\n  (SELECT COUNT(*) FROM BOOTCAMP_DB.NOVAMART.CALENDAR) AS calendar_count,\n  (SELECT\
+      \ COUNT(*) FROM BOOTCAMP_DB.NOVAMART.EVENTS) AS events_count,\n  (SELECT COUNT(*) FROM BOOTCAMP_DB.NOVAMART.EXPERIMENTS)\
+      \ AS experiments_count,\n  (SELECT COUNT(*) FROM BOOTCAMP_DB.NOVAMART.EXPERIMENT_ASSIGNMENTS) AS\
+      \ experiment_assignments_count,\n  (SELECT COUNT(*) FROM BOOTCAMP_DB.NOVAMART.MEMBERSHIPS) AS memberships_count,\n\
+      \  (SELECT COUNT(*) FROM BOOTCAMP_DB.NOVAMART.NPS_RESPONSES) AS nps_responses_count,\n  (SELECT\
+      \ COUNT(*) FROM BOOTCAMP_DB.NOVAMART.ORDERS) AS orders_count,\n  (SELECT COUNT(*) FROM BOOTCAMP_DB.NOVAMART.ORDER_ITEMS)\
+      \ AS order_items_count,\n  (SELECT COUNT(*) FROM BOOTCAMP_DB.NOVAMART.PRODUCTS) AS products_count,\n\
+      \  (SELECT COUNT(*) FROM BOOTCAMP_DB.NOVAMART.PROMOTIONS) AS promotions_count,\n  (SELECT COUNT(*)\
+      \ FROM BOOTCAMP_DB.NOVAMART.SESSIONS) AS sessions_count,\n  (SELECT COUNT(*) FROM BOOTCAMP_DB.NOVAMART.SUPPORT_TICKETS)\
+      \ AS support_tickets_count,\n  (SELECT COUNT(*) FROM BOOTCAMP_DB.NOVAMART.USERS) AS users_count"
+task: Compare Q4 2024 session performance by SESSIONS.DEVICE. Report distinct session count, distinct
+  sessions linked by SESSION_ID to at least one completed Q4 order, and the resulting completed-order
+  session rate. Do not use SESSIONS.HAD_PURCHASE. Identify the lowest-rate device and recommend what product
+  should investigate next without claiming causation.
+required_outputs:
+- result.json
+- results.csv
+- brief.md
+- chart.png
+- chart-data.csv
+- calculation.sql
+result_schema: result.schema.json
+output_contract:
+  csv:
+  - path: results.csv
+    columns: &id001
+    - device
+    - session_count
+    - purchasing_session_count
+    - completed_order_session_rate_pct
+    min_rows: 1
+    max_rows: 50
+  - path: chart-data.csv
+    columns: *id001
+    min_rows: 1
+    max_rows: 50
+  text:
+    path: brief.md
+    min_characters: 100
+  image:
+    path: chart.png
+    min_width: 400
+    min_height: 250
+  sql:
+    path: calculation.sql
+grading_contract:
+  reference_in_student_repository: false
+  headline_gates:
+  - output_contract
+  - deterministic_accuracy
+  - final_answer_judge
+  diagnostic_only:
+  - source_selection
+  - population
+  - date_boundary
+  - query_correctness
+  - validation_checks
+  - query_to_finding_linkage
+  - trace_completeness

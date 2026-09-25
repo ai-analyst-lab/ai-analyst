@@ -3,6 +3,11 @@ case_id: novamart-monthly-operating-review-001
 case_version: "1"
 status: proposed
 exposure: development
+slices:
+  domain: operations
+  task_type: recurring_review
+  complexity: low
+  data_shape: single_table
 audience: NovaMart general manager
 decision: >-
   Determine which factor contributed more to the October-to-December change in
@@ -40,6 +45,25 @@ required_outputs:
   - chart-data.csv
   - calculation.sql
 result_schema: result.schema.json
+output_contract:
+  csv:
+    - path: monthly-results.csv
+      columns: [month, completed_order_count, completed_order_value, average_completed_order_value]
+      min_rows: 3
+      max_rows: 3
+    - path: chart-data.csv
+      columns: [month, completed_order_count, completed_order_value, average_completed_order_value]
+      min_rows: 3
+      max_rows: 3
+  text:
+    path: brief.md
+    min_characters: 100
+  image:
+    path: chart.png
+    min_width: 400
+    min_height: 250
+  sql:
+    path: calculation.sql
 grading_contract:
   reference_in_student_repository: false
   headline_gates:
@@ -51,9 +75,7 @@ grading_contract:
     - date_boundary
     - status_filter
     - query_correctness
-    - methodology_choice
+    - calculation_method
     - validation_checks
     - query_to_finding_linkage
-    - limitation_quality
     - trace_completeness
-    - chart_quality

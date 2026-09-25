@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "novamart-support-resolution-003 result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "case_id",
+    "results",
+    "final_answer",
+    "methodology",
+    "artifacts"
+  ],
+  "properties": {
+    "case_id": {
+      "const": "novamart-support-resolution-003"
+    },
+    "results": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "month",
+          "ticket_count",
+          "resolved_ticket_count",
+          "median_resolution_hours"
+        ],
+        "properties": {
+          "month": {
+            "type": "string"
+          },
+          "ticket_count": {
+            "type": "integer"
+          },
+          "resolved_ticket_count": {
+            "type": "integer"
+          },
+          "median_resolution_hours": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "final_answer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "conclusion",
+        "recommended_next_step",
+        "supporting_facts",
+        "important_limitation"
+      ],
+      "properties": {
+        "conclusion": {
+          "type": "string",
+          "minLength": 20
+        },
+        "recommended_next_step": {
+          "type": "string",
+          "minLength": 20
+        },
+        "supporting_facts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "important_limitation": {
+          "type": "string",
+          "minLength": 20
+        }
+      }
+    },
+    "methodology": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "analysis_type",
+        "population",
+        "calculation_summary",
+        "validation_checks",
+        "assumptions"
+      ],
+      "properties": {
+        "analysis_type": {
+          "type": "string"
+        },
+        "population": {
+          "type": "string"
+        },
+        "calculation_summary": {
+          "type": "string"
+        },
+        "validation_checks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "results",
+        "brief",
+        "chart",
+        "chart_data",
+        "calculation"
+      ],
+      "properties": {
+        "results": {
+          "const": "results.csv"
+        },
+        "brief": {
+          "const": "brief.md"
+        },
+        "chart": {
+          "const": "chart.png"
+        },
+        "chart_data": {
+          "const": "chart-data.csv"
+        },
+        "calculation": {
+          "const": "calculation.sql"
+        }
+      }
+    }
+  }
+}

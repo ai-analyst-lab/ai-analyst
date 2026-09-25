@@ -1,0 +1,84 @@
+schema_version: '1'
+case_id: novamart-acquisition-performance-012
+case_version: '1'
+status: proposed
+exposure: development
+slices:
+  domain: growth
+  task_type: segment_review
+  complexity: high
+  data_shape: multi_table
+  primary_risk: unit_of_analysis
+audience: NovaMart growth lead
+decision: Compare Q4 completed-purchase performance across acquisition channels.
+data_scope:
+  platform: Snowflake
+  database: BOOTCAMP_DB
+  schema: NOVAMART
+  tables:
+  - USERS
+  - ORDERS
+  snapshot_id: novamart-all-tables-2026-09-24-v1
+  snapshot_fingerprint:
+    method: sha256_of_ordered_table_row_counts
+    sha256: fdeb62d623a6200aa9f3d5c05408be1ffe4714d25084f5e17b8558a24c05d3a3
+    query: "SELECT\n  (SELECT COUNT(*) FROM BOOTCAMP_DB.NOVAMART.CALENDAR) AS calendar_count,\n  (SELECT\
+      \ COUNT(*) FROM BOOTCAMP_DB.NOVAMART.EVENTS) AS events_count,\n  (SELECT COUNT(*) FROM BOOTCAMP_DB.NOVAMART.EXPERIMENTS)\
+      \ AS experiments_count,\n  (SELECT COUNT(*) FROM BOOTCAMP_DB.NOVAMART.EXPERIMENT_ASSIGNMENTS) AS\
+      \ experiment_assignments_count,\n  (SELECT COUNT(*) FROM BOOTCAMP_DB.NOVAMART.MEMBERSHIPS) AS memberships_count,\n\
+      \  (SELECT COUNT(*) FROM BOOTCAMP_DB.NOVAMART.NPS_RESPONSES) AS nps_responses_count,\n  (SELECT\
+      \ COUNT(*) FROM BOOTCAMP_DB.NOVAMART.ORDERS) AS orders_count,\n  (SELECT COUNT(*) FROM BOOTCAMP_DB.NOVAMART.ORDER_ITEMS)\
+      \ AS order_items_count,\n  (SELECT COUNT(*) FROM BOOTCAMP_DB.NOVAMART.PRODUCTS) AS products_count,\n\
+      \  (SELECT COUNT(*) FROM BOOTCAMP_DB.NOVAMART.PROMOTIONS) AS promotions_count,\n  (SELECT COUNT(*)\
+      \ FROM BOOTCAMP_DB.NOVAMART.SESSIONS) AS sessions_count,\n  (SELECT COUNT(*) FROM BOOTCAMP_DB.NOVAMART.SUPPORT_TICKETS)\
+      \ AS support_tickets_count,\n  (SELECT COUNT(*) FROM BOOTCAMP_DB.NOVAMART.USERS) AS users_count"
+task: For NovaMart users with completed orders in Q4 2024, compare USERS.ACQUISITION_CHANNEL. Report distinct
+  purchasers, completed orders, completed-order value, and average completed-order value. Identify the
+  channel with the highest completed-order value and recommend what growth should investigate next. Do
+  not treat the descriptive result as channel incrementality or return on ad spend.
+required_outputs:
+- result.json
+- results.csv
+- brief.md
+- chart.png
+- chart-data.csv
+- calculation.sql
+result_schema: result.schema.json
+output_contract:
+  csv:
+  - path: results.csv
+    columns: &id001
+    - acquisition_channel
+    - purchaser_count
+    - completed_order_count
+    - completed_order_value
+    - average_completed_order_value
+    min_rows: 1
+    max_rows: 50
+  - path: chart-data.csv
+    columns: *id001
+    min_rows: 1
+    max_rows: 50
+  text:
+    path: brief.md
+    min_characters: 100
+  image:
+    path: chart.png
+    min_width: 400
+    min_height: 250
+  sql:
+    path: calculation.sql
+grading_contract:
+  reference_in_student_repository: false
+  headline_gates:
+  - output_contract
+  - deterministic_accuracy
+  - final_answer_judge
+  diagnostic_only:
+  - source_selection
+  - population
+  - date_boundary
+  - query_correctness
+  - validation_checks
+  - query_to_finding_linkage
+  - trace_completeness

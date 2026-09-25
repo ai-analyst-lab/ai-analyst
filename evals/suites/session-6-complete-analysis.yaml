@@ -1,0 +1,65 @@
+suite_id: session-6-complete-analysis-development
+suite_version: '1'
+purpose: Measure complete analytical workflow performance across representative NovaMart work.
+data_snapshot: novamart-all-tables-2026-09-24-v1
+cases:
+- case_id: novamart-monthly-operating-review-001
+  case_version: '1'
+  path: evals/cases/public/novamart-monthly-operating-review-001/v1
+- case_id: novamart-support-sla-breach-002
+  case_version: '1'
+  path: evals/cases/public/novamart-support-sla-breach-002/v1
+- case_id: novamart-support-resolution-003
+  case_version: '1'
+  path: evals/cases/public/novamart-support-resolution-003/v1
+- case_id: novamart-nps-segment-004
+  case_version: '1'
+  path: evals/cases/public/novamart-nps-segment-004/v1
+- case_id: novamart-session-conversion-device-005
+  case_version: '1'
+  path: evals/cases/public/novamart-session-conversion-device-005/v1
+- case_id: novamart-plus-order-value-006
+  case_version: '1'
+  path: evals/cases/public/novamart-plus-order-value-006/v1
+- case_id: novamart-repeat-purchase-channel-007
+  case_version: '1'
+  path: evals/cases/public/novamart-repeat-purchase-channel-007/v1
+- case_id: novamart-support-category-008
+  case_version: '1'
+  path: evals/cases/public/novamart-support-category-008/v1
+- case_id: novamart-search-session-009
+  case_version: '1'
+  path: evals/cases/public/novamart-search-session-009/v1
+- case_id: novamart-promotion-returns-010
+  case_version: '1'
+  path: evals/cases/public/novamart-promotion-returns-010/v1
+- case_id: novamart-category-profit-011
+  case_version: '1'
+  path: evals/cases/public/novamart-category-profit-011/v1
+- case_id: novamart-acquisition-performance-012
+  case_version: '1'
+  path: evals/cases/public/novamart-acquisition-performance-012/v1
+- case_id: novamart-app-version-support-013
+  case_version: '1'
+  path: evals/cases/public/novamart-app-version-support-013/v1
+- case_id: novamart-weekend-orders-014
+  case_version: '1'
+  path: evals/cases/public/novamart-weekend-orders-014/v1
+- case_id: novamart-new-repeat-purchasers-015
+  case_version: '1'
+  path: evals/cases/public/novamart-new-repeat-purchasers-015/v1
+- case_id: novamart-membership-cancellation-016
+  case_version: '1'
+  path: evals/cases/public/novamart-membership-cancellation-016/v1
+- case_id: novamart-checkout-experiment-017
+  case_version: '1'
+  path: evals/cases/public/novamart-checkout-experiment-017/v1
+- case_id: novamart-cancellation-device-018
+  case_version: '1'
+  path: evals/cases/public/novamart-cancellation-device-018/v1
+- case_id: novamart-device-funnel-019
+  case_version: '1'
+  path: evals/cases/public/novamart-device-funnel-019/v1
+- case_id: novamart-holiday-order-mix-020
+  case_version: '1'
+  path: evals/cases/public/novamart-holiday-order-mix-020/v1

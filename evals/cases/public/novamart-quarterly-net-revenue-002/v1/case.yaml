@@ -1,0 +1,78 @@
+schema_version: "1"
+case_id: novamart-quarterly-net-revenue-002
+case_version: "1"
+status: proposed
+exposure: development
+slices:
+  domain: finance
+  task_type: recurring_review
+  complexity: medium
+  data_shape: single_table
+  primary_risk: missing_business_definition
+audience: NovaMart finance lead
+decision: >-
+  Understand monthly net revenue during Q4 2024, identify the strongest month,
+  and decide what finance should investigate next.
+data_scope:
+  platform: Snowflake
+  database: BOOTCAMP_DB
+  schema: NOVAMART
+  table: ORDERS
+  date_field: order_date
+  start: "2024-10-01"
+  end_exclusive: "2025-01-01"
+  snapshot_id: novamart-orders-2026-09-21-v1
+  snapshot_fingerprint:
+    method: sha256_of_pipe_delimited_row_count_min_date_max_date_distinct_order_count_total_amount_sum
+    sha256: e3878063bee620c1706f346d12ffbbec2665b5d50448102afa2ae22304ff1c2f
+task: >-
+  Prepare a concise monthly net revenue review for NovaMart for October,
+  November, and December 2024. Use Snowflake as the data source and order_date
+  from October 1, 2024 inclusive through January 1, 2025 exclusive. Report net
+  revenue by month, compare October with December, identify the strongest
+  month, and recommend what the finance lead should investigate next. State
+  the net revenue definition the analysis used and whether that definition came
+  from reviewed company context or was chosen during the analysis. Do not add
+  or change context while running the case.
+required_outputs:
+  - result.json
+  - monthly-net-revenue.csv
+  - brief.md
+  - chart.png
+  - chart-data.csv
+  - calculation.sql
+result_schema: result.schema.json
+output_contract:
+  csv:
+    - path: monthly-net-revenue.csv
+      columns: [month, net_revenue]
+      min_rows: 3
+      max_rows: 3
+    - path: chart-data.csv
+      columns: [month, net_revenue]
+      min_rows: 3
+      max_rows: 3
+  text:
+    path: brief.md
+    min_characters: 100
+  image:
+    path: chart.png
+    min_width: 400
+    min_height: 250
+  sql:
+    path: calculation.sql
+grading_contract:
+  reference_in_student_repository: false
+  headline_gates:
+    - output_contract
+    - deterministic_accuracy
+    - final_answer_judge
+  diagnostic_only:
+    - source_selection
+    - date_boundary
+    - metric_definition
+    - status_treatment
+    - query_correctness
+    - validation_checks
+    - query_to_finding_linkage
+    - trace_completeness

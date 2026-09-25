@@ -91,7 +91,7 @@ assume the interactive project's hooks or connections are present in that snapsh
 - **Outputs**: interactive deliverables in `outputs/` (charts in `outputs/charts/`),
   intermediates in `working/`. Controller workers use the exact paths inside their
   selected run directory, not these shared interactive paths. Neither is committed.
-- **Evaluation boundary**: public tasks may live under `data/evals/public/`. Course heldout answers
+- **Evaluation boundary**: complete-analysis tasks live under `evals/cases/public/`; focused component tasks live under `evals/focused/public/`. Course heldout answers
   do not live in a student clone. Trial outputs are locked before a separate grader reads a private
   reference. A locally visible answer file is development material, not a secret heldout test.
 

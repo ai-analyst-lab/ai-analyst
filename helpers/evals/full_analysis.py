@@ -92,10 +92,13 @@ def load_public_case(case_dir: str | Path) -> tuple[Path, dict[str, Any], dict[s
     for field in ("case_id", "case_version", "task", "data_scope", "required_outputs"):
         if not case.get(field):
             raise ValueError(f"public case is missing {field}")
-    if tuple(case["required_outputs"]) != REQUIRED_OUTPUTS:
-        raise ValueError(
-            f"required_outputs must be exactly {list(REQUIRED_OUTPUTS)} in that order"
-        )
+    required_outputs = tuple(case["required_outputs"])
+    core_outputs = {"result.json", "brief.md", "chart.png", "chart-data.csv", "calculation.sql"}
+    if not core_outputs <= set(required_outputs):
+        raise ValueError(f"required_outputs must include {sorted(core_outputs)}")
+    result_tables = [name for name in required_outputs if name.endswith(".csv") and name != "chart-data.csv"]
+    if len(required_outputs) != 6 or len(result_tables) != 1:
+        raise ValueError("required_outputs must contain the five core artifacts and one result-table CSV")
     if case.get("result_schema") != "result.schema.json":
         raise ValueError("result_schema must point to result.schema.json")
     return root, case, result_schema
@@ -148,14 +151,17 @@ def _verify_snowflake_snapshot(project_root: Path, data_scope: dict[str, Any]) -
     if not kwargs.get("token") and not kwargs.get("password"):
         raise ValueError("Snowflake snapshot verification is missing its authentication credential")
 
-    qualified = ".".join(
-        str(data_scope[name]) for name in ("database", "schema", "table")
-    )
-    query = f"""
-        SELECT COUNT(*), MIN(order_date), MAX(order_date),
-               COUNT(DISTINCT order_id), ROUND(SUM(total_amount), 2)
-        FROM {qualified}
-    """
+    fingerprint = data_scope["snapshot_fingerprint"]
+    query = fingerprint.get("query")
+    if not query:
+        qualified = ".".join(
+            str(data_scope[name]) for name in ("database", "schema", "table")
+        )
+        query = f"""
+            SELECT COUNT(*), MIN(order_date), MAX(order_date),
+                   COUNT(DISTINCT order_id), ROUND(SUM(total_amount), 2)
+            FROM {qualified}
+        """
     with snowflake.connector.connect(**kwargs) as connection:
         with connection.cursor() as cursor:
             cursor.execute(query)
@@ -297,17 +303,17 @@ def start_run(
 
 Read `trials/{trial_id}/public-case/README.md` and `case.yaml`.
 
-Before querying data, start one analysis trace whose output directory is exactly:
+Before querying data, use the repository's trace skill to start one analysis trace whose output directory is exactly:
 
 `{draft}`
 
 Use that same analysis ID for every query, finding, receipt, and trace artifact in this trial. Do not start a second analysis trace.
 
-Complete the analysis with AI Analyst and save exactly these six files in:
+Complete the analysis with AI Analyst and save exactly these required files in:
 
 `{draft}`
 
-{chr(10).join(f'- `{name}`' for name in REQUIRED_OUTPUTS)}
+{chr(10).join(f'- `{name}`' for name in case['required_outputs'])}
 
 After the analysis and trace are complete, lock the run:
 
@@ -316,6 +322,8 @@ python3 -m helpers.evals.full_analysis lock --run-id {run_id}
 ```
 
 Do not place reference answers or grader files in this run directory.
+Do not use the incomplete-trace or snapshot-verification bypass flags. If the lock reports
+missing trace evidence, repair the trace and run the normal lock command again.
 """
     (run_root / "RUN-INSTRUCTIONS.md").write_text(instructions, encoding="utf-8")
     return {
@@ -368,78 +376,99 @@ def _analysis_id_for_lock(
     return str(requested_analysis_id)
 
 
-def _validate_result_contract(draft: Path, case_id: str) -> dict[str, Any]:
+def _schema_errors(value: Any, schema: dict[str, Any], path: str = "result") -> list[str]:
+    errors: list[str] = []
+    kind = schema.get("type")
+    matches_type = {
+        "object": isinstance(value, dict),
+        "array": isinstance(value, list),
+        "string": isinstance(value, str),
+        "integer": isinstance(value, int) and not isinstance(value, bool),
+        "number": isinstance(value, (int, float)) and not isinstance(value, bool),
+        "boolean": isinstance(value, bool),
+    }
+    if kind and not matches_type.get(kind, True):
+        return [f"{path} must be {kind}"]
+    if "const" in schema and value != schema["const"]:
+        errors.append(f"{path} must equal {schema['const']!r}")
+    if "enum" in schema and value not in schema["enum"]:
+        errors.append(f"{path} must be one of {schema['enum']!r}")
+    if isinstance(value, dict):
+        required = set(schema.get("required") or [])
+        missing = sorted(required - set(value))
+        if missing:
+            errors.append(f"{path} is missing {missing}")
+        properties = schema.get("properties") or {}
+        if schema.get("additionalProperties") is False:
+            extra = sorted(set(value) - set(properties))
+            if extra:
+                errors.append(f"{path} has unexpected fields {extra}")
+        for name, child_schema in properties.items():
+            if name in value:
+                errors.extend(_schema_errors(value[name], child_schema, f"{path}.{name}"))
+    if isinstance(value, list):
+        if len(value) < int(schema.get("minItems", 0)):
+            errors.append(f"{path} has fewer than {schema['minItems']} items")
+        if schema.get("maxItems") is not None and len(value) > int(schema["maxItems"]):
+            errors.append(f"{path} has more than {schema['maxItems']} items")
+        item_schema = schema.get("items") or {}
+        for index, item in enumerate(value):
+            errors.extend(_schema_errors(item, item_schema, f"{path}[{index}]"))
+    if isinstance(value, str) and len(value) < int(schema.get("minLength", 0)):
+        errors.append(f"{path} is shorter than {schema['minLength']} characters")
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if schema.get("minimum") is not None and value < schema["minimum"]:
+            errors.append(f"{path} is below {schema['minimum']}")
+    return errors
+
+
+def _validate_result_contract(
+    draft: Path,
+    case: dict[str, Any],
+    result_schema: dict[str, Any],
+) -> dict[str, Any]:
+    case_id = case["case_id"]
+    required_outputs = tuple(case["required_outputs"])
     files = {path.name for path in draft.iterdir() if path.is_file() and not path.name.startswith(".")}
-    missing = sorted(set(REQUIRED_OUTPUTS) - files)
+    missing = sorted(set(required_outputs) - files)
     system_evidence = {name for name in files if re.fullmatch(r"trace_an_[^.]+\.html", name)}
-    extra = sorted(files - set(REQUIRED_OUTPUTS) - system_evidence)
+    extra = sorted(files - set(required_outputs) - system_evidence)
     if missing or extra:
         raise ValueError(f"draft output mismatch: missing={missing}, extra={extra}")
 
     result = _read_json(draft / "result.json")
-    required_sections = {
-        "case_id",
-        "period",
-        "monthly_results",
-        "october_to_december",
-        "final_answer",
-        "methodology",
-        "artifacts",
-    }
-    absent = sorted(required_sections - set(result))
-    if absent:
-        raise ValueError(f"result.json is missing sections: {absent}")
-    if result.get("case_id") != case_id:
-        raise ValueError("result.json case_id does not match the run")
-    if result.get("period") != {"start": "2024-10-01", "end_exclusive": "2025-01-01"}:
-        raise ValueError("result.json period does not match the case")
-    rows = result.get("monthly_results")
-    if not isinstance(rows, list) or [row.get("month") for row in rows] != [
-        "2024-10",
-        "2024-11",
-        "2024-12",
-    ]:
-        raise ValueError("monthly_results must contain October, November, and December in order")
-    expected_artifacts = {
-        "monthly_results": "monthly-results.csv",
-        "brief": "brief.md",
-        "chart": "chart.png",
-        "chart_data": "chart-data.csv",
-        "calculation": "calculation.sql",
-    }
-    if result.get("artifacts") != expected_artifacts:
-        raise ValueError("result.json artifact paths do not match the required bundle")
-    for section in ("final_answer", "methodology", "october_to_december"):
-        if not isinstance(result.get(section), dict):
-            raise ValueError(f"result.json {section} must be an object")
+    errors = _schema_errors(result, result_schema)
+    if errors:
+        raise ValueError("result.json does not match result.schema.json: " + "; ".join(errors[:20]))
 
-    required_columns = [
-        "month",
-        "completed_order_count",
-        "completed_order_value",
-        "average_completed_order_value",
-    ]
-    for name in ("monthly-results.csv", "chart-data.csv"):
+    contract = case.get("output_contract") or {}
+    for spec in contract.get("csv") or []:
+        name = spec["path"]
         with (draft / name).open(newline="", encoding="utf-8") as handle:
             reader = csv.DictReader(handle)
             csv_rows = list(reader)
-            if reader.fieldnames != required_columns:
-                raise ValueError(f"{name} columns must be {required_columns}")
-            if [row["month"] for row in csv_rows] != ["2024-10", "2024-11", "2024-12"]:
-                raise ValueError(f"{name} must contain October, November, and December in order")
+            if reader.fieldnames != spec["columns"]:
+                raise ValueError(f"{name} columns must be {spec['columns']}")
+            if len(csv_rows) < int(spec.get("min_rows", 0)):
+                raise ValueError(f"{name} has too few rows")
+            if spec.get("max_rows") is not None and len(csv_rows) > int(spec["max_rows"]):
+                raise ValueError(f"{name} has too many rows")
 
-    brief = (draft / "brief.md").read_text(encoding="utf-8").strip()
-    if len(brief) < 100:
-        raise ValueError("brief.md is too short to contain the required operating review")
-    sql = (draft / "calculation.sql").read_text(encoding="utf-8").strip()
-    if not sql or re.search(r"\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|MERGE|TRUNCATE)\b", sql, re.I):
-        raise ValueError("calculation.sql must contain read-only SQL")
-    png = (draft / "chart.png").read_bytes()
+    text_spec = contract.get("text") or {"path": "brief.md", "min_characters": 100}
+    brief = (draft / text_spec["path"]).read_text(encoding="utf-8").strip()
+    if len(brief) < int(text_spec.get("min_characters", 1)):
+        raise ValueError(f"{text_spec['path']} is too short")
+    sql_spec = contract.get("sql") or {"path": "calculation.sql"}
+    sql = (draft / sql_spec["path"]).read_text(encoding="utf-8").strip()
+    if not sql:
+        raise ValueError(f"{sql_spec['path']} is empty")
+    image_spec = contract.get("image") or {"path": "chart.png", "min_width": 400, "min_height": 250}
+    png = (draft / image_spec["path"]).read_bytes()
     if len(png) < 24 or png[:8] != b"\x89PNG\r\n\x1a\n":
-        raise ValueError("chart.png is not a readable PNG")
+        raise ValueError(f"{image_spec['path']} is not a readable PNG")
     width, height = struct.unpack(">II", png[16:24])
-    if width < 400 or height < 250:
-        raise ValueError(f"chart.png is too small: {width}x{height}")
+    if width < int(image_spec.get("min_width", 1)) or height < int(image_spec.get("min_height", 1)):
+        raise ValueError(f"{image_spec['path']} is too small: {width}x{height}")
     return result
 
 
@@ -505,14 +534,21 @@ def _copy_trace_evidence(
         {"path": path.name, "sha256": file_digest(path), "bytes": path.stat().st_size}
         for path in sorted(copied)
     ]
+    bundle_digest = payload_digest(files)
     manifest = {
         "analysis_id": analysis_id,
         "files": files,
+        "bundle_digest": bundle_digest,
         "missing": sorted(set(missing)),
         "complete": not missing,
         "captured_at": utc_now(),
     }
-    write_json(trace_root / "manifest.json", manifest)
+    manifest_path = write_json(trace_root / "manifest.json", manifest)
+    for path in [*copied, manifest_path]:
+        try:
+            path.chmod(0o444)
+        except OSError:
+            pass
     return manifest
 
 
@@ -545,7 +581,10 @@ def lock_run(
         requested_analysis_id=analysis_id or trial.get("analysis_id"),
     )
     draft = trial_root / "draft"
-    _validate_result_contract(draft, trial["case_id"])
+    public_case_root = trial_root / "public-case"
+    public_case = _read_yaml(public_case_root / "case.yaml")
+    result_schema = _read_json(public_case_root / "result.schema.json")
+    _validate_result_contract(draft, public_case, result_schema)
     if verify_data_snapshot:
         data_fingerprint = _verify_snowflake_snapshot(project_root, manifest["data_scope"])
     else:
@@ -570,12 +609,13 @@ def lock_run(
     if submission.exists():
         raise ValueError("submission directory already exists; refusing to overwrite it")
     submission.mkdir()
-    for name in REQUIRED_OUTPUTS:
+    required_outputs = tuple(public_case["required_outputs"])
+    for name in required_outputs:
         shutil.copy2(draft / name, submission / name)
 
     files = [
         {"path": name, "sha256": file_digest(submission / name), "bytes": (submission / name).stat().st_size}
-        for name in REQUIRED_OUTPUTS
+        for name in required_outputs
     ]
     bundle_digest = payload_digest(files)
     artifact_manifest = {
@@ -590,7 +630,7 @@ def lock_run(
     }
     artifact_manifest_path = trial_root / "artifact-manifest.json"
     write_json(artifact_manifest_path, artifact_manifest)
-    for path in [*(submission / name for name in REQUIRED_OUTPUTS), artifact_manifest_path]:
+    for path in [*(submission / name for name in required_outputs), artifact_manifest_path]:
         try:
             path.chmod(0o444)
         except OSError:
@@ -603,6 +643,7 @@ def lock_run(
             "artifact_bundle_digest": bundle_digest,
             "artifact_manifest": str(artifact_manifest_path),
             "trace_manifest": str(trial_root / "trace" / "manifest.json"),
+            "trace_bundle_digest": trace_manifest["bundle_digest"],
             "locked_at": artifact_manifest["locked_at"],
         }
     )
@@ -639,7 +680,8 @@ def verify_locked_submission(run_root: str | Path, trial_id: str | None = None) 
     artifact_manifest = _read_json(trial_root / "artifact-manifest.json")
     submission = trial_root / "submission"
     observed_names = sorted(path.name for path in submission.iterdir() if path.is_file())
-    if observed_names != sorted(REQUIRED_OUTPUTS):
+    expected_names = sorted(record["path"] for record in artifact_manifest["files"])
+    if observed_names != expected_names:
         raise ValueError(f"locked submission file set changed: {observed_names}")
     observed = []
     for record in artifact_manifest["files"]:
@@ -653,10 +695,25 @@ def verify_locked_submission(run_root: str | Path, trial_id: str | None = None) 
     digest = payload_digest(observed)
     if digest != artifact_manifest["bundle_digest"] or digest != trial["artifact_bundle_digest"]:
         raise ValueError("locked artifact bundle digest does not match the trial record")
+    trace_root = trial_root / "trace"
+    trace_manifest = _read_json(trace_root / "manifest.json")
+    trace_observed = []
+    for record in trace_manifest.get("files") or []:
+        path = trace_root / record["path"]
+        if not path.is_file():
+            raise ValueError(f"locked trace artifact is missing: {record['path']}")
+        actual = {"path": record["path"], "sha256": file_digest(path), "bytes": path.stat().st_size}
+        if actual != record:
+            raise ValueError(f"locked trace artifact changed: {record['path']}")
+        trace_observed.append(actual)
+    trace_digest = payload_digest(trace_observed)
+    if trace_digest != trace_manifest.get("bundle_digest") or trace_digest != trial.get("trace_bundle_digest"):
+        raise ValueError("locked trace bundle digest does not match the trial record")
     return {
         "run_id": trial["run_id"],
         "trial_id": trial["trial_id"],
         "bundle_digest": digest,
+        "trace_bundle_digest": trace_digest,
         "submission_path": str(submission),
         "trial_root": str(trial_root),
     }

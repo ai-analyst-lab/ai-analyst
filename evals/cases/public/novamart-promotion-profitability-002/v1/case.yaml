@@ -1,0 +1,96 @@
+schema_version: "1"
+case_id: novamart-promotion-profitability-002
+case_version: "1"
+status: proposed
+exposure: development
+slices:
+  domain: marketing
+  task_type: decision_support
+  complexity: high
+  data_shape: multi_table
+audience: NovaMart marketing lead
+decision: >-
+  Decide which of the Black Friday and Holiday Sale promotions produced more
+  completed-order merchandise gross profit per promotion day, then identify
+  what marketing must investigate before deciding which promotion to repeat.
+data_scope:
+  platform: Snowflake
+  database: BOOTCAMP_DB
+  schema: NOVAMART
+  tables: [ORDERS, ORDER_ITEMS, PRODUCTS, PROMOTIONS]
+  snapshot_id: novamart-commerce-2026-09-24-v1
+  snapshot_fingerprint:
+    method: sha256_of_one_row_multi_table_profile
+    sha256: fe3770e913305ffb1917a1b2e8eb1fd449773c78b58bb730aecfb6eaa821fa84
+    query: >-
+      SELECT
+      (SELECT COUNT(*) FROM BOOTCAMP_DB.NOVAMART.ORDERS),
+      (SELECT MIN(order_date) FROM BOOTCAMP_DB.NOVAMART.ORDERS),
+      (SELECT MAX(order_date) FROM BOOTCAMP_DB.NOVAMART.ORDERS),
+      (SELECT COUNT(DISTINCT order_id) FROM BOOTCAMP_DB.NOVAMART.ORDERS),
+      (SELECT ROUND(SUM(total_amount),2) FROM BOOTCAMP_DB.NOVAMART.ORDERS),
+      (SELECT COUNT(*) FROM BOOTCAMP_DB.NOVAMART.ORDER_ITEMS),
+      (SELECT COUNT(DISTINCT order_id) FROM BOOTCAMP_DB.NOVAMART.ORDER_ITEMS),
+      (SELECT SUM(quantity) FROM BOOTCAMP_DB.NOVAMART.ORDER_ITEMS),
+      (SELECT ROUND(SUM(line_total),2) FROM BOOTCAMP_DB.NOVAMART.ORDER_ITEMS),
+      (SELECT COUNT(*) FROM BOOTCAMP_DB.NOVAMART.PRODUCTS),
+      (SELECT ROUND(SUM(cost),2) FROM BOOTCAMP_DB.NOVAMART.PRODUCTS),
+      (SELECT COUNT(*) FROM BOOTCAMP_DB.NOVAMART.PROMOTIONS),
+      (SELECT MIN(start_date) FROM BOOTCAMP_DB.NOVAMART.PROMOTIONS),
+      (SELECT MAX(end_date) FROM BOOTCAMP_DB.NOVAMART.PROMOTIONS)
+task: >-
+  Compare NovaMart's Black Friday and Holiday Sale promotions. Include only
+  orders whose status is exactly completed and whose promo_id identifies one
+  of those two promotions. Define merchandise gross profit as the sum of
+  order_items.line_total minus quantity multiplied by products.cost. Define
+  promotion days as the inclusive number of calendar days from the promotion
+  start date through end date. For each promotion report start date, end date,
+  promotion days, distinct completed-order count, discounted merchandise value,
+  merchandise cost, merchandise gross profit, and merchandise gross profit per
+  promotion day. Determine which promotion produced more total merchandise
+  gross profit and which produced more per promotion day. Recommend what the
+  marketing team should investigate before deciding which promotion to repeat.
+  State clearly that this descriptive comparison does not prove incremental
+  profit or causation. Do not sum order-level values after joining to item rows.
+required_outputs:
+  - result.json
+  - promotion-results.csv
+  - brief.md
+  - chart.png
+  - chart-data.csv
+  - calculation.sql
+result_schema: result.schema.json
+output_contract:
+  csv:
+    - path: promotion-results.csv
+      columns: [promo_name, start_date, end_date, promo_days, completed_order_count, discounted_merchandise_value, merchandise_cost, merchandise_gross_profit, gross_profit_per_day]
+      min_rows: 2
+      max_rows: 2
+    - path: chart-data.csv
+      columns: [promo_name, merchandise_gross_profit, gross_profit_per_day]
+      min_rows: 2
+      max_rows: 2
+  text:
+    path: brief.md
+    min_characters: 100
+  image:
+    path: chart.png
+    min_width: 400
+    min_height: 250
+  sql:
+    path: calculation.sql
+grading_contract:
+  reference_in_student_repository: false
+  headline_gates:
+    - output_contract
+    - deterministic_accuracy
+    - final_answer_judge
+  diagnostic_only:
+    - source_selection
+    - date_boundary
+    - status_filter
+    - query_correctness
+    - calculation_method
+    - validation_checks
+    - query_to_finding_linkage
+    - trace_completeness

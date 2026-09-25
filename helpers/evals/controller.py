@@ -296,6 +296,7 @@ class EvaluationController:
                 "grades": statuses,
                 "blocking_pass": "fail" not in statuses and "error" not in statuses and "blocked" not in statuses,
                 "human_review_required": private_by_id[case_id].human_review_required,
+                "slices": dict(private_by_id[case_id].slices),
                 "final_status": (
                     "failed"
                     if "fail" in statuses or "error" in statuses or "blocked" in statuses

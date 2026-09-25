@@ -1,0 +1,398 @@
+suite_id: session6-sql-development
+suite_version: '1'
+data_snapshot: snowflake:novamart-commerce-2026-09-24-v1
+purpose: Focused calculation checks that complement the complete-analysis cases
+visibility: public-task-manifest
+cases:
+- case_id: novamart-q4-completed-order-value-003
+  task: Using the configured NovaMart Snowflake data, return the sum of TOTAL_AMOUNT
+    for orders whose STATUS is exactly completed and whose ORDER_DATE is from 2024-10-01
+    inclusive to 2025-01-01 exclusive. Round to two decimals.
+  intended_user: NovaMart general manager
+  decision: Establish the completed-order value baseline for Q4 2024.
+  consequence_if_wrong: A wrong population or date boundary distorts the operating
+    baseline.
+  human_review_boundary: null
+  exposure: working
+  purpose: capability
+  case_version: '1'
+  status: proposed
+  truth_basis: computed
+  data_scope:
+    platform: snowflake
+    database: BOOTCAMP_DB
+    schema: NOVAMART
+    tables:
+    - ORDERS
+  success_criteria:
+  - type: numeric
+    description: The Q4 completed-order value matches an independently executed query.
+  allowed_capabilities:
+  - read_data
+  - run_read_only_query
+  required_behavior: []
+  forbidden_behavior: []
+  tolerance:
+    absolute: 0.01
+  graders:
+  - id: q4-completed-order-value
+    type: numeric
+    field: answer
+    unit: currency
+  human_review_required: false
+  slices:
+    domain: operations
+    complexity: low
+    risk: population
+    data_shape: single_table
+  data_snapshot: snowflake:novamart-commerce-2026-09-24-v1
+  truth_evidence: Independently recomputed from the frozen Snowflake snapshot.
+  author: AI Analyst Lab
+  reviewed_by: null
+  verified_at: null
+  has_private_reference: true
+  schema_version: '1.2'
+- case_id: novamart-q4-completed-purchasers-004
+  task: Using the configured NovaMart Snowflake data, return the number of distinct
+    USER_ID values with at least one order whose STATUS is exactly completed and whose
+    ORDER_DATE is from 2024-10-01 inclusive to 2025-01-01 exclusive.
+  intended_user: NovaMart growth lead
+  decision: Establish the size of the Q4 completed-purchaser population.
+  consequence_if_wrong: Counting orders instead of people inflates the customer population.
+  human_review_boundary: null
+  exposure: working
+  purpose: capability
+  case_version: '1'
+  status: proposed
+  truth_basis: computed
+  data_scope:
+    platform: snowflake
+    database: BOOTCAMP_DB
+    schema: NOVAMART
+    tables:
+    - ORDERS
+  success_criteria:
+  - type: numeric
+    description: The distinct completed-purchaser count matches an independent query.
+  allowed_capabilities:
+  - read_data
+  - run_read_only_query
+  required_behavior: []
+  forbidden_behavior: []
+  tolerance:
+    absolute: 0
+  graders:
+  - id: q4-completed-purchasers
+    type: numeric
+    field: answer
+    unit: count
+  human_review_required: false
+  slices:
+    domain: growth
+    complexity: low
+    risk: grain
+    data_shape: single_table
+  data_snapshot: snowflake:novamart-commerce-2026-09-24-v1
+  truth_evidence: Independently recomputed from the frozen Snowflake snapshot.
+  author: AI Analyst Lab
+  reviewed_by: null
+  verified_at: null
+  has_private_reference: true
+  schema_version: '1.2'
+- case_id: novamart-q4-average-nps-005
+  task: Using the configured NovaMart Snowflake data, return the average recorded
+    NPS response SCORE for RESPONSE_DATE from 2024-10-01 inclusive to 2025-01-01 exclusive.
+    Round to four decimals. Do not convert the score into NPS.
+  intended_user: NovaMart customer experience lead
+  decision: Describe the average recorded response score in Q4 2024.
+  consequence_if_wrong: Confusing mean response score with NPS changes the metric.
+  human_review_boundary: null
+  exposure: working
+  purpose: capability
+  case_version: '1'
+  status: proposed
+  truth_basis: computed
+  data_scope:
+    platform: snowflake
+    database: BOOTCAMP_DB
+    schema: NOVAMART
+    tables:
+    - NPS_RESPONSES
+  success_criteria:
+  - type: numeric
+    description: The mean recorded response score matches an independent query.
+  allowed_capabilities:
+  - read_data
+  - run_read_only_query
+  required_behavior: []
+  forbidden_behavior: []
+  tolerance:
+    absolute: 0.0001
+  graders:
+  - id: q4-average-response-score
+    type: numeric
+    field: answer
+    unit: score
+  human_review_required: false
+  slices:
+    domain: customer_experience
+    complexity: low
+    risk: metric_definition
+    data_shape: single_table
+  data_snapshot: snowflake:novamart-commerce-2026-09-24-v1
+  truth_evidence: Independently recomputed from the frozen Snowflake snapshot.
+  author: AI Analyst Lab
+  reviewed_by: null
+  verified_at: null
+  has_private_reference: true
+  schema_version: '1.2'
+- case_id: novamart-q4-support-resolution-006
+  task: Using the configured NovaMart Snowflake data, return the median resolution
+    time in hours for support tickets whose CREATED_DATE is from 2024-10-01 inclusive
+    to 2025-01-01 exclusive and whose RESOLVED_AT is not null. Compute elapsed minutes
+    from CREATED_AT to RESOLVED_AT, divide by 60, and round to two decimals.
+  intended_user: NovaMart support manager
+  decision: Establish the typical resolution time for tickets created in Q4 2024.
+  consequence_if_wrong: Including unresolved tickets or using a mean changes the operating
+    signal.
+  human_review_boundary: null
+  exposure: working
+  purpose: capability
+  case_version: '1'
+  status: proposed
+  truth_basis: computed
+  data_scope:
+    platform: snowflake
+    database: BOOTCAMP_DB
+    schema: NOVAMART
+    tables:
+    - SUPPORT_TICKETS
+  success_criteria:
+  - type: numeric
+    description: The median resolved-ticket duration matches an independent query.
+  allowed_capabilities:
+  - read_data
+  - run_read_only_query
+  required_behavior: []
+  forbidden_behavior: []
+  tolerance:
+    absolute: 0.01
+  graders:
+  - id: q4-median-resolution-hours
+    type: numeric
+    field: answer
+    unit: hours
+  human_review_required: false
+  slices:
+    domain: support
+    complexity: medium
+    risk: missingness
+    data_shape: single_table
+  data_snapshot: snowflake:novamart-commerce-2026-09-24-v1
+  truth_evidence: Independently recomputed from the frozen Snowflake snapshot.
+  author: AI Analyst Lab
+  reviewed_by: null
+  verified_at: null
+  has_private_reference: true
+  schema_version: '1.2'
+- case_id: novamart-december-ios-completed-orders-007
+  task: Using the configured NovaMart Snowflake data, return the number of orders
+    whose STATUS is exactly completed, DEVICE is exactly ios, and ORDER_DATE is from
+    2024-12-01 inclusive to 2025-01-01 exclusive.
+  intended_user: NovaMart mobile product lead
+  decision: Establish December completed-order volume on iOS.
+  consequence_if_wrong: A wrong device label or date window changes the segment count.
+  human_review_boundary: null
+  exposure: working
+  purpose: regression
+  case_version: '1'
+  status: proposed
+  truth_basis: computed
+  data_scope:
+    platform: snowflake
+    database: BOOTCAMP_DB
+    schema: NOVAMART
+    tables:
+    - ORDERS
+  success_criteria:
+  - type: numeric
+    description: The December iOS completed-order count matches an independent query.
+  allowed_capabilities:
+  - read_data
+  - run_read_only_query
+  required_behavior: []
+  forbidden_behavior: []
+  tolerance:
+    absolute: 0
+  graders:
+  - id: december-ios-completed-orders
+    type: numeric
+    field: answer
+    unit: count
+  human_review_required: false
+  slices:
+    domain: product
+    complexity: low
+    risk: filter
+    data_shape: single_table
+  data_snapshot: snowflake:novamart-commerce-2026-09-24-v1
+  truth_evidence: Independently recomputed from the frozen Snowflake snapshot.
+  author: AI Analyst Lab
+  reviewed_by: null
+  verified_at: null
+  has_private_reference: true
+  schema_version: '1.2'
+- case_id: novamart-q4-electronics-gross-profit-008
+  task: Using the configured NovaMart Snowflake data, return completed-order merchandise
+    gross profit for products whose CATEGORY is exactly electronics and orders whose
+    ORDER_DATE is from 2024-10-01 inclusive to 2025-01-01 exclusive. Define merchandise
+    gross profit as the sum of ORDER_ITEMS.LINE_TOTAL minus ORDER_ITEMS.QUANTITY multiplied
+    by PRODUCTS.COST. Round to two decimals.
+  intended_user: NovaMart merchandising lead
+  decision: Establish Q4 merchandise gross profit for the electronics category.
+  consequence_if_wrong: A bad join or order-level aggregation can materially inflate
+    profit.
+  human_review_boundary: null
+  exposure: working
+  purpose: regression
+  case_version: '1'
+  status: proposed
+  truth_basis: computed
+  data_scope:
+    platform: snowflake
+    database: BOOTCAMP_DB
+    schema: NOVAMART
+    tables:
+    - ORDERS
+    - ORDER_ITEMS
+    - PRODUCTS
+  success_criteria:
+  - type: numeric
+    description: The item-grain merchandise gross profit matches an independent query.
+  allowed_capabilities:
+  - read_data
+  - run_read_only_query
+  required_behavior: []
+  forbidden_behavior: []
+  tolerance:
+    absolute: 0.01
+  graders:
+  - id: q4-electronics-gross-profit
+    type: numeric
+    field: answer
+    unit: currency
+  human_review_required: false
+  slices:
+    domain: merchandising
+    complexity: high
+    risk: join_grain
+    data_shape: multi_table
+  data_snapshot: snowflake:novamart-commerce-2026-09-24-v1
+  truth_evidence: Independently recomputed from the frozen Snowflake snapshot.
+  author: AI Analyst Lab
+  reviewed_by: null
+  verified_at: null
+  has_private_reference: true
+  schema_version: '1.2'
+- case_id: novamart-q4-completed-session-share-009
+  task: Using the configured NovaMart Snowflake data, return the percentage of distinct
+    Q4 2024 sessions that are linked by SESSION_ID to at least one completed order
+    in Q4 2024. Use SESSIONS with SESSION_DATE from 2024-10-01 inclusive to 2025-01-01
+    exclusive. Do not use SESSIONS.HAD_PURCHASE. Divide distinct matched sessions
+    by all distinct sessions, multiply by 100, and round to four decimals.
+  intended_user: NovaMart product analytics lead
+  decision: Estimate the observed completed-order session share without using the
+    unreliable flag.
+  consequence_if_wrong: Using HAD_PURCHASE or counting joined rows can misstate conversion.
+  human_review_boundary: null
+  exposure: working
+  purpose: regression
+  case_version: '1'
+  status: proposed
+  truth_basis: computed
+  data_scope:
+    platform: snowflake
+    database: BOOTCAMP_DB
+    schema: NOVAMART
+    tables:
+    - SESSIONS
+    - ORDERS
+  success_criteria:
+  - type: numeric
+    description: The distinct-session percentage matches an independent query.
+  allowed_capabilities:
+  - read_data
+  - run_read_only_query
+  required_behavior: []
+  forbidden_behavior: []
+  tolerance:
+    absolute: 0.0001
+  graders:
+  - id: q4-completed-session-share
+    type: numeric
+    field: answer
+    unit: percent
+  human_review_required: false
+  slices:
+    domain: product
+    complexity: high
+    risk: unreliable_field
+    data_shape: multi_table
+  data_snapshot: snowflake:novamart-commerce-2026-09-24-v1
+  truth_evidence: Independently recomputed from distinct session identifiers in the
+    frozen snapshot.
+  author: AI Analyst Lab
+  reviewed_by: null
+  verified_at: null
+  has_private_reference: true
+  schema_version: '1.2'
+- case_id: novamart-q4-plus-aov-difference-010
+  task: Using the configured NovaMart Snowflake data, calculate the difference in
+    average TOTAL_AMOUNT between completed Plus-member orders and completed non-Plus
+    orders for ORDER_DATE from 2024-10-01 inclusive to 2025-01-01 exclusive. Return
+    Plus average minus non-Plus average, rounded to two decimals.
+  intended_user: NovaMart membership lead
+  decision: Describe the observed Q4 order-value difference between Plus and non-Plus
+    orders.
+  consequence_if_wrong: Reversing the subtraction or mixing statuses changes the direction
+    of the result.
+  human_review_boundary: null
+  exposure: working
+  purpose: capability
+  case_version: '1'
+  status: proposed
+  truth_basis: computed
+  data_scope:
+    platform: snowflake
+    database: BOOTCAMP_DB
+    schema: NOVAMART
+    tables:
+    - ORDERS
+  success_criteria:
+  - type: numeric
+    description: The signed difference in group averages matches an independent query.
+  allowed_capabilities:
+  - read_data
+  - run_read_only_query
+  required_behavior: []
+  forbidden_behavior: []
+  tolerance:
+    absolute: 0.01
+  graders:
+  - id: q4-plus-aov-difference
+    type: numeric
+    field: answer
+    unit: currency
+  human_review_required: false
+  slices:
+    domain: membership
+    complexity: medium
+    risk: directionality
+    data_shape: single_table
+  data_snapshot: snowflake:novamart-commerce-2026-09-24-v1
+  truth_evidence: Independently recomputed from the frozen Snowflake snapshot.
+  author: AI Analyst Lab
+  reviewed_by: null
+  verified_at: null
+  has_private_reference: true
+  schema_version: '1.2'
