@@ -108,15 +108,32 @@ class ConnectionManager:
     def _load_config(dataset_id=None):
         """Load connection config from the knowledge system.
 
-        Reads .knowledge/active.yaml (or uses dataset_id) and loads the
-        dataset's manifest.yaml for connection details.
+        Resolves ``dataset_id`` when given, otherwise the dataset named in
+        .knowledge/active.yaml, and loads that dataset's manifest.yaml for
+        connection details. A requested dataset is always honoured: asking
+        for a local dataset must never land on whichever dataset is active.
 
         Returns:
             dict with connection configuration.
+
+        Raises:
+            RuntimeError: If no dataset resolves, or the requested
+                ``dataset_id`` has no manifest.
         """
         try:
-            from helpers.data.data_helpers import detect_active_source
-            source = detect_active_source()
+            from helpers.data.data_helpers import _read_manifest, detect_active_source
+        except Exception as exc:
+            raise RuntimeError(f"Failed to import dataset helpers: {exc}")
+
+        if dataset_id is not None and _read_manifest(dataset_id) is None:
+            raise RuntimeError(
+                f"Dataset {dataset_id!r} not found: no manifest at "
+                f".knowledge/datasets/{dataset_id}/manifest.yaml. "
+                "Use /datasets to list connected datasets or /connect-data to add one."
+            )
+
+        try:
+            source = detect_active_source(dataset_id)
             return {
                 "type": source.get("type", "csv"),
                 "dataset_id": source.get("source", "unknown"),

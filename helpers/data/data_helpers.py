@@ -242,16 +242,27 @@ _ACTIVE_YAML = _KNOWLEDGE_DIR / "active.yaml"
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _ENV_FILE = _REPO_ROOT / ".env"
 _env_loaded = False
+_dotenv_keys = set()  # keys whose current value was written by _load_env (not the shell)
+
+# Behavior switches (see .env.example). For these the SHELL wins over .env, the standard
+# dotenv precedence, so `AAP_USE_REMOTE=0 <command>` can turn remote off for one run even
+# when the saved .env says 1. Credentials keep the opposite rule (see _load_env).
+_SHELL_WINS_PREFIX = "AAP_"
 
 
 def _load_env():
     """Load the saved .env into os.environ once, with no third-party dependency.
 
     The connection block expands $SNOWFLAKE_* placeholders from os.environ, so the
-    .env has to be loaded first or the credentials come through blank. The .env WINS
-    over whatever is already in the environment: it is the canonical place the connect
-    flow writes credentials, so a stale or leftover shell variable must not silently
-    override the value the user just set.
+    .env has to be loaded first or the credentials come through blank.
+
+    Precedence depends on the kind of key:
+      - Credentials and connection settings: the .env WINS over whatever is already in the
+        environment. It is the canonical place the connect flow writes credentials, so a
+        stale or leftover shell variable must not silently override the value the user
+        just set.
+      - Behavior switches (AAP_*): the shell WINS, as in standard dotenv. These are
+        per-run toggles, so a value set on the command line must beat the saved default.
     """
     global _env_loaded
     if _env_loaded:
@@ -267,36 +278,57 @@ def _load_env():
             key, _, val = line.partition("=")
             key = key.strip()
             val = val.strip().strip('"').strip("'")
-            if key:
-                os.environ[key] = val
+            if not key:
+                continue
+            if key.startswith(_SHELL_WINS_PREFIX) and key in os.environ:
+                continue  # shell value wins for behavior switches
+            os.environ[key] = val
+            _dotenv_keys.add(key)
     except Exception:
         pass  # never let env loading break detection
+
+
+_TRUTHY = ("1", "true", "yes")
+_FALSY = ("0", "false", "no", "off")
 
 
 def _remote_enabled():
     """Whether to use the declared remote warehouse instead of local DuckDB.
 
-    True if AAP_USE_REMOTE is set in the environment, OR the user has opted in via a
-    persisted flag (use_remote: true) in .knowledge/active.yaml. The persisted flag
-    is what lets the connect flow turn Snowflake on by writing a file, so a person
-    never has to set an environment variable in a terminal.
+    Order of precedence:
+      1. AAP_USE_REMOTE set in the shell: truthy turns remote on, an explicit falsy value
+         ("0", "false", "no", "off") turns it OFF even if active.yaml says use_remote: true.
+      2. AAP_USE_REMOTE from .env: truthy turns remote on.
+      3. The persisted flag (use_remote: true) in .knowledge/active.yaml. This is what lets
+         the connect flow turn a warehouse on by writing a file, so a person never has to
+         set an environment variable in a terminal.
     """
-    if os.environ.get("AAP_USE_REMOTE", "").lower() in ("1", "true", "yes"):
+    raw = os.environ.get("AAP_USE_REMOTE")
+    val = (raw or "").strip().lower()
+    if val in _TRUTHY:
         return True
+    if raw is not None and val in _FALSY and "AAP_USE_REMOTE" not in _dotenv_keys:
+        return False  # explicit shell off-switch beats the persisted flag
     try:
         import yaml
         data = yaml.safe_load((_REPO_ROOT / ".knowledge" / "active.yaml").read_text()) or {}
-        return str(data.get("use_remote", "")).lower() in ("1", "true", "yes")
+        return str(data.get("use_remote", "")).lower() in _TRUTHY
     except Exception:
         return False
 
 
-def detect_active_source():
+def detect_active_source(dataset_id=None):
     """Detect which data source is currently active.
 
-    Reads ``.knowledge/active.yaml`` to find the active dataset, then loads
-    the dataset's ``manifest.yaml`` for connection details. Falls back
-    gracefully if YAML is unavailable or files are missing.
+    Reads ``.knowledge/active.yaml`` to find the active dataset (or uses
+    ``dataset_id`` when given), then loads the dataset's ``manifest.yaml``
+    for connection details. Falls back gracefully if YAML is unavailable or
+    files are missing.
+
+    Args:
+        dataset_id: Optional dataset ID to resolve instead of the active one.
+            A run that names a dataset must get that dataset, never whatever
+            happens to be active.
 
     Returns:
         dict with keys:
@@ -312,7 +344,7 @@ def detect_active_source():
     _load_env()
 
     # --- Read active.yaml ---
-    active_dataset = _read_active_dataset()
+    active_dataset = dataset_id or _read_active_dataset()
     if active_dataset is None:
         return _fallback_source("(no active dataset)")
 
