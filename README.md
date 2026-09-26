@@ -126,7 +126,7 @@ The repo includes small public practice datasets, synthetic NovaMart context, an
 - **CSV files**, dropped in a directory
 - **DuckDB**, local or MotherDuck
 - **Postgres**, any Postgres-compatible database
-- **BigQuery**, with a Google service account
+- **BigQuery**, with Application Default Credentials from `gcloud auth application-default login`, no service-account key (see `docs/SETUP_BIGQUERY.md`)
 - **Snowflake**, with user/password or key pair (see `docs/SETUP_SNOWFLAKE.md`)
 - **Databricks**, through a configured SQL warehouse
 - **Redshift**, through its PostgreSQL-compatible interface
