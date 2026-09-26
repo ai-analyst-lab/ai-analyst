@@ -9,7 +9,7 @@
 
 <strong>An open-source AI data analyst that runs inside Claude Code.</strong>
 
-<img src="https://img.shields.io/badge/skills-63-D97706"> <img src="https://img.shields.io/badge/agents-40-D97706"> <img src="https://img.shields.io/badge/helpers-147%20modules-D97706"> <img src="https://img.shields.io/badge/python-3.10%2B-3776AB"> <img src="https://img.shields.io/badge/license-MIT-3da639"> <a href="https://github.com/ai-analyst-lab/ai-analyst/actions/workflows/ci.yml"><img src="https://github.com/ai-analyst-lab/ai-analyst/actions/workflows/ci.yml/badge.svg"></a>
+<img src="https://img.shields.io/badge/skills-64-D97706"> <img src="https://img.shields.io/badge/agents-40-D97706"> <img src="https://img.shields.io/badge/helpers-151%20modules-D97706"> <img src="https://img.shields.io/badge/python-3.10%2B-3776AB"> <img src="https://img.shields.io/badge/license-MIT-3da639"> <a href="https://github.com/ai-analyst-lab/ai-analyst/actions/workflows/ci.yml"><img src="https://github.com/ai-analyst-lab/ai-analyst/actions/workflows/ci.yml/badge.svg"></a>
 
 frames the decision · profiles before trusting · every number gets a comparison · traces findings to rows · validates before presenting · remembers your corrections
 
@@ -126,7 +126,7 @@ The repo includes small public practice datasets, synthetic NovaMart context, an
 - **CSV files**, dropped in a directory
 - **DuckDB**, local or MotherDuck
 - **Postgres**, any Postgres-compatible database
-- **BigQuery**, with a Google service account
+- **BigQuery**, with Application Default Credentials from `gcloud auth application-default login`, no service-account key (see `docs/SETUP_BIGQUERY.md`)
 - **Snowflake**, with user/password or key pair (see `docs/SETUP_SNOWFLAKE.md`)
 - **Databricks**, through a configured SQL warehouse
 - **Redshift**, through its PostgreSQL-compatible interface

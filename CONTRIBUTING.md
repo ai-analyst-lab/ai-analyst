@@ -8,7 +8,7 @@ analyst more correct, more honest, or easier to use, and it has to pass the same
 ```bash
 pip install -e ".[dev]"
 python scripts/repo_lint.py     # frontmatter, file case, secrets, private paths, public hosts, residue
-python -m pytest tests/         # 882 tests; add one for any helper you change
+python -m pytest tests/         # 1,210 tests (1 provider-dependent skip); add one for any helper you change
 ```
 
 Both must pass. The lint's allowlist is `scripts/repo_lint_allow.txt`; add a line only for a

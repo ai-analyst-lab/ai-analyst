@@ -109,7 +109,7 @@ and exports you explicitly invoke (Drive, Notion, Slack). Delete the `hooks` blo
 
 - Python 3.10+. `pip install -e ".[dev]"`; `.[causal]` adds pyfixest, `.[warehouses]` adds the
   Postgres and Snowflake drivers.
-- `python -m pytest tests/` (882 tests) and `python scripts/repo_lint.py` (frontmatter, case,
+- `python -m pytest tests/` (1,210 tests) and `python scripts/repo_lint.py` (frontmatter, case,
   secrets, private paths, public file hosts, residue) both run in CI. Run both before a commit.
 - Adding a skill: `.claude/skills/<name>/SKILL.md` with `name` (matching the directory) and a
   trigger-rich `description`; then add it to `docs/SKILLS.md`. Adding an agent: copy

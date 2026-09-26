@@ -35,3 +35,4 @@ README.md:novamart                                      # public example and set
 docs/SETUP_GOOGLE_DOCS_API.md:bootcamp                  # public course setup example
 docs/SETUP_GOOGLE_DOCS_API.md:novamart                  # public synthetic course example
 tests/test_evals_runtime.py:novamart                    # public evaluation fixture names
+evals/focused/public/session6-sql-development.yaml:bootcamp   # real Snowflake database name BOOTCAMP_DB
