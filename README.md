@@ -13,6 +13,7 @@
 
 frames the decision · profiles before trusting · every number gets a comparison · traces findings to rows · validates before presenting · remembers your corrections
 
+<a href="https://aianalystlab.ai/ai-analyst/">Guided tour</a> ·
 <a href="#what-it-does">What it does</a> ·
 <a href="#ten-minute-start">Ten-minute start</a> ·
 <a href="#how-it-works">How it works</a> ·
@@ -196,4 +197,4 @@ If you want the analyst without the repo, [ai-analyst-plugin](https://github.com
 
 Questions or bugs: open an [issue](https://github.com/ai-analyst-lab/ai-analyst/issues), or ask in [Slack](https://join.slack.com/t/aianalystlab/shared_invite/zt-3yhcg5cit-WnENO3sWfnvro6kvDqQNgA). Licensed under [MIT](LICENSE).
 
-Built by [Shane Butler](https://aianalystlab.ai) at AI Analyst Lab.
+Built by [Shane Butler](https://aianalystlab.ai) at AI Analyst Lab. A guided tour of the repo, with what each part does and where to start, is at [aianalystlab.ai/ai-analyst](https://aianalystlab.ai/ai-analyst/).
