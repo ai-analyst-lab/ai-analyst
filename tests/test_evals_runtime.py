@@ -1121,6 +1121,8 @@ def test_reliability_trial_excludes_future_course_answers_and_local_data(tmp_pat
     (project / ".knowledge/datasets/future/metrics").mkdir(parents=True)
     (project / "data/context-examples").mkdir(parents=True)
     (project / "data/evals").mkdir(parents=True)
+    (project / "evals/examples").mkdir(parents=True)
+    (project / "evals/examples/retention.json").write_text('{"answer": 99}')
     (project / "data/practice").mkdir(parents=True)
     (project / "tests").mkdir(parents=True)
     (project / ".claude/skills").mkdir(parents=True)
@@ -1141,6 +1143,7 @@ def test_reliability_trial_excludes_future_course_answers_and_local_data(tmp_pat
         assert not (root / ".knowledge/datasets/future").exists()
         assert not (root / "data/context-examples").exists()
         assert not (root / "data/evals").exists()
+        assert not (root / "evals").exists()
         assert not (root / "data/practice").exists()
         assert not (root / "tests").exists()
         assert not (root / ".env").exists()
@@ -1179,3 +1182,5 @@ def test_reliability_trial_excludes_future_course_answers_and_local_data(tmp_pat
     command_run_reliability(args)
     result = json.loads((tmp_path / "output/trials.json").read_text())
     assert result["runs"][0]["status"] == "completed"
+    assert (tmp_path / "output/trials/1/input-inventory.json").is_file()
+    assert (tmp_path / "output/trials/1/response.json").is_file()

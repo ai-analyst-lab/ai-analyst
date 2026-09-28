@@ -75,6 +75,15 @@ assume the interactive project's hooks or connections are present in that snapsh
 
 ## Data and memory
 
+- **Context source and guides**: resolve `.knowledge/context-source.yaml` before reading
+  business knowledge. `helpers.knowledge.context_snapshot.knowledge_root` resolves the
+  current store; it may be a separate folder, not the project's `.knowledge/` directory.
+  Before choosing a business definition, call `guide_catalog` in
+  `helpers/knowledge/context_guides.py` for the active dataset. Read workspace guidance
+  and guide descriptions, then use `load_guide` for applicable guides, recording the
+  question, selection reason, fresh analysis ID and catalog hash. An empty legacy metric
+  index does not prove no guidance exists. Respect each guide's team, task and date scope;
+  related terminology alone does not authorize applying another policy's filters.
 - **Active dataset**: `.knowledge/active.yaml`. Datasets are isolated; never join across them
   without saying so. `/datasets` lists and switches; `/connect-data` registers a new source
   (CSV folder, DuckDB, Postgres, BigQuery, Snowflake) and builds its brain.

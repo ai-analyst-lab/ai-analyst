@@ -17,9 +17,10 @@ context that can be supplied after the user asks a question.
 
 ## Instructions
 
-Load each subsystem in order. Every file read MUST gracefully degrade: if the
-file does not exist, skip silently and note "not yet populated" in the summary.
-Never block the session on a missing subsystem.
+Load each subsystem in order. An absent optional file can be reported as "not yet
+populated." A configured context source that is missing, invalid or inaccessible
+is different: report the problem and repair the connection before relying on its
+business definitions. Do not silently substitute local context.
 
 ### Step 1: Setup State
 Read `.knowledge/setup-state.yaml`.
@@ -31,9 +32,9 @@ Read `.knowledge/setup-state.yaml`.
 Read `.knowledge/active.yaml`.
 - If `active_dataset` is null or missing, note "No active dataset" and continue.
 - **Resolve the context source first.** Call `resolve_context_dir(active, project_root)` from
-  `helpers/knowledge/context_sync.py` -> `(ctx_dir, source)`. If `.knowledge/context-source.yaml` says `source: git`,
-  it clones/pulls the team's communal context repo to a cache and returns that dataset dir; otherwise it
-  returns the in-repo `.knowledge/datasets/{active}/`. Load the dataset knowledge (semantic/, metrics/,
+  `helpers/knowledge/context_sync.py` -> `(ctx_dir, source)`. `source: path` reads the visible
+  external store directly, without a cache. `source: git` uses the legacy Git cache;
+  `source: local` reads `.knowledge/datasets/{active}/`. Load dataset knowledge (semantic/, metrics/,
   schema.md, quirks.md) from `ctx_dir` either way - the same loader, the source just differs. Report the
   source ("context: local" or "context: team repo @ {ref}") in the readiness summary.
 - Inventory from `ctx_dir`. Load `context-policy.yaml` and `custom_instructions.md`
@@ -86,6 +87,18 @@ The context store separates three delivery modes:
 - selected context is chosen for the question and worker;
 - compiled context is executable, deterministic context such as a metric compile block.
 
+**Workspace guidance and task guides.** Call
+`helpers.knowledge.context_guides.guide_catalog(project_root, dataset=active)`.
+Apply the small `workspace_guidance` to this session. Inspect guide descriptions and
+scope once the question is known; do not preload every guide body. For a relevant
+guide call `load_guide` with its ID, catalog hash, question, selection reason and
+the current analysis ID. Read the returned content before querying. The helper
+logs that delivered content in `working/context_loads_<analysis_id>.jsonl`.
+If two sources conflict or scope is unclear, ask rather than silently choosing a
+definition. Draft, expired and other-dataset guides are listed as excluded.
+This is a simple agent-selected catalog, not vector search or Hex's proprietary
+retrieval algorithm. A loading record proves delivery, not correct application.
+
 **Schema generation if `schema.md` is missing (REQUIRED):**
 
 The schema is critical for SQL queries and analysis — never proceed without it.
@@ -128,8 +141,9 @@ Check for org ID in `setup-state.yaml` (`phases.phase_3_business.data.organizati
 or in the active dataset manifest's `organization` field.
 
 If an org ID exists and is not `_example`:
-- Read `.knowledge/organizations/{org_id}/manifest.yaml` for name, industry.
-- Read `.knowledge/organizations/{org_id}/business/index.yaml` for section counts
+- Resolve `helpers.knowledge.context_snapshot.knowledge_root(project_root)` first.
+- Read `{resolved_root}/organizations/{org_id}/manifest.yaml` for name, industry.
+- Read `{resolved_root}/organizations/{org_id}/business/index.yaml` for section counts
   (glossary terms, products, metrics, objectives, teams).
 - **If org dir missing:** Note "Org: linked but not found".
 
@@ -246,4 +260,4 @@ _Records of times the user corrected the system's assumptions._
 2. **Never hardcode dataset names.** Resolve from `active.yaml`.
 3. **Never modify manifest during bootstrap.** Bootstrap is read-only.
 4. **Never dump raw YAML to the user.** Show the brief status, not the load.
-5. **Never block on a missing subsystem.** Graceful degradation always.
+5. **Distinguish absent optional context from a broken configured source.** Never hide a failed connection by substituting a different definition.

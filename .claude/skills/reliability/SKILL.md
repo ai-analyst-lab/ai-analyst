@@ -29,6 +29,10 @@ The runner automatically gives each trial a clean view of the current analytical
 
 If the current system already contains a reviewed definition for the question, report that fact. Do not hide current context merely to manufacture variation.
 
+For a separate local context store, pass its path with `--context-store`. The runner saves a snapshot under the run's `context-snapshot/` directory and installs the same contents in each trial. This does not change the project's active context configuration. Without an override, a configured `source: path` store is used automatically; legacy Git-cache mode must first be connected as a visible local path. Do not silently substitute local definitions if that source cannot be read.
+
+Each trial is instructed to inspect the guide catalog and load relevant reviewed guides. Inspect `trials/<number>/trace/context_loads_<analysis_id>.jsonl` to see the full guide text loaded, and compare it with the query logs to check application. The snapshot proves which files were available, not that a guide was used. `input-inventory.json` records trial inputs and `response.json` preserves the response and captured tool events. Definition labels alone do not establish whether two attempts used the same calculation.
+
 ## Report
 
 Lead with:

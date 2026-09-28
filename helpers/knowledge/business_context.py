@@ -16,7 +16,7 @@ from helpers.pipeline.file_helpers import safe_read_yaml
 
 def _find_org_id(knowledge_dir: str = ".knowledge") -> str | None:
     """Return the first non-example org directory name, or None."""
-    orgs_dir = Path(knowledge_dir) / "organizations"
+    orgs_dir = _knowledge_root(knowledge_dir) / "organizations"
     if not orgs_dir.is_dir():
         return None
     for entry in sorted(orgs_dir.iterdir()):
@@ -33,8 +33,16 @@ def _resolve_org_dir(
         org_id = _find_org_id(knowledge_dir)
     if org_id is None:
         return None
-    org_dir = Path(knowledge_dir) / "organizations" / org_id
+    org_dir = _knowledge_root(knowledge_dir) / "organizations" / org_id
     return org_dir if org_dir.is_dir() else None
+
+
+def _knowledge_root(knowledge_dir):
+    path = Path(knowledge_dir).resolve()
+    if (path / "context-source.yaml").exists():
+        from helpers.knowledge.context_snapshot import knowledge_root
+        return knowledge_root(path.parent)
+    return path
 
 
 def _read_business_file(

@@ -84,12 +84,20 @@ def command_reliability(args) -> None:
 def command_run_reliability(args) -> None:
     """Launch fresh Claude sessions, then measure their behavior in code."""
     allowed = ("Read", "Glob", "Grep", "Bash") if args.allow_code else ("Read", "Glob", "Grep")
-    command = ClaudeCommand(model=args.model, timeout_seconds=args.timeout, allowed_tools=allowed)
+    command = ClaudeCommand(model=args.model, timeout_seconds=args.timeout, allowed_tools=allowed,
+                            capture_tool_events=True)
     if args.trials < 1:
         raise ValueError("trials must be at least 1")
     parallelism = min(max(1, args.parallelism), args.trials)
     project_root = Path(args.project_root).resolve()
     output_directory = Path(args.output).resolve()
+    if (output_directory / "trials.json").exists():
+        raise ValueError("Reliability output already contains a run; choose a new output directory")
+    from helpers.knowledge.context_snapshot import snapshot_visible_context, install_snapshot
+    snapshot_path = output_directory / "context-snapshot"
+    context_store = getattr(args, "context_store", None)
+    snapshot = snapshot_visible_context(project_root, snapshot_path,
+        source_override=Path(context_store) if context_store else None)
     # Connection credentials stay outside every trial workspace, but the child
     # process still needs them when the active dataset is remote. Loading the
     # project .env into this process lets Claude query the approved source
@@ -125,15 +133,26 @@ def command_run_reliability(args) -> None:
     )
     prompt = (
         "Answer one analytics question using the active project and data. Do not read prior "
-        "reliability results. Return JSON with these fields: "
+        "reliability results. Before choosing business meaning, read .knowledge/active.yaml "
+        "and inspect the configured context catalog with "
+        "helpers.knowledge.context_guides.guide_catalog('.', dataset=<active_dataset>). "
+        "Apply its workspace guidance; select applicable guides by description and scope. "
+        "Load selected guides through load_guide with the catalog hash, original question, "
+        "selection reason and fresh analysis ID. This records the text actually supplied. "
+        "Do not conclude that business meaning is absent merely because a legacy metrics "
+        "index is empty. If no applicable reviewed meaning is available, disclose that "
+        "and ask or state the assumption rather than inventing company authority. "
+        "Return JSON with these fields: "
         + ", ".join(reliability_fields)
         + ". Choose and report the analytical definition you actually used. reported_value "
         "must contain only the primary scalar and its unit or symbol, such as 25.1%, $3.2M, "
         "or 1409. Use null when there is no primary scalar. definition_key must be a short "
         "snake_case label that distinguishes materially different populations, return behaviors, "
-        "windows, or units, such as repeat_purchase_completed_orders. "
+        "windows, or units. "
         f"When Python is needed, use this interpreter: {python_executable}. "
         "Use the active remote data source and verify the remote connection before querying. "
+        "Use helpers.data.connection_manager.ConnectionManager for SQL so execution and "
+        "results are logged; do not replace it with an unlogged direct connector. "
         "Do not use a local data copy or silently fall back to one. "
         + f"Question: {args.question}"
     )
@@ -157,9 +176,15 @@ def command_run_reliability(args) -> None:
                         ignored.add(name)
                     elif name in {".env", ".mcp.json"} or name.endswith((".pyc", ".pyo")):
                         ignored.add(name)
+                    elif name.startswith('.env.') and name not in {'.env.example', '.env.template'}:
+                        ignored.add(name)
+                    elif relative == Path('.claude/settings.local.json'):
+                        ignored.add(name)
                     # Reliability trials receive the active analytical system,
                     # not future course answers, old captures, or test fixtures.
-                    elif not relative_directory.parts and name == "tests":
+                    elif not relative_directory.parts and name in {"tests", "evals"}:
+                        ignored.add(name)
+                    elif relative_directory == Path(".knowledge") and name in {".context-cache", "context-snapshot"}:
                         ignored.add(name)
                     elif relative_directory == Path("data") and name in {
                         "context-examples",
@@ -178,7 +203,28 @@ def command_run_reliability(args) -> None:
                 return ignored
 
             shutil.copytree(project_root, workspace, ignore=ignore)
-            result = command.run(workspace, prompt, json_schema=reliability_schema)
+            if snapshot is not None:
+                install_snapshot(snapshot_path, workspace)
+            from helpers.knowledge.analysis_context import start_analysis
+            analysis_id = start_analysis(working_dir=workspace / 'working',
+                question=args.question, dataset=active_dataset)
+            trial_prompt = prompt + (
+                f" A fresh analysis record already exists with analysis_id {analysis_id}. "
+                "Use that ID for guide loading and queries; do not start another analysis."
+            )
+            from .fingerprints import file_digest
+            evidence_dir = output_directory / "trials" / str(trial)
+            evidence_dir.mkdir(parents=True, exist_ok=False)
+            inputs = [{"path": str(p.relative_to(workspace)), "sha256": file_digest(p)}
+                      for p in sorted(workspace.rglob("*")) if p.is_file()]
+            write_json(evidence_dir / "input-inventory.json", inputs)
+            result = command.run(workspace, trial_prompt, json_schema=reliability_schema)
+            write_json(evidence_dir / "response.json", result)
+            for path in (workspace / "working").rglob("*"):
+                if path.is_file() and path.suffix in {".json", ".jsonl", ".md", ".sql"}:
+                    target = evidence_dir / "trace" / path.relative_to(workspace / "working")
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(path, target)
         structured = result.get("structured_result", {})
         record = {
             "trial": trial,
@@ -204,6 +250,7 @@ def command_run_reliability(args) -> None:
         "question": args.question,
         "hidden_paths": [str(path) for path in hidden_paths],
         "parallelism": parallelism,
+        "context_snapshot": snapshot,
         "decision_tolerance": {
             "unit": args.unit,
             "absolute": args.absolute,
@@ -473,6 +520,7 @@ def build_parser() -> argparse.ArgumentParser:
     run_reliability.add_argument("--question", required=True)
     run_reliability.add_argument("--project-root", default=".")
     run_reliability.add_argument("--output", required=True)
+    run_reliability.add_argument("--context-store", help="Visible context source to snapshot for this run; does not change active configuration")
     run_reliability.add_argument("--trials", type=int, default=5)
     run_reliability.add_argument(
         "--parallelism",

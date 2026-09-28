@@ -159,11 +159,12 @@ class ClaudeCommand:
     model: str = "claude-opus-4-6"
     timeout_seconds: int = 600
     allowed_tools: tuple[str, ...] = ("Read", "Glob", "Grep")
+    capture_tool_events: bool = False
 
     def argv(self, prompt: str, json_schema: dict[str, Any] | None = None) -> list[str]:
         tools = ",".join(self.allowed_tools)
         schema = json.dumps(json_schema or {"type": "object", "additionalProperties": True})
-        return [
+        argv = [
             "claude",
             "--print",
             "--output-format",
@@ -183,6 +184,10 @@ class ClaudeCommand:
             f"--allowedTools={tools}",
             prompt,
         ]
+        if self.capture_tool_events:
+            argv[argv.index("--output-format") + 1] = "stream-json"
+            argv[-1:-1] = ["--verbose"]
+        return argv
 
     def run(
         self,
@@ -208,12 +213,23 @@ class ClaudeCommand:
         )
         try:
             stdout, stderr = process.communicate(timeout=self.timeout_seconds)
-        except subprocess.TimeoutExpired:
+        except subprocess.TimeoutExpired as exc:
             _terminate_process_tree(process)
+            partial = exc.output or ''
+            if isinstance(partial, bytes):
+                partial = partial.decode('utf-8', errors='replace')
+            events = []
+            if self.capture_tool_events:
+                for line in partial.splitlines():
+                    try:
+                        events.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        continue  # Last event can be interrupted mid-line.
             result = {
                 "status": "error",
                 "raw_output": "",
                 "structured_result": {},
+                "tool_events": extract_tool_events(events),
                 "errors": [
                     {
                         "type": "timeout",
@@ -226,25 +242,32 @@ class ClaudeCommand:
             )
             return result
         if process.returncode != 0:
+            failed_envelope = {}
+            failed_tool_events = []
+            try:
+                failed_envelope, failed_tool_events = decode_cli_output(stdout, self.capture_tool_events)
+            except (json.JSONDecodeError, ValueError):
+                pass
+            errors = [{"type": "claude_exit", "returncode": process.returncode,
+                       "stderr": stderr[-4000:]}]
+            if failed_envelope.get('api_error_status'):
+                errors.append({'type': 'api_error', 'status': failed_envelope['api_error_status'],
+                               'message': str(failed_envelope.get('result', ''))[:2000]})
             result = {
                 "status": "error",
                 "raw_output": stdout,
                 "structured_result": {},
-                "errors": [
-                    {
-                        "type": "claude_exit",
-                        "returncode": process.returncode,
-                        "stderr": stderr[-4000:],
-                    }
-                ],
+                "errors": errors,
+                "tool_events": failed_tool_events,
+                "cost_usd": failed_envelope.get('total_cost_usd'),
             }
             result["execution_metadata"] = self.execution_metadata(
                 workspace, prompt, json_schema, argv, started_at, input_inventory
             )
             return result
         try:
-            envelope = json.loads(stdout)
-        except json.JSONDecodeError as exc:
+            envelope, tool_events = decode_cli_output(stdout, self.capture_tool_events)
+        except (json.JSONDecodeError, ValueError) as exc:
             result = {
                 "status": "error",
                 "raw_output": stdout,
@@ -258,11 +281,12 @@ class ClaudeCommand:
         result = envelope.get("structured_output", envelope.get("result", envelope))
         structured = result if isinstance(result, dict) else {"answer": result}
         result = {
-            "status": "completed",
-            "raw_output": stdout,
+            "status": "error" if envelope.get("is_error") else "completed",
+            "raw_output": json.dumps(envelope) if self.capture_tool_events else stdout,
             "structured_result": structured,
-            "errors": [],
+            "errors": envelope.get("errors") or ([{"type": "model_error", "detail": envelope.get("result")}] if envelope.get("is_error") else []),
             "cost_usd": envelope.get("total_cost_usd"),
+            "tool_events": tool_events,
         }
         result["execution_metadata"] = self.execution_metadata(
             workspace, prompt, json_schema, argv, started_at, input_inventory
@@ -302,6 +326,38 @@ class ClaudeCommand:
                 __import__("datetime").timezone.utc
             ).isoformat(timespec="seconds"),
         }
+
+
+def decode_cli_output(stdout: str, streamed: bool = False) -> tuple[dict, list[dict]]:
+    if not streamed:
+        value = json.loads(stdout)
+        if not isinstance(value, dict):
+            raise ValueError("expected a Claude result object")
+        return value, []
+    events = [json.loads(line) for line in stdout.splitlines() if line.strip()]
+    results = [event for event in events if event.get("type") == "result"]
+    if len(results) != 1:
+        raise ValueError("expected exactly one final Claude result")
+    return results[0], extract_tool_events(events)
+
+
+def extract_tool_events(events: list[dict]) -> list[dict]:
+    tool_events = []
+    for event in events:
+        if not isinstance(event, dict):
+            continue
+        message = event.get("message")
+        # Status/system events may carry a plain-text message rather than an
+        # assistant message object. They contain no tool blocks.
+        if not isinstance(message, dict):
+            continue
+        blocks = message.get("content", [])
+        if not isinstance(blocks, list):
+            continue
+        for block in blocks:
+            if isinstance(block, dict) and block.get("type") in {"tool_use", "tool_result"}:
+                tool_events.append({"parent_tool_use_id": event.get("parent_tool_use_id"), **block})
+    return tool_events
 
 
 def _sha256_text(value: str) -> str:

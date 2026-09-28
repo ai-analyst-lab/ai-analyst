@@ -1,4 +1,6 @@
-"""Resolve where the analyst reads its context from: local (in this tool) or a communal git repo.
+"""Resolve context from local files, a visible external path, or a legacy Git cache.
+
+Path mode reads a checked-out context store directly; edits require no cache reset.
 
 Reads .knowledge/context-source.yaml. If source is 'git', clone (or pull) the communal context repo into a
 local cache and return the dataset directory inside it. If 'local' (or no config), return the in-repo
@@ -63,7 +65,7 @@ def resolve_context_dir(
     project_root: str | Path = ".",
     conn: Optional[Any] = None,
 ) -> tuple[Path, str]:
-    """Return (dataset_context_dir, source) where source is 'local' or 'git'.
+    """Return (dataset_context_dir, source) for 'local', 'path' or 'git'.
 
     dataset_context_dir is the directory that holds this dataset's semantic/ and metrics/ - either the
     in-repo .knowledge/datasets/{active}/ (local) or the synced communal repo's dataset path (git).
@@ -82,7 +84,23 @@ def resolve_context_dir(
 
     import yaml
     cfg = yaml.safe_load(cfg_path.read_text()) or {}
-    if cfg.get("source", "local") != "git":
+    source = cfg.get("source", "local")
+    if source not in {"local", "path", "git"}:
+        raise ContextSyncError(f"Unknown context source: {source!r}; use local, path or git")
+    if source == "path":
+        if not cfg.get("path"):
+            raise ContextSyncError("Path context source requires path")
+        store = (root / Path(cfg["path"]).expanduser()).resolve()
+        relative = Path(cfg.get("dataset_path", f"datasets/{active_dataset}"))
+        if relative.is_absolute() or ".." in relative.parts:
+            raise ContextSyncError("dataset_path must stay within the context store")
+        resolved = (store / relative).resolve()
+        if not resolved.is_relative_to(store) or not resolved.is_dir():
+            raise ContextSyncError(f"Context dataset path is missing or outside store: {relative}")
+        if conn is not None:
+            check_schema_drift(resolved, conn)
+        return resolved, "path"
+    if source == "local":
         if conn is not None:
             check_schema_drift(local_dir, conn)
         return local_dir, "local"

@@ -53,9 +53,8 @@ def list_metrics(
     context_dir: str | Path | None = None,
 ) -> list[dict[str, Any]]:
     """The metric index entries for a dataset, or [] if none are defined."""
-    base = Path(context_dir) if context_dir is not None else (
-        Path(project_root) / ".knowledge" / "datasets" / dataset
-    )
+    from helpers.knowledge.context_sync import resolve_context_dir
+    base = Path(context_dir) if context_dir is not None else resolve_context_dir(dataset, project_root)[0]
     idx = base / "metrics" / "index.yaml"
     if not idx.exists():
         return []

@@ -121,6 +121,7 @@ def measure_reliability(
             }
             for key, group in sorted(definition_groups.items())
         },
+        "definition_grouping_basis": "Model-reported labels, not validated semantic equivalence; review populations, behavior and windows before comparing.",
         "numerical_comparison_valid": not definitions_differ,
         "exact_agreement": {"count": exact_count, "rate": exact_rate},
         "tolerance_agreement": {
@@ -135,7 +136,7 @@ def measure_reliability(
         result["exact_agreement"] = {
             "count": None,
             "rate": None,
-            "reason": "Trials used materially different analytical definitions.",
+            "reason": "Definition labels differ; review whether the underlying analytical definitions actually differ.",
         }
         result["tolerance_agreement"] = {
             "count": None,
@@ -143,7 +144,7 @@ def measure_reliability(
             "reference": None,
             "absolute": absolute_tolerance,
             "relative": relative_tolerance,
-            "reason": "Tolerance agreement is not computed across different quantities.",
+            "reason": "Tolerance agreement is withheld until differently labeled definitions have been reviewed.",
         }
         result["distribution"] = None
     if values and not definitions_differ:

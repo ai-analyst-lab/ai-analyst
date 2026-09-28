@@ -13,10 +13,12 @@ def _pct(value: float | None) -> str:
 
 
 def render_reliability(report: dict[str, Any], output: str | Path) -> Path:
+    verdict = ("definition labels need review" if report['verdict'] == 'definitions_differ'
+               else report['verdict'].replace('_', ' '))
     lines = [
         "# Reliability report",
         "",
-        f"**Verdict:** {report['verdict'].replace('_', ' ')}",
+        f"**Verdict:** {verdict}",
         f"**Successful trials:** {report['successful_trials']} of {report['requested_trials']}",
         f"**Exact agreement:** {_pct(report['exact_agreement']['rate'])}",
         f"**Agreement within the named tolerance:** {_pct(report['tolerance_agreement']['rate'])}",
@@ -40,14 +42,15 @@ def render_reliability(report: dict[str, Any], output: str | Path) -> Path:
         for trial, headline in headlines:
             lines.append(f"- **Trial {trial}:** {str(headline).replace(chr(10), ' ')}")
     if report.get("definition_groups"):
-        lines.extend(["", "## Definition groups", ""])
+        lines.extend(["", "## Provisional definition-label groups", "",
+                      "These labels come from the model. Different labels can describe the same calculation; identical labels can conceal different choices. Review populations, behavior, dates and exclusions before accepting a grouping.", ""])
         for key, group in report["definition_groups"].items():
             values = ", ".join(str(value) for value in group.get("values", []))
             lines.append(f"- **{key}:** {group.get('count', 0)} trial(s); values: {values}")
     if not report.get("numerical_comparison_valid", True):
         lines.extend([
             "",
-            "> Numerical agreement is not calculated across different analytical definitions.",
+            "> Numerical agreement is withheld until the differently labeled definitions have been reviewed.",
         ])
     path = Path(output)
     path.parent.mkdir(parents=True, exist_ok=True)

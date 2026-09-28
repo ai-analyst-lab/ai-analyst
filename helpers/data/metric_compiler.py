@@ -63,9 +63,8 @@ def metric_path(
     compiler from silently reading a different local definition when the analyst is using
     shared or otherwise resolved context.
     """
-    base = Path(context_dir) if context_dir is not None else (
-        Path(project_root) / ".knowledge" / "datasets" / dataset
-    )
+    from helpers.knowledge.context_sync import resolve_context_dir
+    base = Path(context_dir) if context_dir is not None else resolve_context_dir(dataset, project_root)[0]
     return base / "metrics" / f"{metric_id}.yaml"
 
 
