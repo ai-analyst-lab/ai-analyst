@@ -1,7 +1,7 @@
 schema_version: '1'
 case_id: week4-context-all-session-month
 evaluation_mode: sql_results
-status: authoring-draft
+status: course-development
 slices:
   domain: product
   complexity: low

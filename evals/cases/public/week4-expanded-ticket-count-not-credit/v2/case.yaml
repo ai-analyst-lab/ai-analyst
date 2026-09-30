@@ -1,7 +1,7 @@
 schema_version: '1'
 case_id: week4-expanded-ticket-count-not-credit
 evaluation_mode: sql_results
-status: authoring-draft
+status: course-development
 slices:
   domain: support
   complexity: low

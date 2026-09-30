@@ -1,7 +1,7 @@
 schema_version: '1'
 case_id: session8-guide-service-recovery-monthly
 evaluation_mode: sql_results
-status: authoring-draft
+status: course-development
 slices:
   domain: support
   complexity: medium

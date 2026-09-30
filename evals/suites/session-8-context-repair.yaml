@@ -1,7 +1,7 @@
 suite_id: session-8-context-repair
 suite_version: '4'
 evaluation_mode: sql_results
-status: engineering-rehearsed-instructor-review-pending
+status: course-development
 description: Sixteen SQL/results questions for testing context additions. Not full-analysis accuracy.
 cases:
   - case_id: session8-guide-service-recovery-november

@@ -18,6 +18,8 @@ Session 6 uses the 20 complete-analysis cases listed in `suites/session-6-comple
 
 Session 8 uses the 16 SQL/results cases in `suites/session-8-context-repair.yaml`. It tests calculation accuracy before and after context changes. See [SQL/results evaluations](SQL-RESULTS-MODE.md). These are the two current course suites; older experimental suites and case versions have been archived outside the student repositories.
 
+The Session 8 suite and cases use `status: course-development`: they are released classroom development cases, not held-out tests or production-approved business definitions. Existing case IDs and versions are retained so saved runs still resolve to the same references. The evaluator records reference-review evidence separately; this release label does not create a new reference approval.
+
 The historical promotion task under `tests/fixtures/eval-cases/` is a software-test fixture, not an extra course assignment. Instructor rehearsal scripts and their local-workspace tests are maintained separately.
 
 The focused Snowflake cases remain available as optional component tests. Their scores describe calculation behavior only and should not be averaged into complete-analysis accuracy.

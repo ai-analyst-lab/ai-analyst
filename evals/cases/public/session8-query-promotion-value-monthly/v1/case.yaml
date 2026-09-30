@@ -1,7 +1,7 @@
 schema_version: '1'
 case_id: session8-query-promotion-value-monthly
 evaluation_mode: sql_results
-status: instructor-latency-candidate
+status: course-development
 slices:
   domain: commerce
   complexity: medium

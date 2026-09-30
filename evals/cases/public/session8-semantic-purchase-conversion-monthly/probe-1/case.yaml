@@ -1,7 +1,7 @@
 schema_version: '1'
 case_id: session8-semantic-purchase-conversion-monthly
 evaluation_mode: sql_results
-status: instructor-development-not-student-release
+status: course-development
 slices:
   domain: growth
   complexity: high
