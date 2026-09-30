@@ -23,6 +23,9 @@ Run `/context-trace` on the exact question. Preserve its JSON fingerprint.
 
 ## 2. Propose
 
+For edits to guides, reviewed queries or semantic definitions, use `/maintain-context`
+to inspect the appropriate template, validate dependencies and preserve human review.
+
 Create `working/context-change-proposal.yaml` with:
 
 - observed failure and evidence;
@@ -40,9 +43,9 @@ Do not change trusted context until the user approves the proposal.
 ## 3. Preserve the baseline
 
 Run the working and regression cases before the edit. Keep the manifest paths and run IDs. Freeze the suite, data snapshot, model, evaluator, and trial count.
-Record the proposal's named target case IDs. For the Session 8 course fallback, use
-`data/evals/public/week4-context.yaml` with the `context-policy` runner. Lock outputs before grading
-against `data/evals/working-references/week4-context.yaml`.
+Record the proposal's target case IDs and use the installed suite agreed for this experiment.
+Do not silently replace it with a legacy policy fixture. Lock outputs before grading; keep
+evaluation references outside candidate context. Do not launch model runs if the user has paused them.
 
 ## 4. Apply one change
 

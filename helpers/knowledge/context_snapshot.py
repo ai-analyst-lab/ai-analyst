@@ -61,6 +61,9 @@ def snapshot_visible_context(project_root: Path, destination: Path, *, source_ov
         raise ContextSyncError(f'Refusing to overwrite context snapshot: {destination}')
     records = []
     contents = []
+    excluded = []
+    query_sql_eligibility = {}
+    connected_stores = {}
     for item in sorted(store.iterdir()):
         if item.name not in _ROOTS | _FILES:
             continue
@@ -78,8 +81,36 @@ def snapshot_visible_context(project_root: Path, destination: Path, *, source_ov
             if any(p.lower() in {'evals', 'answers', 'answer_key', 'working', 'runs', 'grades'} for p in relative.parts):
                 raise ContextSyncError(f'Evaluation/run material is not context: {relative}')
             content = path.read_bytes()
+            # New connected resources must be reviewed before becoming worker input.
+            # Legacy material retains its existing snapshot behavior.
+            if path.suffix in {'.yaml', '.yml'}:
+                raw = yaml.safe_load(content)
+                if isinstance(raw, dict) and raw.get('schema_version') == 2 and raw.get('kind'):
+                    from helpers.connected_context.store import Store, ContextError
+                    dataset = raw.get('dataset')
+                    eligible = True
+                    try:
+                        if dataset not in connected_stores:
+                            connected_stores[dataset] = Store(store, dataset)
+                        connected_stores[dataset].eligible(raw['kind'], raw['id'])
+                    except ContextError as exc:
+                        eligible = False
+                        excluded.append({'path': relative.as_posix(), 'reason': str(exc)})
+                    if raw.get('kind') == 'query' and raw.get('mode') == 'reviewed_sql':
+                        from helpers.connected_context.store import safe_path
+                        sql_path = safe_path(store, raw['sql']).relative_to(store).as_posix()
+                        query_sql_eligibility.setdefault(sql_path, []).append(eligible)
+                    if not eligible:
+                        continue
             contents.append((relative, content))
             records.append({'path': relative.as_posix(), 'sha256': hashlib.sha256(content).hexdigest(), 'bytes': len(content)})
+    # A draft's SQL body is not approved context just because it is a separate file.
+    # Preserve a shared SQL file only if at least one eligible query references it.
+    excluded_sql = {path for path, states in query_sql_eligibility.items() if not any(states)}
+    contents = [(p, body) for p, body in contents if p.as_posix() not in excluded_sql]
+    records = [item for item in records if item['path'] not in excluded_sql]
+    excluded.extend({'path': p, 'reason': 'No eligible connected query references this SQL'}
+                    for p in sorted(excluded_sql))
     digest = hashlib.sha256(json.dumps(records, sort_keys=True).encode()).hexdigest()
     destination.mkdir(parents=True, exist_ok=False)
     for relative, content in contents:
@@ -88,7 +119,7 @@ def snapshot_visible_context(project_root: Path, destination: Path, *, source_ov
         target.write_bytes(content)
         target.chmod(0o444)
     record = {'source': 'path', 'source_path': str(store), 'sha256': digest,
-              'files': records, 'dataset_path': config.get('dataset_path')}
+              'files': records, 'dataset_path': config.get('dataset_path'), 'excluded': excluded}
     (destination / 'snapshot-manifest.json').write_text(json.dumps(record, indent=2) + '\n')
     (destination / 'snapshot-manifest.json').chmod(0o444)
     return record
@@ -96,6 +127,13 @@ def snapshot_visible_context(project_root: Path, destination: Path, *, source_ov
 
 def install_snapshot(snapshot: Path, workspace: Path, expected_digest: str | None = None) -> dict:
     """Install a byte-verified snapshot and point the worker only at that copy."""
+    if snapshot.is_symlink():
+        raise ContextSyncError('Context snapshot root cannot be a symlink')
+    # macOS /var is itself an alias. Inspect links inside the snapshot, not
+    # unrelated ancestors of its resolved root.
+    snapshot = snapshot.resolve(strict=True)
+    if (snapshot / 'snapshot-manifest.json').is_symlink():
+        raise ContextSyncError('Context snapshot manifest cannot be a symlink')
     record = json.loads((snapshot / 'snapshot-manifest.json').read_text())
     digest = hashlib.sha256(json.dumps(record['files'], sort_keys=True).encode()).hexdigest()
     if digest != record.get('sha256') or (expected_digest is not None and digest != expected_digest):
@@ -111,7 +149,8 @@ def install_snapshot(snapshot: Path, workspace: Path, expected_digest: str | Non
             raise ContextSyncError('Invalid snapshot relative path')
         seen.add(relative.as_posix())
         source = snapshot / relative
-        if any(part.is_symlink() for part in [source, *source.parents] if part != snapshot.parent):
+        within = [source, *source.parents][:len(relative.parts)]
+        if any(part.is_symlink() for part in within):
             raise ContextSyncError(f'Context snapshot rejects symlink: {relative}')
         content = source.read_bytes()
         if len(content) != item['bytes'] or hashlib.sha256(content).hexdigest() != item['sha256']:

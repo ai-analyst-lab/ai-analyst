@@ -75,6 +75,11 @@ assume the interactive project's hooks or connections are present in that snapsh
 
 ## Data and memory
 
+- **Connected resources**: use `helpers.connected_context` and `docs/CONNECTED-CONTEXT.md`
+  for guides linked to reviewed queries or executable semantic definitions. Follow analyst-core;
+  use `/maintain-context` to author resources from the store's templates. Drafts cannot execute.
+  Loading a guide is not proof its calculation was used.
+
 - **Context source and guides**: resolve `.knowledge/context-source.yaml` before reading
   business knowledge. `helpers.knowledge.context_snapshot.knowledge_root` resolves the
   current store; it may be a separate folder, not the project's `.knowledge/` directory.

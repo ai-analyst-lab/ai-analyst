@@ -19,7 +19,7 @@ from typing import Any
 
 import yaml
 
-from helpers.data.metric_compiler import is_compilable, load_metric
+from helpers.data.metric_compiler import is_compilable, load_metric, MetricCompileError
 
 # provenance_mode values, shared with analyst-core and the trace skill.
 MODE_COMPILED = "compiled"        # Tier A, deterministic local compiler
@@ -77,8 +77,11 @@ def route(
 
     try:
         metric = load_metric(dataset, metric_id, project_root, context_dir=context_dir)
-    except Exception:
+    except (FileNotFoundError, MetricCompileError):
         return _tier_c(f"metric id {metric_id!r} not found in {dataset}")
+
+    if metric.get('schema_version') == 2:
+        raise MetricCompileError('Version-2 metrics require helpers.connected_context; do not fall back to generated SQL')
 
     external = ((metric.get("compile") or {}).get("external")) if isinstance(metric.get("compile"), dict) else None
     if isinstance(external, dict) and external.get("source"):

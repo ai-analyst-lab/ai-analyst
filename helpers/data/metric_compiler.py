@@ -65,6 +65,11 @@ def metric_path(
     """
     from helpers.knowledge.context_sync import resolve_context_dir
     base = Path(context_dir) if context_dir is not None else resolve_context_dir(dataset, project_root)[0]
+    # Expose connected definitions to the legacy router's explicit version guard.
+    # Otherwise the new location looks like a missing metric and silently falls forward.
+    connected = base / "semantic" / "metrics" / f"{metric_id}.yaml"
+    if connected.exists():
+        return connected
     return base / "metrics" / f"{metric_id}.yaml"
 
 
@@ -265,6 +270,11 @@ def _execute(conn, sql: str, params: list[Any]):
     """
     if not params:
         return conn.query(sql)
+    # ConnectionManager now owns binding and logging on supported backends.
+    # Preserve the raw fixture path only for older non-manager integrations.
+    from helpers.data.connection_manager import ConnectionManager
+    if isinstance(conn, ConnectionManager):
+        return conn.query(sql, params=params)
     ct = getattr(conn, "connection_type", "duckdb")
     raw = getattr(conn, "_connection", None)
     if ct in _PARAM_BACKENDS and raw is not None:

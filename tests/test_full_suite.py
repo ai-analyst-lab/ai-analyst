@@ -12,6 +12,13 @@ from helpers.evals.full_suite import build_isolated_workspace, load_complete_sui
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_incomplete_api_failure_is_error_not_malformed_submission():
+    from helpers.evals.full_suite import _terminal_case_status
+    assert _terminal_case_status(False, {'status':'error'}) == 'error'
+    assert _terminal_case_status(False, {'status':'completed'}) == 'invalid'
+    assert _terminal_case_status(True, {'status':'error'}) == 'locked'
+
+
 def test_session6_complete_suite_contains_twenty_unique_cases():
     suite, cases = load_complete_suite(ROOT / "evals/suites/session-6-complete-analysis.yaml")
     assert suite["suite_id"] == "session-6-complete-analysis-development"
@@ -67,3 +74,14 @@ def test_complete_suite_records_elapsed_time(tmp_path, monkeypatch):
     assert result["actual_parallelism"] == 1
     assert result["elapsed_seconds"] >= 0
     assert result["status_counts"] == {"locked": 1}
+
+
+def test_copy_rejects_symlink_before_following_it(tmp_path):
+    source = tmp_path / 'source'
+    source.mkdir()
+    outside = tmp_path / 'answers.txt'
+    outside.write_text('do not copy')
+    (source / 'innocent.txt').symlink_to(outside)
+    with pytest.raises(ValueError, match='symlink'):
+        build_isolated_workspace(source, tmp_path / 'copy')
+    assert not (tmp_path / 'copy').exists()

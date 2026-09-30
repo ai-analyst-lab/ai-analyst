@@ -115,6 +115,16 @@ def reconcile_analysis(analysis_id, dataset, date, working_dir=None, rel_tol=0.0
             if action.get("analysis_id") == analysis_id:
                 actions.append(action)
 
+    context_events = []
+    context_path = base / f"connected_context_{analysis_id}.jsonl"
+    if context_path.exists():
+        for line in context_path.read_text().splitlines():
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if record.get("analysis_id") == analysis_id:
+                context_events.append(record)
     identities = [e.get("connection_identity") for e in entries if e.get("connection_identity")]
     source = {
         "dataset": dataset,
@@ -142,7 +152,7 @@ def reconcile_analysis(analysis_id, dataset, date, working_dir=None, rel_tol=0.0
 
     out = {"analysis_id": analysis_id, "analysis": analysis, "receipt": receipt,
            "receipt_path": str(receipt_path), "findings": findings,
-           "query_entries": entries, "actions": actions, **rec}
+           "query_entries": entries, "actions": actions, "context_events": context_events, **rec}
     p = base / f"provenance_{analysis_id}.json"
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(out, indent=2, default=str))

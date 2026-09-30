@@ -393,6 +393,8 @@ def test_isolated_judge_copies_only_charts_and_current_rubric(tmp_path):
 
 
 def test_week5_engine_suite_is_public_and_answer_free():
+    if not Path("evals/focused/public/week5-engine.yaml").is_file():
+        pytest.skip("Unreleased Week 5 authoring suite is not part of the student distribution")
     _, public_cases = load_suite("evals/focused/public/week5-engine.yaml")
     assert len(public_cases) == 3
     assert all(case.exposure == "working" for case in public_cases)

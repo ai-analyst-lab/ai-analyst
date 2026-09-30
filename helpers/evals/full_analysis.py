@@ -93,12 +93,18 @@ def load_public_case(case_dir: str | Path) -> tuple[Path, dict[str, Any], dict[s
         if not case.get(field):
             raise ValueError(f"public case is missing {field}")
     required_outputs = tuple(case["required_outputs"])
-    core_outputs = {"result.json", "brief.md", "chart.png", "chart-data.csv", "calculation.sql"}
+    mode = case.get("evaluation_mode", "full_analysis")
+    if mode not in {"full_analysis", "sql_results"}:
+        raise ValueError(f"unknown evaluation_mode: {mode}")
+    core_outputs = ({"result.json", "calculation.sql"} if mode == "sql_results" else
+                    {"result.json", "brief.md", "chart.png", "chart-data.csv", "calculation.sql"})
+    if any(Path(name).name != name or name.startswith(".") for name in required_outputs):
+        raise ValueError("required_outputs must be plain file names")
     if not core_outputs <= set(required_outputs):
         raise ValueError(f"required_outputs must include {sorted(core_outputs)}")
     result_tables = [name for name in required_outputs if name.endswith(".csv") and name != "chart-data.csv"]
-    if len(required_outputs) != 6 or len(result_tables) != 1:
-        raise ValueError("required_outputs must contain the five core artifacts and one result-table CSV")
+    if len(required_outputs) != len(core_outputs) + 1 or len(result_tables) != 1:
+        raise ValueError("required_outputs must contain the mode's core artifacts and one result-table CSV")
     if case.get("result_schema") != "result.schema.json":
         raise ValueError("result_schema must point to result.schema.json")
     return root, case, result_schema
@@ -208,6 +214,27 @@ def _only_trial(run_root: Path, trial_id: str | None = None) -> Path:
     return trials[0]
 
 
+def _sql_discovery_snapshot(project_root: Path, run_root: Path, dataset: str | None) -> dict[str, Any] | None:
+    """Save the same local catalogs a SQL worker otherwise discovers with two calls.
+
+    This neither selects resources nor loads guide bodies or executes SQL. Errors
+    remain explicit: an unavailable catalog must never look like an empty one.
+    """
+    if not dataset:
+        return None
+    from helpers.knowledge.context_guides import guide_catalog
+    from helpers.connected_context.store import Store
+    payload: dict[str, Any] = {"schema_version": "1", "dataset": dataset, "status": "ready"}
+    try:
+        payload["business_guides"] = guide_catalog(project_root, dataset=dataset)
+        payload["calculations"] = Store.from_project(project_root, dataset).catalog()
+    except Exception as exc:
+        payload = {"schema_version": "1", "dataset": dataset, "status": "error", "error_type": type(exc).__name__, "error": str(exc)}
+    path = run_root / "context-discovery.json"
+    write_json(path, payload)
+    return {"path": str(path), "sha256": file_digest(path), "status": payload["status"]}
+
+
 def start_run(
     *,
     project_root: str | Path,
@@ -265,7 +292,8 @@ def start_run(
     manifest = {
         "schema_version": SCHEMA_VERSION,
         "run_id": run_id,
-        "suite_id": "full-analysis-development",
+        "suite_id": "sql-results-development" if case.get("evaluation_mode") == "sql_results" else "full-analysis-development",
+        "evaluation_mode": case.get("evaluation_mode", "full_analysis"),
         "status": "awaiting_submission",
         "exposure": exposure,
         "case_id": case["case_id"],
@@ -295,10 +323,30 @@ def start_run(
         "artifact_bundle_digest": None,
         "created_at": utc_now(),
     }
+    if case.get("evaluation_mode") == "sql_results":
+        from helpers.knowledge.analysis_context import start_analysis
+        active_path = project_root / ".knowledge" / "active.yaml"
+        active_dataset = _read_yaml(active_path).get("active_dataset") if active_path.is_file() else None
+        trial["analysis_id"] = start_analysis(
+            working_dir=project_root / "working", question=case["task"],
+            dataset=active_dataset or "unknown", output_dir=draft,
+        )
+        discovery = _sql_discovery_snapshot(project_root, run_root, active_dataset)
+        if discovery is not None:
+            manifest["context_discovery"] = discovery
     write_json(run_root / "manifest.json", manifest)
     write_json(trial_root / "trial.json", trial)
     _append_event(run_root, "run_started", trial_id=trial_id, exposure=exposure)
 
+    trace_instruction = (
+        "This is a SQL/results test, not a complete-analysis test. Start one analysis record with the trace helper, "
+        "use its analysis ID for the connection helper's query log, and save your SQL and result table. "
+        "Record any context files you read in result.json. Do not create a report, chart, findings or HTML trace. "
+        "The lock captures the analysis record and query log automatically."
+        if case.get("evaluation_mode") == "sql_results" else
+        "Use that same analysis ID for every query, finding, receipt, and trace artifact in this trial. "
+        "Do not start a second analysis trace."
+    )
     instructions = f"""# Run {run_id}
 
 Read `trials/{trial_id}/public-case/README.md` and `case.yaml`.
@@ -307,7 +355,7 @@ Before querying data, use the repository's trace skill to start one analysis tra
 
 `{draft}`
 
-Use that same analysis ID for every query, finding, receipt, and trace artifact in this trial. Do not start a second analysis trace.
+{trace_instruction}
 
 Complete the analysis with AI Analyst and save exactly these required files in:
 
@@ -326,6 +374,148 @@ Do not use the incomplete-trace or snapshot-verification bypass flags. If the lo
 missing trace evidence, repair the trace and run the normal lock command again.
 """
     (run_root / "RUN-INSTRUCTIONS.md").write_text(instructions, encoding="utf-8")
+    if case.get("evaluation_mode") == "sql_results":
+        instructions = f"""# SQL/results run {run_id}
+
+This run and analysis record already exist. Do not start another run or analysis.
+Use analysis ID `{trial['analysis_id']}`. The active analysis record points to this draft.
+The exact task from the public case is:
+
+{case['task']}
+
+The remaining public-case fields are reproduced without removing any constraints:
+```yaml
+{yaml.safe_dump({key: value for key, value in case.items() if key != 'task'}, sort_keys=False)}
+```
+
+The exact result.json schema is:
+```json
+{json.dumps(result_schema, indent=2)}
+```
+
+The full public case and schema remain available at `{public_copy / 'case.yaml'}`
+and `{public_copy / 'result.schema.json'}`. Follow the output contract and data scope
+above as well as the task and JSON schema. You do not need to reread those files
+merely to rediscover the same fields reproduced above.
+
+Use the existing Python interpreter supplied by the runner. Do not create a virtual
+environment or install dependencies. Use ConnectionManager for logged Snowflake queries.
+For physical column names and types, use the supported metadata method
+`conn.get_table_schema('TABLE')` inside the same ConnectionManager context; it returns
+a list of dictionaries with `name`, `type` and `nullable`. Use an actual table name
+in the configured dataset scope. Do not send DESCRIBE or INFORMATION_SCHEMA discovery
+through conn.query: that method is for scoped analytical SELECTs. Metadata is not a
+business definition or proof of which column implements a business rule.
+Save only result.json, results.csv and calculation.sql under `{draft}`.
+Record the paths of context files actually read in result.json; do not invent a list.
+Before calculating, inspect BOTH the business-guide catalog and the connected
+calculation catalog for the active dataset from .knowledge/active.yaml:
+If `context-discovery.json` exists beside this instruction file with status `ready`,
+read it: it contains the same two local catalogs prepared for this isolated run,
+including workspace guidance, descriptions, eligibility and resource hashes. This
+satisfies catalog discovery; do not repeat the catalog calls just to obtain the
+same information. It does not select a resource or load a guide's full content.
+If its status is `error`, that is a discovery problem, not an empty catalog. Inspect
+the error and use the normal commands below to diagnose it or report the blocker.
+When no snapshot is present, obtain both catalogs with:
+`helpers.knowledge.context_guides.guide_catalog('.', dataset=<active_dataset from .knowledge/active.yaml>)`.
+`-m helpers.connected_context --dataset DATASET catalog`
+Read workspace guidance and descriptions. Load relevant guides with `load_guide` using
+their catalog hashes and this analysis ID. Do not preload every guide or invent missing policy.
+The exact Python call is:
+`helpers.knowledge.context_guides.load_guide('.', dataset=DATASET, guide_id=ID, question=QUESTION, reason=REASON, analysis_id='{trial['analysis_id']}', expected_sha256=HASH)`.
+Use the catalog's `file_sha256` for HASH. DATASET, ID, QUESTION and REASON are your
+discovered dataset, selected guide, current question and selection explanation.
+Inspect eligible metric/query resources, including any guide `implementations` links;
+the connected catalog also exposes resources that have no guide link. A loaded guide
+or a model YAML file is not an executed calculation.
+
+Choose the calculation path by meaning, population, period, grouping and supported
+parameters. When an eligible maintained metric or reviewed query exactly supports
+the question, load it with its catalog hash and selection reason, then execute it
+through the installed connected-context service. Do not rewrite its SQL manually.
+Use the supplied interpreter with these commands (DATASET, KIND, ID, HASH and REQUEST
+are values discovered from the catalog, not literal placeholders):
+`-m helpers.connected_context --dataset DATASET load KIND ID --hash HASH --analysis-id {trial['analysis_id']} --reason 'why this scope matches'`
+Save a structured YAML/JSON request under working/ with `metric_id`, declared
+`parameters`, and supported `dimensions`, or with `query_id` and declared `parameters`.
+`-m helpers.connected_context --dataset DATASET plan REQUEST`
+`-m helpers.connected_context --dataset DATASET run REQUEST --analysis-id {trial['analysis_id']}`
+Inspect its checks and returned artifacts. A successful run records an `executed`
+event with mode `semantic_compiled` or `reviewed_query`, query ID and resource hash.
+Keep those original artifacts under working/context-runs/ for trace capture.
+
+Use the returned results and replayable calculation.sql for the submission. If the
+case requires only presentation changes (column aliases, column selection, ordering
+or rounding), wrap the returned SQL as a subquery, execute that wrapper through
+ConnectionManager using the same analysis ID, and save its SQL and actual returned
+CSV. Preserve the maintained calculation inside it; do not replace it with handwritten
+source-table SQL or hard-coded results.
+For simple selection/rounding/aliases/order, prefer `-m helpers.connected_context --dataset DATASET present EXECUTION_DIR PRESENTATION_YAML --analysis-id {trial['analysis_id']}` with `columns: [{{column: INPUT, name: OUTPUT, round: DIGITS}}]` (round optional) and optional `order_by: [OUTPUT]`; it executes and verifies a wrapper around the preserved SQL and records parent lineage.
+
+If no eligible executable supports the requested scope, generated SQL is allowed
+when the business meaning and source mapping are sufficient. A nearby reviewed
+query may be loaded as an exemplar and adapted for a different grouping or scope;
+label that calculation generated/adapted, log its actual SQL, and keep the reviewed
+resource unchanged. Never label adapted SQL as reviewed-query or semantic execution.
+Missing business meaning, ambiguous matching definitions, failed quality checks or
+failed safety/review checks must be reported; do not bypass those failures by
+silently generating an equivalent query.
+
+For generated/adapted SQL or a presentation wrapper, the supported logged query API
+is the following Python pattern. `sql` must contain your actual read-only SQL and
+DATASET must be the active dataset you discovered; neither is an answer supplied
+by the runner. Use required column aliases and rounding in SQL, not a separate
+unlogged alteration of the returned values.
+
+```python
+from pathlib import Path
+from helpers.data.connection_manager import ConnectionManager
+draft = Path({str(draft)!r})
+with ConnectionManager(dataset_id=DATASET) as conn:
+    frame = conn.query(sql, analysis_id={trial['analysis_id']!r})
+frame.to_csv(draft / 'results.csv', index=False)
+(draft / 'calculation.sql').write_text(sql)
+```
+
+The query method returns a pandas DataFrame, not a dictionary or a cursor. For
+Snowflake output, double-quote aliases to match the case's required column names
+exactly (for example, AS "segment" and AS "value"); unquoted aliases become uppercase.
+Check the actual DataFrame columns before exporting. Do not rename only the CSV
+while leaving different column names in the saved SQL result. For
+result.json, follow the supplied schema: case_id is {case['case_id']!r}, analysis_id
+is {trial['analysis_id']!r}; standard artifact paths are calculation.sql and results.csv.
+List only context files actually read. Do not add narrative or status keys forbidden
+by that schema. A parameterized library query must remain unchanged in the library;
+the submitted calculation.sql must be replayable for this case without missing
+parameter values. Inspect the service's returned calculation.sql before copying it.
+
+Record the selected path and any adaptation or presentation wrapper in the existing
+context event stream, not extra result.json fields. Use
+`helpers.connected_context.store.event('.', ANALYSIS_ID, 'calculation_selected', path=PATH, reason=REASON)`
+with this run's analysis ID and the chosen path (`semantic_compiled`, `reviewed_query`,
+or `generated_sql`). For adaptation, include `source_query_id`, `source_hash` and
+`adaptation` keyword details; for presentation changes include `presentation` details.
+This selection note explains intent; only the service's later `executed` event proves
+maintained execution. Keep result.json within its supplied schema; do not invent fields.
+
+No report, chart, findings or HTML trace is needed. The lock copies the SQL execution
+log, connected execution events and any maintained-calculation artifacts.
+
+Use the supplied interpreter to run:
+`-m helpers.evals.full_analysis lock --run-id {run_id}`
+
+After the normal lock succeeds, the task is complete. Return the run ID and final
+lock status immediately; do not begin another inspection or calculation after locking.
+
+Do not use bypass flags or read reference answers. If execution or locking fails,
+report the error for this run instead of starting another run or changing the case.
+If essential business meaning is unavailable after inspecting the relevant catalogs
+and accessible sources, stop with that specific missing-information explanation.
+Do not repeatedly search unavailable sources or fabricate numeric rows to satisfy
+the output contract. Such a run is incomplete, not a successful numeric submission.
+"""
+        (run_root / "RUN-INSTRUCTIONS.md").write_text(instructions, encoding="utf-8")
     return {
         "run_id": run_id,
         "trial_id": trial_id,
@@ -334,7 +524,7 @@ missing trace evidence, repair the trace and run the normal lock command again.
         "task_path": str(public_copy / "case.yaml"),
         "instructions_path": str(run_root / "RUN-INSTRUCTIONS.md"),
         "exposure": exposure,
-        "analysis_id": None,
+        "analysis_id": trial["analysis_id"],
     }
 
 
@@ -454,26 +644,60 @@ def _validate_result_contract(
             if spec.get("max_rows") is not None and len(csv_rows) > int(spec["max_rows"]):
                 raise ValueError(f"{name} has too many rows")
 
-    text_spec = contract.get("text") or {"path": "brief.md", "min_characters": 100}
-    brief = (draft / text_spec["path"]).read_text(encoding="utf-8").strip()
-    if len(brief) < int(text_spec.get("min_characters", 1)):
-        raise ValueError(f"{text_spec['path']} is too short")
+    full_analysis = case.get("evaluation_mode", "full_analysis") == "full_analysis"
+    text_spec = contract.get("text") or ({"path": "brief.md", "min_characters": 100} if full_analysis else None)
+    if text_spec:
+        brief = (draft / text_spec["path"]).read_text(encoding="utf-8").strip()
+        if len(brief) < int(text_spec.get("min_characters", 1)):
+            raise ValueError(f"{text_spec['path']} is too short")
     sql_spec = contract.get("sql") or {"path": "calculation.sql"}
     sql = (draft / sql_spec["path"]).read_text(encoding="utf-8").strip()
     if not sql:
         raise ValueError(f"{sql_spec['path']} is empty")
-    image_spec = contract.get("image") or {"path": "chart.png", "min_width": 400, "min_height": 250}
-    png = (draft / image_spec["path"]).read_bytes()
-    if len(png) < 24 or png[:8] != b"\x89PNG\r\n\x1a\n":
-        raise ValueError(f"{image_spec['path']} is not a readable PNG")
-    width, height = struct.unpack(">II", png[16:24])
-    if width < int(image_spec.get("min_width", 1)) or height < int(image_spec.get("min_height", 1)):
-        raise ValueError(f"{image_spec['path']} is too small: {width}x{height}")
+    image_spec = contract.get("image") or ({"path": "chart.png", "min_width": 400, "min_height": 250} if full_analysis else None)
+    if image_spec:
+        png = (draft / image_spec["path"]).read_bytes()
+        if len(png) < 24 or png[:8] != b"\x89PNG\r\n\x1a\n":
+            raise ValueError(f"{image_spec['path']} is not a readable PNG")
+        width, height = struct.unpack(">II", png[16:24])
+        if width < int(image_spec.get("min_width", 1)) or height < int(image_spec.get("min_height", 1)):
+            raise ValueError(f"{image_spec['path']} is too small: {width}x{height}")
     return result
 
 
+def _copy_calculation_evidence(working: Path, destination: Path, analysis_id: str | None) -> list[Path]:
+    """Preserve maintained calculation artifacts before a temporary worker disappears."""
+    if not analysis_id:
+        return []
+    if not re.fullmatch(r"an_[A-Za-z0-9_]+", analysis_id):
+        raise ValueError("Invalid calculation evidence analysis ID")
+    root = working / "context-runs" / analysis_id
+    if not root.exists():
+        return []
+    if root.is_symlink() or root.parent.is_symlink():
+        raise ValueError("Calculation evidence rejects symlinks")
+    copied = []
+    names = {"plan.json", "executed.sql", "parameters.json", "calculation.sql", "results.csv", "execution.json", "failure.json"}
+    for run in sorted(root.iterdir()):
+        if run.is_symlink():
+            raise ValueError("Calculation evidence rejects symlinks")
+        if not run.is_dir():
+            continue
+        for name in sorted(names):
+            source = run / name
+            if source.is_symlink():
+                raise ValueError("Calculation evidence rejects symlinks")
+            if source.is_file():
+                target = destination / "connected-calculations" / run.name / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, target)
+                copied.append(target)
+    return copied
+
+
 def _copy_trace_evidence(
-    *, project_root: Path, trial_root: Path, analysis_id: str | None
+    *, project_root: Path, trial_root: Path, analysis_id: str | None,
+    evaluation_mode: str = "full_analysis",
 ) -> dict[str, Any]:
     trace_root = trial_root / "trace"
     trace_root.mkdir(parents=True, exist_ok=True)
@@ -500,7 +724,7 @@ def _copy_trace_evidence(
             elif label != "findings":
                 missing.append(label)
 
-        for label, pattern in (("query_log", "query_log_*.jsonl"), ("action_log", "action_log_*.jsonl")):
+        for label, pattern in (("query_log", "query_log_*.jsonl"), ("action_log", "action_log_*.jsonl"), ("context_loads", "context_loads_*.jsonl"), ("connected_context", "connected_context_*.jsonl")):
             matches: list[str] = []
             for source in sorted(working.glob(pattern)):
                 for line in source.read_text(encoding="utf-8").splitlines():
@@ -514,7 +738,7 @@ def _copy_trace_evidence(
                 target = trace_root / f"{label}_{analysis_id}.jsonl"
                 target.write_text("\n".join(matches) + "\n", encoding="utf-8")
                 copied.append(target)
-            else:
+            elif label not in {"context_loads", "connected_context"}:
                 missing.append(label)
 
         trace_candidates = [working / f"trace_{analysis_id}.html"]
@@ -530,12 +754,17 @@ def _copy_trace_evidence(
         else:
             missing.append("trace_html")
 
+    if evaluation_mode == "sql_results":
+        # SQL mode captures execution evidence, not a fabricated full analytical trace.
+        missing = [label for label in missing if label in {"analysis_record", "query_log"}]
+    copied.extend(_copy_calculation_evidence(working, trace_root, analysis_id))
     files = [
-        {"path": path.name, "sha256": file_digest(path), "bytes": path.stat().st_size}
+        {"path": path.relative_to(trace_root).as_posix(), "sha256": file_digest(path), "bytes": path.stat().st_size}
         for path in sorted(copied)
     ]
     bundle_digest = payload_digest(files)
     manifest = {
+        "evaluation_mode": evaluation_mode,
         "analysis_id": analysis_id,
         "files": files,
         "bundle_digest": bundle_digest,
@@ -582,9 +811,26 @@ def lock_run(
     )
     draft = trial_root / "draft"
     public_case_root = trial_root / "public-case"
+    for entry in manifest.get('public_case_files', []):
+        file = public_case_root / entry['path']
+        if not file.is_file() or file_digest(file) != entry['sha256'] or file.stat().st_size != entry['bytes']:
+            raise ValueError('Public case changed after the run started; do not alter the test to make it pass')
     public_case = _read_yaml(public_case_root / "case.yaml")
+    if payload_digest(public_case) != manifest.get('public_task_digest'):
+        raise ValueError('Public task changed after the run started')
     result_schema = _read_json(public_case_root / "result.schema.json")
     _validate_result_contract(draft, public_case, result_schema)
+    if public_case.get("data_scope", {}).get("platform", "").lower() == "snowflake":
+        from helpers.data.sql_policy import inspect_sql, qualify_table
+        scope = public_case["data_scope"]
+        sources = [qualify_table(table, database=scope["database"], schema=scope["schema"])
+                   for table in scope.get("tables", [scope["table"]] if scope.get("table") else [])]
+        sql_path = (public_case.get("output_contract", {}).get("sql") or {}).get("path", "calculation.sql")
+        safety = inspect_sql((draft / sql_path).read_text(encoding="utf-8"), allowed_sources=sources)
+        write_json(trial_root / "prelock-sql-policy.json", safety.as_dict())
+        if not safety.passed:
+            raise ValueError("final SQL failed pre-lock policy; correct and rerun it before locking: "
+                             + "; ".join(safety.violations))
     if verify_data_snapshot:
         data_fingerprint = _verify_snowflake_snapshot(project_root, manifest["data_scope"])
     else:
@@ -598,6 +844,7 @@ def lock_run(
         project_root=project_root,
         trial_root=trial_root,
         analysis_id=analysis_id,
+        evaluation_mode=public_case.get("evaluation_mode", "full_analysis"),
     )
     if not trace_manifest["complete"] and not allow_incomplete_trace:
         raise ValueError(

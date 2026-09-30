@@ -19,6 +19,7 @@ DEFAULT_ALLOWED_ENTRIES = (
     ".claude/skills",
     "agents",
     "helpers",
+    "docs/CONNECTED-CONTEXT.md",
     ".knowledge",
     "data_sources.yaml",
 )
@@ -159,7 +160,9 @@ class ClaudeCommand:
     model: str = "claude-opus-4-6"
     timeout_seconds: int = 600
     allowed_tools: tuple[str, ...] = ("Read", "Glob", "Grep")
+    process_settings: dict[str, Any] | None = None
     capture_tool_events: bool = False
+    max_budget_usd: float | None = None
 
     def argv(self, prompt: str, json_schema: dict[str, Any] | None = None) -> list[str]:
         tools = ",".join(self.allowed_tools)
@@ -184,9 +187,15 @@ class ClaudeCommand:
             f"--allowedTools={tools}",
             prompt,
         ]
+        if self.process_settings:
+            argv[-1:-1] = ["--settings", json.dumps(self.process_settings, sort_keys=True)]
         if self.capture_tool_events:
             argv[argv.index("--output-format") + 1] = "stream-json"
             argv[-1:-1] = ["--verbose"]
+        if self.max_budget_usd is not None:
+            if self.max_budget_usd <= 0:
+                raise ValueError('max_budget_usd must be positive')
+            argv[-1:-1] = ['--max-budget-usd', str(self.max_budget_usd)]
         return argv
 
     def run(

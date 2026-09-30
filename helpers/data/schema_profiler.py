@@ -844,7 +844,14 @@ def get_table_reference(table_name, schema=None):
         pass
 
     # Build qualified name
-    if schema:
+    if source_info.get("type") == "snowflake":
+        from helpers.data.sql_policy import qualify_table
+        connection = source_info.get("connection", {})
+        qualified_name = qualify_table(
+            table_name, database=connection.get("database", ""),
+            schema=schema or connection.get("schema", ""),
+        )
+    elif schema:
         qualified_name = f"{schema}.{table_name}"
     else:
         qualified_name = table_name

@@ -122,6 +122,8 @@ def append_entry(
     query_id: str | None = None,
     analysis_id: str | None = None,
     connection_identity: dict | None = None,
+    sql_policy: dict | None = None,
+    parameters: list | None = None,
 ) -> dict:
     """Append a query log entry to the JSONL file.
 
@@ -176,6 +178,8 @@ def append_entry(
         "dialect": dialect,
         "connection_type": connection_type,
         "connection_identity": connection_identity or {},
+        "sql_policy": sql_policy or {},
+        "parameters": parameters,
         "tables_accessed": tables_accessed or [],
         "columns_accessed": columns_accessed or [],
         "result_summary": result_summary,

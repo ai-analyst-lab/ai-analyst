@@ -61,8 +61,10 @@ def _q_block(q):
             f"result: {html.escape(str(q.get('result_value')))}")
     preview = q.get("result_preview") or []
     preview_html = ""
+    if q.get("parameters") is not None:
+        preview_html += '<p class="qmeta">Bound parameters: ' + html.escape(_redact_action_text(q["parameters"])) + '</p>'
     if preview:
-        preview_html = (
+        preview_html += (
             '<details><summary>Recorded result preview</summary><pre>'
             + html.escape(__import__("json").dumps(preview, indent=2, default=str))
             + "</pre></details>"
@@ -148,6 +150,13 @@ def render_trace(provenance, out_path, title="Provenance trace"):
         warns += ('<div class="warn">Orphan queries (linked to no finding): '
                   f'{len(provenance["orphan_queries"])}</div>')
 
+    import json
+    context_blocks = []
+    for record in provenance.get("context_events", []):
+        label = f"{record.get('stage', 'unknown')} · {record.get('resource', record.get('name', ''))}"
+        content = html.escape(_redact_action_text(json.dumps(record, indent=2, default=str)))
+        context_blocks.append(f'<details><summary>{html.escape(label)}</summary><pre>{content}</pre></details>')
+    context_html = ''.join(context_blocks) or '<p>No connected-context events recorded.</p>'
     doc = (f'<!doctype html><html><head><meta charset="utf-8"><title>{html.escape(title)}</title>'
            f'<style>{_CSS}</style></head><body>'
            f'<h1>{html.escape(title)}</h1><p class="meta">{meta}</p>'
@@ -156,7 +165,9 @@ def render_trace(provenance, out_path, title="Provenance trace"):
            f'<h2>Findings → the query that produced each</h2>{findings_html}'
            f'<h2>Query timeline</h2>{timeline}'
            f'<h2>Action timeline</h2><p class="meta">Actions recorded under this analysis ID. Expand an action to inspect its input and recorded output.</p>'
-           f'{actions_html}</body></html>')
+           f'{actions_html}<h2>Context and calculation path</h2>'
+           '<p>Loaded records show delivered context. Executed records show tool calls, not proof of business correctness.</p>'
+           f'{context_html}</body></html>')
     Path(out_path).write_text(doc)
     return str(out_path)
 

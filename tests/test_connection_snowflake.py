@@ -76,7 +76,7 @@ class _NoArrowConn(_FakeConn):
 
 
 def _snowflake_cm():
-    cm = ConnectionManager(config={"type": "snowflake", "connection": {"schema": "public"}})
+    cm = ConnectionManager(config={"type": "snowflake", "connection": {"database": "SALES_DB", "schema": "public"}})
     cm._connection = _FakeConn()
     cm._conn_type = "snowflake"
     cm._schema_prefix = "public"
@@ -121,16 +121,16 @@ def test_read_table_snowflake_uses_query():
     cm = _snowflake_cm()
     df = cm.read_table("orders")
     assert list(df.columns) == ["n"] and len(df) == 3
-    assert any("SELECT * FROM public.orders" in q for q in cm._connection.executed)
+    assert any("SELECT * FROM SALES_DB.PUBLIC.ORDERS" in q for q in cm._connection.executed)
 
 
 def test_snowflake_query_falls_back_when_connector_pandas_extra_is_missing():
-    cm = ConnectionManager(config={"type": "snowflake", "connection": {"schema": "public"}})
+    cm = ConnectionManager(config={"type": "snowflake", "connection": {"database": "SALES_DB", "schema": "public"}})
     cm._connection = _NoArrowConn()
     cm._conn_type = "snowflake"
     cm._schema_prefix = "public"
 
-    df = cm.query("SELECT COUNT(*) AS n FROM orders", log=False)
+    df = cm.query("SELECT COUNT(*) AS n FROM SALES_DB.PUBLIC.ORDERS", log=False)
 
     assert df.iloc[0, 0] == 47_199
     assert list(df.columns) == ["N"]

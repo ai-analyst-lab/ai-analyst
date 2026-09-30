@@ -1,0 +1,81 @@
+schema_version: '1'
+case_id: session8-query-promotion-value-device
+evaluation_mode: sql_results
+status: instructor-latency-candidate
+slices:
+  domain: commerce
+  complexity: medium
+  query_route: exact
+  primary_risk: organization_specific_definition
+audience: NovaMart commerce team
+task: Using NovaMart ORDERS, report NovaMart promotion-attributed order value for
+  November 2024 by order device. Use ORDER_DATE from 2024-11-01 inclusive through
+  2024-12-01 exclusive. Return segment as the original device label and value as the
+  total monetary amount rounded to two decimal places. Use available company context
+  for the business definition; record any material definition gap rather than inventing
+  company policy.
+required_outputs:
+- result.json
+- results.csv
+- calculation.sql
+result_schema: result.schema.json
+output_contract:
+  csv:
+  - path: results.csv
+    columns:
+    - segment
+    - value
+    min_rows: 1
+    max_rows: 100
+  sql:
+    path: calculation.sql
+    columns:
+    - segment
+    - value
+  value_rules:
+    segment: Original order device label
+    value: Total promotion-attributed order value under applicable company meaning,
+      rounded to two decimal places.
+grading_contract:
+  headline_gates:
+  - output_contract
+  - deterministic_accuracy
+  diagnostic_only:
+  - query_correctness
+  - trace_completeness
+case_version: '1'
+data_scope:
+  platform: Snowflake
+  database: BOOTCAMP_DB
+  schema: NOVAMART
+  tables:
+  - CALENDAR
+  - EVENTS
+  - EXPERIMENTS
+  - EXPERIMENT_ASSIGNMENTS
+  - MEMBERSHIPS
+  - NPS_RESPONSES
+  - ORDERS
+  - ORDER_ITEMS
+  - PRODUCTS
+  - PROMOTIONS
+  - SESSIONS
+  - SUPPORT_TICKETS
+  - USERS
+  snapshot_id: novamart-content-2026-09-26-authoring
+  snapshot_fingerprint:
+    method: sha256_of_ordered_snowflake_hash_agg_per_table_noncryptographic_content_sentinels
+    sha256: c7e6b8580027b9c9f090eeb68c9bd476232553ebc9338199f301817121d51ea0
+    query: SELECT (SELECT HASH_AGG(*) FROM BOOTCAMP_DB.NOVAMART.CALENDAR) AS CALENDAR_hash,
+      (SELECT HASH_AGG(*) FROM BOOTCAMP_DB.NOVAMART.EVENTS) AS EVENTS_hash, (SELECT
+      HASH_AGG(*) FROM BOOTCAMP_DB.NOVAMART.EXPERIMENTS) AS EXPERIMENTS_hash, (SELECT
+      HASH_AGG(*) FROM BOOTCAMP_DB.NOVAMART.EXPERIMENT_ASSIGNMENTS) AS EXPERIMENT_ASSIGNMENTS_hash,
+      (SELECT HASH_AGG(*) FROM BOOTCAMP_DB.NOVAMART.MEMBERSHIPS) AS MEMBERSHIPS_hash,
+      (SELECT HASH_AGG(*) FROM BOOTCAMP_DB.NOVAMART.NPS_RESPONSES) AS NPS_RESPONSES_hash,
+      (SELECT HASH_AGG(*) FROM BOOTCAMP_DB.NOVAMART.ORDERS) AS ORDERS_hash, (SELECT
+      HASH_AGG(*) FROM BOOTCAMP_DB.NOVAMART.ORDER_ITEMS) AS ORDER_ITEMS_hash, (SELECT
+      HASH_AGG(*) FROM BOOTCAMP_DB.NOVAMART.PRODUCTS) AS PRODUCTS_hash, (SELECT HASH_AGG(*)
+      FROM BOOTCAMP_DB.NOVAMART.PROMOTIONS) AS PROMOTIONS_hash, (SELECT HASH_AGG(*)
+      FROM BOOTCAMP_DB.NOVAMART.SESSIONS) AS SESSIONS_hash, (SELECT HASH_AGG(*) FROM
+      BOOTCAMP_DB.NOVAMART.SUPPORT_TICKETS) AS SUPPORT_TICKETS_hash, (SELECT HASH_AGG(*)
+      FROM BOOTCAMP_DB.NOVAMART.USERS) AS USERS_hash

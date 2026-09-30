@@ -88,6 +88,12 @@ The context store separates three delivery modes:
 - compiled context is executable, deterministic context such as a metric compile block.
 
 **Workspace guidance and task guides.** Call
+`python -m helpers.connected_context --dataset DATASET catalog` for version-2 guides,
+query entries and semantic resources. Follow `docs/CONNECTED-CONTEXT.md` for typed links,
+loading and execution. Do not reinterpret a draft or failed dependency as missing optional
+context. Legacy guide discovery remains available below.
+
+For legacy guides, call
 `helpers.knowledge.context_guides.guide_catalog(project_root, dataset=active)`.
 Apply the small `workspace_guidance` to this session. Inspect guide descriptions and
 scope once the question is known; do not preload every guide body. For a relevant
@@ -119,7 +125,9 @@ Extract these variables for use in SQL queries and agent prompts:
 - `{{DATE_RANGE}}` — Available date range (e.g., "2024-01-01 to 2026-03-31")
 - `{{DATABASE}}` — Database name or connection string
 
-Use `{{SCHEMA}}` as a prefix in SQL queries when querying external warehouses (BigQuery, Snowflake, Postgres). For local DuckDB/CSV, it's typically null.
+For Snowflake use `manager.table_reference(table)` to construct
+`DATABASE.SCHEMA.TABLE`; schema alone is insufficient. Other data warehouses have
+their own naming rules. For local DuckDB/CSV a schema prefix is typically absent.
 
 ### Step 3: User Profile
 Read `.knowledge/user/profile.md`.

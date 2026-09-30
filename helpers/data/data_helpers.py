@@ -425,17 +425,53 @@ def _read_active_dataset():
 
 
 def _read_manifest(dataset_id):
-    """Read a dataset's manifest.yaml from .knowledge/datasets/{id}/."""
+    """Read the requested dataset from the configured context store.
+
+    Path snapshots are authoritative; an invalid external configuration must not
+    silently select a stale local manifest. Git mode reads an existing checkout
+    without fetching or changing it as a side effect of opening a connection.
+    """
     if not _YAML_AVAILABLE:
         return None
-    manifest_path = _KNOWLEDGE_DIR / "datasets" / dataset_id / "manifest.yaml"
+    from helpers.knowledge.context_sync import ContextSyncError, resolve_context_dir
+    from helpers.knowledge.context_snapshot import knowledge_root
+    if (not isinstance(dataset_id, str) or not dataset_id
+            or Path(dataset_id).name != dataset_id or dataset_id in {".", ".."}):
+        raise ContextSyncError("Dataset ID must be a single directory name")
+    project = _KNOWLEDGE_DIR.resolve().parent
+    config_path = _KNOWLEDGE_DIR / "context-source.yaml"
+    config = {}
+    if config_path.exists():
+        try:
+            config = yaml.safe_load(config_path.read_text()) or {}
+        except (OSError, yaml.YAMLError) as exc:
+            raise ContextSyncError("Cannot read configured context source") from exc
+        if not isinstance(config, dict):
+            raise ContextSyncError("Context source configuration must be a mapping")
+    if config.get("source", "local") == "git":
+        store = knowledge_root(project).resolve()
+        relative = Path(config.get("dataset_path", f"datasets/{dataset_id}"))
+        resolved = (store / relative).resolve()
+        if relative.is_absolute() or ".." in relative.parts or not resolved.is_relative_to(store) or not resolved.is_dir():
+            raise ContextSyncError("Configured cached dataset path is missing or outside store")
+    else:
+        resolved, _ = resolve_context_dir(dataset_id, project)
+    manifest_path = resolved / "manifest.yaml"
     if not manifest_path.exists():
         return None
     try:
         with open(manifest_path) as f:
-            return yaml.safe_load(f)
-    except Exception:
-        return None
+            manifest = yaml.safe_load(f)
+    except (OSError, yaml.YAMLError) as exc:
+        raise ContextSyncError(f"Cannot read manifest for dataset {dataset_id}") from exc
+    if not isinstance(manifest, dict):
+        raise ContextSyncError(f"Manifest for dataset {dataset_id} must be a mapping")
+    if (config.get("source", "local") != "local" and "dataset_path" in config
+            and config["dataset_path"] != f"datasets/{dataset_id}" and "dataset_id" not in manifest):
+        raise ContextSyncError("A custom dataset_path requires explicit dataset_id in its manifest")
+    if manifest.get("dataset_id", dataset_id) != dataset_id:
+        raise ContextSyncError(f"Configured manifest identifies a different dataset than {dataset_id}")
+    return manifest
 
 
 def _fallback_source(dataset_id):

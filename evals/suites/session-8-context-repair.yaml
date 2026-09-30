@@ -1,0 +1,54 @@
+suite_id: session-8-context-repair
+suite_version: '4'
+evaluation_mode: sql_results
+status: engineering-rehearsed-instructor-review-pending
+description: Sixteen SQL/results questions for testing context additions. Not full-analysis accuracy.
+cases:
+  - case_id: session8-guide-service-recovery-november
+    case_version: '1'
+    path: evals/cases/public/session8-guide-service-recovery-november/v1
+  - case_id: session8-guide-service-recovery-monthly
+    case_version: '1'
+    path: evals/cases/public/session8-guide-service-recovery-monthly/v1
+  - case_id: session8-live-guide-account-service-severity
+    case_version: '1'
+    path: evals/cases/public/session8-live-guide-account-service-severity/v1
+  - case_id: session8-live-guide-account-service-month
+    case_version: '1'
+    path: evals/cases/public/session8-live-guide-account-service-month/v1
+  - case_id: session8-semantic-purchase-conversion-november
+    case_version: probe-1
+    path: evals/cases/public/session8-semantic-purchase-conversion-november/probe-1
+  - case_id: session8-semantic-purchase-conversion-monthly
+    case_version: probe-1
+    path: evals/cases/public/session8-semantic-purchase-conversion-monthly/probe-1
+  - case_id: session8-semantic-paid-response-nps-q4
+    case_version: probe-1
+    path: evals/cases/public/session8-semantic-paid-response-nps-q4/probe-1
+  - case_id: session8-semantic-paid-response-nps-monthly
+    case_version: probe-1
+    path: evals/cases/public/session8-semantic-paid-response-nps-monthly/probe-1
+  - case_id: session8-query-billing-support-total
+    case_version: probe-1
+    path: evals/cases/public/session8-query-billing-support-total/probe-1
+  - case_id: session8-query-billing-support-monthly
+    case_version: probe-1
+    path: evals/cases/public/session8-query-billing-support-monthly/probe-1
+  - case_id: session8-query-promotion-count-device
+    case_version: '1'
+    path: evals/cases/public/session8-query-promotion-count-device/v1
+  - case_id: session8-query-promotion-value-device
+    case_version: '1'
+    path: evals/cases/public/session8-query-promotion-value-device/v1
+  - case_id: session8-query-promotion-value-monthly
+    case_version: '1'
+    path: evals/cases/public/session8-query-promotion-value-monthly/v1
+  - case_id: week4-context-all-session-month
+    case_version: '2'
+    path: evals/cases/public/week4-context-all-session-month/v2
+  - case_id: week4-expanded-ticket-count-not-credit
+    case_version: '2'
+    path: evals/cases/public/week4-expanded-ticket-count-not-credit/v2
+  - case_id: week4-expanded-all-completed
+    case_version: '2'
+    path: evals/cases/public/week4-expanded-all-completed/v2

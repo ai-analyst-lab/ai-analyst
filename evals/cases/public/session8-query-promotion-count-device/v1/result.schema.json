@@ -1,0 +1,43 @@
+{
+  "type": "object",
+  "required": [
+    "case_id",
+    "analysis_id",
+    "context_files",
+    "artifacts"
+  ],
+  "properties": {
+    "case_id": {
+      "type": "string",
+      "const": "session8-query-promotion-count-device"
+    },
+    "analysis_id": {
+      "type": "string"
+    },
+    "context_files": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "required": [
+        "calculation",
+        "results"
+      ],
+      "properties": {
+        "calculation": {
+          "type": "string",
+          "const": "calculation.sql"
+        },
+        "results": {
+          "type": "string",
+          "const": "results.csv"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

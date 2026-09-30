@@ -30,6 +30,24 @@ def _guide(path: Path, dataset: str, today: date) -> tuple[dict, list[str]]:
     guide = yaml.safe_load(payload)
     if not isinstance(guide, dict):
         raise ContextSyncError(f'Guide must be an object: {path.name}')
+    if guide.get('schema_version') == 2:
+        from helpers.connected_context.store import Store, ContextError, validate_resource
+        validate_resource(guide)
+        if guide['kind'] != 'guide' or path.stem != guide['id']:
+            raise ContextSyncError('Guide kind and filename must match')
+        reasons = []
+        if guide['dataset'] != dataset:
+            reasons.append('different dataset')
+        else:
+            try:
+                Store(path.parent.parent, dataset, today=today).eligible('guide', guide['id'])
+            except ContextError as exc:
+                reasons.append(str(exc))
+        guide['file_sha256'] = _digest(payload)
+        guide['source'] = [r['path'] for r in guide['refs'] if r['kind'] == 'source']
+        guide['reviewed_on'] = (guide.get('review') or {}).get('on')
+        guide['review_after'] = (guide.get('review') or {}).get('after')
+        return guide, reasons
     required = ('id', 'description', 'dataset', 'owner', 'source', 'status', 'reviewed_on', 'review_after', 'content')
     missing = [key for key in required if not guide.get(key)]
     if missing:
@@ -73,6 +91,8 @@ def guide_catalog(project_root='.', *, dataset: str, today: date | None = None) 
         metadata = {key: guide.get(key) for key in ('id', 'description', 'dataset', 'owner', 'source', 'reviewed_on', 'review_after', 'file_sha256')}
         metadata['path'] = 'guides/' + path.name
         metadata['scope'] = guide.get('scope', '')
+        if guide.get('source_references'):
+            metadata['source_references'] = guide['source_references']
         if reasons:
             excluded.append({**metadata, 'reasons': reasons})
         else:
@@ -99,6 +119,14 @@ def load_guide(project_root='.', *, dataset: str, guide_id: str, question: str,
     record = {'analysis_id': analysis_id, 'question': question, 'selection_reason': reason,
               'guide_id': guide_id, 'source': guide['source'], 'owner': guide['owner'],
               'file_sha256': guide['file_sha256'], 'content': guide['content']}
+    if guide.get('schema_version') == 2:
+        record['refs'] = guide['refs']
+        if guide.get('source_references'):
+            record['source_references'] = guide['source_references']
+        if guide.get('implementations'):
+            from helpers.connected_context.store import Store
+            record['implementations'] = guide['implementations']
+            record['implementation_status'] = Store(store, dataset, today=today).implementation_status(guide)
     path = Path(project_root) / 'working' / f'context_loads_{analysis_id}.jsonl'
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open('a') as handle:

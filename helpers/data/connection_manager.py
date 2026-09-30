@@ -408,8 +408,59 @@ class ConnectionManager:
 
         Returns:
             list[dict]: Each dict has keys: name, type, nullable.
+
+        Snowflake accepts an unqualified, schema-qualified, or three-part table
+        reference (SQL identifier notation). It uses authoritative column metadata,
+        not sampled values, within the same source scope as analytical queries.
+        Invalid/out-of-scope references and connector errors raise; an absent or
+        inaccessible table returns an empty list. Numeric types retain precision
+        and scale. This API does not accept arbitrary metadata SQL.
         """
-        if self._conn_type in ("duckdb",) and self._connection:
+        if self._conn_type == "snowflake":
+            from helpers.data.sql_policy import identifier_parts, inspect_sql, render_parts
+            identifier_parts(table_name)  # Reject SQL text before opening a connection.
+            if self._connection is None:
+                self.connect()
+            database, schema = self._snowflake_namespace()
+            reference = self.table_reference(table_name)
+            scope = self._config.get("allowed_sources")
+            allowed_schemas = [f"{database}.{schema}"] if database and schema else []
+            policy = inspect_sql(
+                f"SELECT * FROM {reference}", allowed_sources=scope,
+                allowed_schemas=[] if scope is not None else allowed_schemas,
+            )
+            if not policy.passed:
+                raise ValueError("Snowflake schema inspection rejected: " + "; ".join(policy.violations))
+            catalog, namespace, table = identifier_parts(reference)
+            # Only the validated identifier is interpolated. All filter values
+            # are bound, including quoted names with punctuation or apostrophes.
+            sql = (
+                "SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, NUMERIC_PRECISION, NUMERIC_SCALE "
+                f"FROM {render_parts((catalog,))}.INFORMATION_SCHEMA.COLUMNS "
+                "WHERE TABLE_CATALOG = %s AND TABLE_SCHEMA = %s AND TABLE_NAME = %s "
+                "ORDER BY ORDINAL_POSITION"
+            )
+            parameters = (catalog, namespace, table)
+            cursor = self._connection.cursor()
+            started = time.perf_counter()
+            try:
+                cursor.execute(sql, parameters)
+                rows = cursor.fetchall()
+                self.last_schema_query_id = getattr(cursor, "sfqid", None)
+            finally:
+                cursor.close()
+            columns = []
+            for name, kind, nullable, precision, scale in rows:
+                if kind in {"NUMBER", "DECIMAL", "NUMERIC"} and precision is not None and scale is not None:
+                    kind = f"{kind}({precision},{scale})"
+                columns.append({"name": name, "type": kind, "nullable": nullable == "YES"})
+            self._autolog_query(
+                sql, pd.DataFrame(columns), (time.perf_counter() - started) * 1000,
+                parameters=list(parameters), query_id=self.last_schema_query_id,
+            )
+            return columns
+
+        elif self._conn_type in ("duckdb",) and self._connection:
             try:
                 df = self._connection.sql(f"DESCRIBE {table_name}").df()
                 columns = []
@@ -448,7 +499,7 @@ class ConnectionManager:
 
         return []
 
-    def query(self, sql, log=True):
+    def query(self, sql, log=True, *, params=None, analysis_id=None):
         """Execute a SQL query and return results as a DataFrame.
 
         Args:
@@ -465,6 +516,34 @@ class ConnectionManager:
         Raises:
             RuntimeError: If no SQL-capable connection is available.
         """
+        # Public parameter convention is positional '?'. Tokenize, rather than
+        # replacing question marks inside quoted strings/comments.
+        import uuid
+        self.last_query_id = f"cm_{uuid.uuid4().hex}"
+        supplied = None if params is None else list(params)
+        driver_sql = sql
+        if supplied is not None:
+            import sqlglot
+            from sqlglot.tokens import TokenType
+            markers = [t for t in sqlglot.tokenize(sql) if t.token_type == TokenType.PLACEHOLDER]
+            if len(markers) != len(supplied):
+                raise ValueError("Bound parameter count does not match SQL placeholders")
+            if self._conn_type == "snowflake" or self._conn_type in _PG_FAMILY:
+                # pyformat drivers also interpret literal percent signs.
+                chunks, last = [], 0
+                for marker in markers:
+                    chunks.append(sql[last:marker.start].replace("%", "%%"))
+                    chunks.append("%s")
+                    last = marker.end + 1
+                chunks.append(sql[last:].replace("%", "%%"))
+                driver_sql = ''.join(chunks)
+            elif self._conn_type not in {"duckdb", "csv"}:
+                raise ValueError(f"Bound parameters unsupported for {self._conn_type}")
+
+        def record(df, elapsed, **kwargs):
+            self._autolog_query(sql, df, elapsed, analysis_id=analysis_id,
+                                parameters=supplied, **kwargs)
+
         # Lazy-connect: open the connection on first use, the same way
         # test_connection() does. Without this, a fresh ConnectionManager().query()
         # falls through to the RuntimeError below even though the backend is SQL-capable.
@@ -474,13 +553,31 @@ class ConnectionManager:
 
         start = time.perf_counter()
         if self._conn_type in ("duckdb", "csv") and self._connection:
-            df = self._connection.sql(sql).df()
+            df = self._connection.execute(sql, supplied).df() if supplied is not None else self._connection.sql(sql).df()
         elif self._conn_type in _PG_FAMILY and self._connection:
-            df = pd.read_sql(sql, self._connection)
+            df = pd.read_sql(driver_sql, self._connection, params=supplied) if supplied is not None else pd.read_sql(sql, self._connection)
         elif self._conn_type == "snowflake" and self._connection:
+            from helpers.data.sql_policy import inspect_sql
+            db, schema = self._snowflake_namespace()
+            # Source policy comes from configured scope, never from query text.
+            # A missing namespace allows identity-only SELECTs, not arbitrary tables.
+            allowed_schemas = [f"{db}.{schema}"] if db and schema else []
+            scope = self._config.get("allowed_sources")
+            policy = inspect_sql(sql, allowed_sources=scope,
+                                 allowed_schemas=[] if scope is not None else allowed_schemas)
+            if not policy.passed:
+                message = "; ".join(policy.violations)
+                if db and schema:
+                    message += f". Use explicit {db}.{schema}.TABLE references; do not change the intended source."
+                record(None, 0, status="rejected", error=message,
+                                    policy=policy.as_dict(), force=True)
+                raise ValueError(f"Snowflake query rejected before execution: {message}")
             cur = self._connection.cursor()
             try:
-                cur.execute(sql)
+                if supplied is None:
+                    cur.execute(sql)
+                else:
+                    cur.execute(driver_sql, tuple(supplied))
                 if not cur.description:
                     df = pd.DataFrame()
                 else:
@@ -494,8 +591,19 @@ class ConnectionManager:
                             raise
                         columns = [d[0] for d in cur.description]
                         df = pd.DataFrame(cur.fetchall(), columns=columns)
+            except Exception as exc:
+                record(None, (time.perf_counter() - start) * 1000,
+                                    status="error", error=type(exc).__name__,
+                                    query_id=getattr(cur, "sfqid", None),
+                                    policy=policy.as_dict(), force=True)
+                raise
             finally:
                 cur.close()
+            self.last_query_id = getattr(cur, "sfqid", None) or self.last_query_id
+            if log:
+                record(df, (time.perf_counter() - start) * 1000,
+                                    query_id=getattr(cur, "sfqid", None), policy=policy.as_dict())
+            return df
         elif self._conn_type == "bigquery" and self._connection:
             df = pd.DataFrame([dict(r) for r in self._connection.query(sql).result()])
         elif self._conn_type == "databricks" and self._connection:
@@ -516,17 +624,39 @@ class ConnectionManager:
         execution_ms = (time.perf_counter() - start) * 1000.0
 
         if log:
-            self._autolog_query(sql, df, execution_ms)
+            record(df, execution_ms)
         return df
 
-    def _autolog_query(self, sql, df, execution_ms):
+    def _snowflake_namespace(self):
+        """Configured namespace; a verified session fills absent config only."""
+        from helpers.data.sql_policy import render_parts
+        config = self._config.get("connection", {})
+        # Config strings follow SQL identifier notation; session values are
+        # already resolved names and must preserve case, including quoted names.
+        values = []
+        for key in ("database", "schema"):
+            configured = config.get(key)
+            observed = self._connection_identity.get(key)
+            values.append(configured or (render_parts((observed,)) if observed else ""))
+        return tuple(values)
+
+    def table_reference(self, table_name):
+        """Return explicit SQL source syntax without changing database scope."""
+        if self._conn_type == "snowflake":
+            from helpers.data.sql_policy import qualify_table
+            database, schema = self._snowflake_namespace()
+            return qualify_table(table_name, database=database, schema=schema)
+        return f"{self._schema_prefix}.{table_name}" if self._schema_prefix else table_name
+
+    def _autolog_query(self, sql, df, execution_ms, *, status="success", error=None,
+                       query_id=None, policy=None, force=False, analysis_id=None, parameters=None):
         """Record this query to the query log at execution. Best-effort: a logging failure must never
         break the query, so everything here is wrapped and swallowed."""
         try:
-            if os.environ.get("AAP_QUERY_AUTOLOG", "1") == "0":
+            if not force and os.environ.get("AAP_QUERY_AUTOLOG", "1") == "0":
                 return
             from helpers.provenance import query_log
-            if not query_log.autolog_enabled():
+            if not force and not query_log.autolog_enabled():
                 return  # a caller (e.g. a pipeline) is logging by hand; do not double-log
 
             # The scalar result_value: only when the result is a single 1x1 cell (most metric queries).
@@ -562,12 +692,12 @@ class ConnectionManager:
 
             tables = re.findall(r'(?:from|join)\s+([A-Za-z0-9_.]+)', sql or "", flags=re.IGNORECASE)
 
-            analysis_id = None
-            try:
-                from helpers.knowledge.analysis_context import current_analysis_id
-                analysis_id = current_analysis_id(create=True)
-            except Exception:
-                analysis_id = None
+            if analysis_id is None:
+                try:
+                    from helpers.knowledge.analysis_context import current_analysis_id
+                    analysis_id = current_analysis_id(create=True)
+                except Exception:
+                    analysis_id = None
 
             query_log.append_entry(
                 dataset_name=self.dataset_id,
@@ -588,6 +718,11 @@ class ConnectionManager:
                 execution_ms=execution_ms,
                 analysis_id=analysis_id,
                 connection_identity=self._connection_identity or None,
+                query_id=query_id or getattr(self, "last_query_id", None),
+                status=status,
+                error=error,
+                sql_policy=policy,
+                parameters=[str(x) if not isinstance(x, (str, int, float, bool, type(None))) else x for x in parameters] if parameters is not None else None,
             )
         except Exception:
             # Provenance logging is never allowed to take down a real query.
@@ -618,8 +753,7 @@ class ConnectionManager:
             return pd.read_sql(f"SELECT * FROM {schema}.{table_name}", self._connection)
 
         elif self._conn_type == "snowflake" and self._connection:
-            schema = self._schema_prefix or "PUBLIC"
-            return self.query(f"SELECT * FROM {schema}.{table_name}", log=False)
+            return self.query(f"SELECT * FROM {self.table_reference(table_name)}")
 
         elif self._conn_type == "bigquery" and self._connection:
             proj = getattr(self._connection, "project", None)

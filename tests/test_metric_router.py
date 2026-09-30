@@ -86,3 +86,16 @@ def test_router_reads_the_resolved_context_directory(tmp_path):
     result = mr.route("acme", "revenue", project_root=tmp_path, context_dir=resolved)
     assert result["tier"] == "A"
     assert [row["id"] for row in mr.list_metrics("acme", context_dir=resolved)] == ["revenue"]
+
+
+@pytest.mark.parametrize("location", ["local", "external"])
+def test_connected_metric_cannot_fall_forward_to_generated_sql(ds, location):
+    root, dataset = ds
+    base = root / ".knowledge/datasets/acme" if location == "local" else root / "external/datasets/acme"
+    path = base / "semantic/metrics/revenue.yaml"
+    path.parent.mkdir(parents=True)
+    path.write_text("schema_version: 2\nkind: metric\nid: revenue\nstatus: draft\n")
+    kwargs = {} if location == "local" else {"context_dir": base}
+    # Includes collision with the old compilable 'revenue' fixture: don't bypass the new definition.
+    with pytest.raises(mr.MetricCompileError, match="helpers.connected_context"):
+        mr.route(dataset, "revenue", project_root=root, **kwargs)

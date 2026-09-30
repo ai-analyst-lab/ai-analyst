@@ -29,9 +29,14 @@ class SnowflakeDialect(SQLDialect):
         >>> SnowflakeDialect().qualify_table('orders')
         'ORDERS'
         """
-        if schema:
-            return f"{schema.upper()}.{table.upper()}"
-        return table.upper()
+        from helpers.data.sql_policy import identifier_parts, render_parts
+        parts = identifier_parts(table)
+        if schema and len(parts) < 3:
+            prefix = identifier_parts(schema)
+            # Fully qualified objects and schema-qualified objects must not be
+            # double-prefixed. A partial prefix remains partial, never guessed.
+            parts = prefix[:max(0, 3 - len(parts))] + parts if len(parts) > 1 else prefix + parts
+        return render_parts(parts)
 
     # limit_clause — inherited (LIMIT N)
 

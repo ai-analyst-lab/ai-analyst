@@ -80,3 +80,30 @@ def test_metrics_and_business_context_use_external_store(tmp_path):
     project = setup(tmp_path, {'source': 'path', 'path': '../context'})
     assert list_metrics('novamart', project) == [{'id': 'test_metric'}]
     assert get_glossary('novamart', str(project / '.knowledge')) == [{'name': 'example'}]
+
+
+@pytest.mark.parametrize('tamper', [None, 'file', 'directory', 'manifest'])
+def test_install_snapshot_allows_ancestor_alias_but_rejects_internal_links(tmp_path, tamper):
+    from helpers.knowledge.context_snapshot import snapshot_visible_context, install_snapshot
+    store = tmp_path / 'context/datasets/novamart'
+    store.mkdir(parents=True)
+    (store / 'guide.md').write_text('Original context')
+    project = setup(tmp_path, {'source': 'path', 'path': '../context'})
+    real = tmp_path / 'real'
+    real.mkdir()
+    alias = tmp_path / 'alias'
+    alias.symlink_to(real, target_is_directory=True)
+    snapshot = alias / 'snapshot'
+    snapshot_visible_context(project, snapshot)
+    if tamper:
+        path = snapshot / {'file': 'datasets/novamart/guide.md',
+                           'directory': 'datasets/novamart',
+                           'manifest': 'snapshot-manifest.json'}[tamper]
+        moved = tmp_path / ('moved-' + tamper)
+        path.rename(moved)
+        path.symlink_to(moved, target_is_directory=tamper == 'directory')
+        with pytest.raises(ContextSyncError, match='symlink'):
+            install_snapshot(snapshot, tmp_path / 'worker')
+    else:
+        install_snapshot(snapshot, tmp_path / 'worker')
+        assert (tmp_path / 'worker/.knowledge/context-snapshot/datasets/novamart/guide.md').read_text() == 'Original context'

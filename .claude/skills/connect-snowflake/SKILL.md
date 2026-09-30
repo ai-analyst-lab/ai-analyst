@@ -57,14 +57,20 @@ import warnings; warnings.filterwarnings('ignore')
 from helpers.data.connection_manager import ConnectionManager
 mgr = ConnectionManager()
 print('backend:', mgr.connection_type)   # MUST print 'snowflake'
-df = mgr.query('SELECT event_type, COUNT(*) n FROM events GROUP BY event_type ORDER BY n DESC')
+events = mgr.table_reference('events')
+df = mgr.query(f'SELECT event_type, COUNT(*) n FROM {events} GROUP BY event_type ORDER BY n DESC')
 print(df.to_string(index=False))
 mgr.close()
 "
 ```
 
-Tables are **unqualified** in your configured schema (e.g. `events`, `orders`,
-`sessions`, `users`, `promotions`, `products`). Use Snowflake dialect:
+Use **DATABASE.SCHEMA.TABLE** for physical Snowflake sources, obtained from
+`mgr.table_reference('orders')` or the verified connection configuration.
+The data warehouse is compute, not part of this object name. Short names are
+valid Snowflake syntax but are rejected by the course analytical-query policy
+so execution and evaluation use the same explicit source. CTE aliases stay
+unqualified. On rejection, correct the reference and retry once; never change
+the intended source or disable the guard. Use Snowflake dialect:
 `DATE_TRUNC('month', col)`, etc. — or `get_dialect("snowflake")` from
 `helpers/data/sql_dialect.py`.
 

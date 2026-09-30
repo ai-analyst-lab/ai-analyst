@@ -28,9 +28,9 @@ CASE_DIR = (
 )
 PROMOTION_CASE_DIR = (
     PROJECT_ROOT
-    / "evals"
-    / "cases"
-    / "public"
+    / "tests"
+    / "fixtures"
+    / "eval-cases"
     / "novamart-promotion-profitability-002"
     / "v1"
 )
@@ -103,7 +103,7 @@ def populate(draft: Path, *, count: int = 10) -> None:
     (draft / "monthly-results.csv").write_text(csv_text)
     (draft / "chart-data.csv").write_text(csv_text)
     (draft / "brief.md").write_text("# Review\n\n" + "A complete descriptive operating review. " * 5)
-    (draft / "calculation.sql").write_text("SELECT month, COUNT(*) FROM orders GROUP BY month;\n")
+    (draft / "calculation.sql").write_text("SELECT month, COUNT(*) FROM BOOTCAMP_DB.NOVAMART.ORDERS GROUP BY month;\n")
     (draft / "chart.png").write_bytes(png())
 
 
@@ -131,6 +131,19 @@ def test_public_case_contains_no_private_fields():
         assert private_value not in public_text
     for secret_marker in ("SNOWFLAKE_TOKEN=", "SNOWFLAKE_PASSWORD=", "PRIVATE KEY"):
         assert secret_marker not in public_text
+
+
+def test_lock_rejects_short_source_before_creating_submission(tmp_path):
+    runs_root = tmp_path / "runs"
+    started = start_run(project_root=tmp_path, case_dir=CASE_DIR, runs_root=runs_root)
+    draft = Path(started["draft_path"])
+    populate(draft)
+    (draft / "calculation.sql").write_text("SELECT COUNT(*) FROM orders")
+    attach_analysis(tmp_path, started)
+    with pytest.raises(ValueError, match="pre-lock policy"):
+        lock_run(project_root=tmp_path, runs_root=runs_root, run_id=started["run_id"], verify_data_snapshot=False)
+    assert not (draft.parent / "submission").exists()
+    assert json.loads((draft.parent / "prelock-sql-policy.json").read_text())["passed"] is False
 
 
 def test_start_lock_verify_and_detect_mutation(tmp_path):
@@ -236,7 +249,7 @@ def test_second_case_uses_its_own_output_contract(tmp_path):
         "Black Friday,30445.47,4349.35\nHoliday Sale,67286.45,3958.03\n"
     )
     (draft / "brief.md").write_text("# Promotion review\n\n" + "A complete descriptive comparison. " * 5)
-    (draft / "calculation.sql").write_text("SELECT promo_name FROM promotions;\n")
+    (draft / "calculation.sql").write_text("SELECT promo_name FROM BOOTCAMP_DB.NOVAMART.PROMOTIONS;\n")
     (draft / "chart.png").write_bytes(png())
     analysis_id = attach_analysis(tmp_path, started, "an_promotion")
     locked = lock_run(

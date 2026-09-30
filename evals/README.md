@@ -16,6 +16,10 @@ Course reference answers and graders are released separately after the first bli
 
 Session 6 uses the 20 complete-analysis cases listed in `suites/session-6-complete-analysis.yaml`. Every case produces a structured result, table, brief, chart, chart data, executable SQL, and trace. The sibling course evaluator grades the locked outputs.
 
+Session 8 uses the 16 SQL/results cases in `suites/session-8-context-repair.yaml`. It tests calculation accuracy before and after context changes. See [SQL/results evaluations](SQL-RESULTS-MODE.md). These are the two current course suites; older experimental suites and case versions have been archived outside the student repositories.
+
+The historical promotion task under `tests/fixtures/eval-cases/` is a software-test fixture, not an extra course assignment. Instructor rehearsal scripts and their local-workspace tests are maintained separately.
+
 The focused Snowflake cases remain available as optional component tests. Their scores describe calculation behavior only and should not be averaged into complete-analysis accuracy.
 
 ## Development workflow

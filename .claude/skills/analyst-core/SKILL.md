@@ -46,8 +46,19 @@ before presenting.
    keys, obvious anomalies. Use the data-profiling and data-quality-check
    skills. Never assume a column means what its name suggests.
 
-3. **Route defined metrics through the compiler.** When a question asks for a
-   metric, check whether it is defined in `.knowledge/datasets/{active}/metrics/`.
+3. **Discover connected context before choosing a calculation.** Resolve the configured
+   store, not an assumed local knowledge path. Run
+   `python -m helpers.connected_context --dataset DATASET catalog`. For eligible version-2
+   resources, follow `docs/CONNECTED-CONTEXT.md`: load the applicable guide with its catalog
+   hash and this analysis ID, inspect metric/query references and `implementations` links
+   with their reported availability, save a structured request,
+   inspect its plan and execute through the installed service. Prefer a supported maintained
+   metric; use a reviewed query where it fits. Do not preload every guide or claim that
+   loading proves use. Drafts, broken references, missing meaning and safety failures are
+   not permission to improvise. Generated/adapted SQL is a separately validated, labeled path.
+
+   **Legacy metrics:** When a question asks for a metric, check the dataset directory
+   returned by `resolve_context_dir`, including its `metrics/` folder.
    If a single defined metric matches unambiguously and has a `compile:` block,
    compute it with the compiler instead of writing SQL by hand:
 
@@ -64,7 +75,9 @@ before presenting.
    guards halt on an impossible ratio or a fan-out. Only route this way for a
    clean single-metric match; a fuzzy, multi-metric, or undefined ask stays on
    the normal generate-and-validate path (Tier C). Never refuse an undefined
-   metric; answer it the normal way and label it (see Provenance below). If the
+   metric solely because it lacks compiled support; if business meaning is sufficient,
+   answer it normally and label it (see Provenance below). Do not bypass missing policy
+   or failed safety checks. If the
    metric binds to an external layer (Tier B), delegate to that source.
 
 4. **Every number gets a comparison.** A metric alone is trivia. Pair every
